@@ -1,0 +1,16 @@
+C:\dev\VSProjects\ViennaDotNet\ViennaDotNet.DB\bin\Debug\net8.0\ViennaDotNet.DB.deps.json
+C:\dev\VSProjects\ViennaDotNet\ViennaDotNet.DB\bin\Debug\net8.0\ViennaDotNet.DB.dll
+C:\dev\VSProjects\ViennaDotNet\ViennaDotNet.DB\bin\Debug\net8.0\ViennaDotNet.DB.pdb
+C:\dev\VSProjects\ViennaDotNet\ViennaDotNet.DB\bin\Debug\net8.0\ViennaDotNet.Common.dll
+C:\dev\VSProjects\ViennaDotNet\ViennaDotNet.DB\bin\Debug\net8.0\ViennaDotNet.Common.pdb
+C:\dev\VSProjects\ViennaDotNet\ViennaDotNet.DB\obj\Debug\net8.0\ViennaDotNet.DB.csproj.AssemblyReference.cache
+C:\dev\VSProjects\ViennaDotNet\ViennaDotNet.DB\obj\Debug\net8.0\ViennaDotNet.DB.GeneratedMSBuildEditorConfig.editorconfig
+C:\dev\VSProjects\ViennaDotNet\ViennaDotNet.DB\obj\Debug\net8.0\ViennaDotNet.DB.AssemblyInfoInputs.cache
+C:\dev\VSProjects\ViennaDotNet\ViennaDotNet.DB\obj\Debug\net8.0\ViennaDotNet.DB.AssemblyInfo.cs
+C:\dev\VSProjects\ViennaDotNet\ViennaDotNet.DB\obj\Debug\net8.0\ViennaDotNet.DB.csproj.CoreCompileInputs.cache
+C:\dev\VSProjects\ViennaDotNet\ViennaDotNet.DB\obj\Debug\net8.0\ViennaDotNet.DB.sourcelink.json
+C:\dev\VSProjects\ViennaDotNet\ViennaDotNet.DB\obj\Debug\net8.0\ViennaDo.144CA5DE.Up2Date
+C:\dev\VSProjects\ViennaDotNet\ViennaDotNet.DB\obj\Debug\net8.0\ViennaDotNet.DB.dll
+C:\dev\VSProjects\ViennaDotNet\ViennaDotNet.DB\obj\Debug\net8.0\refint\ViennaDotNet.DB.dll
+C:\dev\VSProjects\ViennaDotNet\ViennaDotNet.DB\obj\Debug\net8.0\ViennaDotNet.DB.pdb
+C:\dev\VSProjects\ViennaDotNet\ViennaDotNet.DB\obj\Debug\net8.0\ref\ViennaDotNet.DB.dll

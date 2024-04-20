@@ -1,0 +1,13 @@
+C:\dev\VSProjects\ViennaDotNet\ViennaDotNet.Common\obj\Debug\net8.0\ViennaDotNet.Common.csproj.AssemblyReference.cache
+C:\dev\VSProjects\ViennaDotNet\ViennaDotNet.Common\obj\Debug\net8.0\ViennaDotNet.Common.GeneratedMSBuildEditorConfig.editorconfig
+C:\dev\VSProjects\ViennaDotNet\ViennaDotNet.Common\obj\Debug\net8.0\ViennaDotNet.Common.AssemblyInfoInputs.cache
+C:\dev\VSProjects\ViennaDotNet\ViennaDotNet.Common\obj\Debug\net8.0\ViennaDotNet.Common.AssemblyInfo.cs
+C:\dev\VSProjects\ViennaDotNet\ViennaDotNet.Common\obj\Debug\net8.0\ViennaDotNet.Common.csproj.CoreCompileInputs.cache
+C:\dev\VSProjects\ViennaDotNet\ViennaDotNet.Common\obj\Debug\net8.0\ViennaDotNet.Common.sourcelink.json
+C:\dev\VSProjects\ViennaDotNet\ViennaDotNet.Common\bin\Debug\net8.0\ViennaDotNet.Common.deps.json
+C:\dev\VSProjects\ViennaDotNet\ViennaDotNet.Common\bin\Debug\net8.0\ViennaDotNet.Common.dll
+C:\dev\VSProjects\ViennaDotNet\ViennaDotNet.Common\bin\Debug\net8.0\ViennaDotNet.Common.pdb
+C:\dev\VSProjects\ViennaDotNet\ViennaDotNet.Common\obj\Debug\net8.0\ViennaDotNet.Common.dll
+C:\dev\VSProjects\ViennaDotNet\ViennaDotNet.Common\obj\Debug\net8.0\refint\ViennaDotNet.Common.dll
+C:\dev\VSProjects\ViennaDotNet\ViennaDotNet.Common\obj\Debug\net8.0\ViennaDotNet.Common.pdb
+C:\dev\VSProjects\ViennaDotNet\ViennaDotNet.Common\obj\Debug\net8.0\ref\ViennaDotNet.Common.dll

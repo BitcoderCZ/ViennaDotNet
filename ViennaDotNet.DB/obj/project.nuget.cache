@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "dgSpecHash": "gAsyrep0RjDXZd6MBh6gHDIHXvYxzexMsgRtq9JvJVJV4AYx9On3L/MmAMLnyeRkrInxPH3AKz3Ol5qLJxrMog==",
+  "success": true,
+  "projectFilePath": "C:\\dev\\VSProjects\\ViennaDotNet\\ViennaDotNet.DB\\ViennaDotNet.DB.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Bitcoder\\.nuget\\packages\\microsoft.data.sqlite\\8.0.4\\microsoft.data.sqlite.8.0.4.nupkg.sha512",
+    "C:\\Users\\Bitcoder\\.nuget\\packages\\microsoft.data.sqlite.core\\8.0.4\\microsoft.data.sqlite.core.8.0.4.nupkg.sha512",
+    "C:\\Users\\Bitcoder\\.nuget\\packages\\newtonsoft.json\\13.0.3\\newtonsoft.json.13.0.3.nupkg.sha512",
+    "C:\\Users\\Bitcoder\\.nuget\\packages\\sqlitepclraw.bundle_e_sqlite3\\2.1.6\\sqlitepclraw.bundle_e_sqlite3.2.1.6.nupkg.sha512",
+    "C:\\Users\\Bitcoder\\.nuget\\packages\\sqlitepclraw.core\\2.1.6\\sqlitepclraw.core.2.1.6.nupkg.sha512",
+    "C:\\Users\\Bitcoder\\.nuget\\packages\\sqlitepclraw.lib.e_sqlite3\\2.1.6\\sqlitepclraw.lib.e_sqlite3.2.1.6.nupkg.sha512",
+    "C:\\Users\\Bitcoder\\.nuget\\packages\\sqlitepclraw.provider.e_sqlite3\\2.1.6\\sqlitepclraw.provider.e_sqlite3.2.1.6.nupkg.sha512",
+    "C:\\Users\\Bitcoder\\.nuget\\packages\\system.memory\\4.5.3\\system.memory.4.5.3.nupkg.sha512",
+    "C:\\Users\\Bitcoder\\.nuget\\packages\\uma.uuid\\0.1.0\\uma.uuid.0.1.0.nupkg.sha512"
+  ],
+  "logs": []
+}

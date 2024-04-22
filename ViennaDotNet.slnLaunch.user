@@ -1,0 +1,20 @@
+[
+  {
+    "Name": "New Profile",
+    "Projects": [
+      {
+        "Name": "ViennaDotNet.ApiServer\\ViennaDotNet.ApiServer.csproj",
+        "Action": "Start",
+        "DebugTarget": "http"
+      },
+      {
+        "Name": "ViennaDotNet.TappablesGenerator\\ViennaDotNet.TappablesGenerator.csproj",
+        "Action": "Start"
+      },
+      {
+        "Name": "ViennaDotNet.EventBus.Server\\ViennaDotNet.EventBus.Server.csproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]

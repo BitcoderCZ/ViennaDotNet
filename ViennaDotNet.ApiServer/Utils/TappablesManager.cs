@@ -27,7 +27,7 @@ namespace ViennaDotNet.ApiServer.Utils
             }));
         }
 
-        public Tappable[] getTappablesAround(float lat, float lon, float radius)
+        public Tappable[] getTappablesAround(double lat, double lon, double radius)
         {
             return getTileIdsAround(lat, lon, radius)
                 .Select(tileId => tappables.GetOrDefault(tileId, null))
@@ -36,15 +36,15 @@ namespace ViennaDotNet.ApiServer.Utils
                 .SelectMany(stream => stream) //.flatMap(Collection::stream)
                 .Where(tappable =>
                 {
-                    float dx = lonToX(tappable.lon) * (1 << 16) - lonToX(lon) * (1 << 16);
-                    float dy = latToY(tappable.lat) * (1 << 16) - latToY(lat) * (1 << 16);
-                    float distanceSquared = dx * dx + dy * dy;
+                    double dx = lonToX(tappable.lon) * (1 << 16) - lonToX(lon) * (1 << 16);
+                    double dy = latToY(tappable.lat) * (1 << 16) - latToY(lat) * (1 << 16);
+                    double distanceSquared = dx * dx + dy * dy;
                     return distanceSquared <= radius * radius;
                 })
                 .ToArray();
         }
 
-        private static string[] getTileIdsAround(float lat, float lon, float radius)
+        private static string[] getTileIdsAround(double lat, double lon, double radius)
         {
             int tileX = xToTile(lonToX(lon));
             int tileY = yToTile(latToY(lat));
@@ -65,7 +65,7 @@ namespace ViennaDotNet.ApiServer.Utils
             return null;
         }
 
-        public void notifyTileActive(string playerId, float lat, float lon)
+        public void notifyTileActive(string playerId, double lat, double lon)
         {
             int tileX = xToTile(lonToX(lon));
             int tileY = yToTile(latToY(lat));
@@ -127,22 +127,22 @@ namespace ViennaDotNet.ApiServer.Utils
             return $"{xToTile(lonToX(lon))}_{yToTile(latToY(lat))}";
         }
 
-        private static float lonToX(float lon)
+        private static double lonToX(double lon)
         {
-            return (float)((1.0 + MathE.ToRadians(lon) / Math.PI) / 2.0);
+            return ((1.0 + MathE.ToRadians(lon) / Math.PI) / 2.0);
         }
 
-        private static float latToY(float lat)
+        private static double latToY(double lat)
         {
-            return (float)((1.0 - (Math.Log(Math.Tan(MathE.ToRadians(lat)) + 1.0 / Math.Cos(MathE.ToRadians(lat)))) / Math.PI) / 2.0);
+            return ((1.0 - (Math.Log(Math.Tan(MathE.ToRadians(lat)) + 1.0 / Math.Cos(MathE.ToRadians(lat)))) / Math.PI) / 2.0);
         }
 
-        private static int xToTile(float x)
+        private static int xToTile(double x)
         {
             return (int)Math.Floor(x * (1 << 16));
         }
 
-        private static int yToTile(float y)
+        private static int yToTile(double y)
         {
             return (int)Math.Floor(y * (1 << 16));
         }

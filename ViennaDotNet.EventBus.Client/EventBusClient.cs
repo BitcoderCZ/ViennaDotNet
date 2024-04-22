@@ -14,6 +14,8 @@ namespace ViennaDotNet.EventBus.Client
 {
     public class EventBusClient
     {
+        //public const int Timeout = 15 * 1000;
+
         public static EventBusClient create(string connectionString)
         {
             string[] parts = connectionString.Split(':', 2);
@@ -34,7 +36,11 @@ namespace ViennaDotNet.EventBus.Client
             Socket socket;
             try
             {
-                socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
+                socket = new Socket(SocketType.Stream, ProtocolType.Tcp)
+                {
+                    //ReceiveTimeout = Timeout,
+                    //SendTimeout = Timeout
+                };
                 socket.Connect(host, port);
             }
             catch (IOException exception)
@@ -127,8 +133,6 @@ namespace ViennaDotNet.EventBus.Client
                                 {
                                     byteArrayOutputStream.Write(readBuffer, startOffset, offset - startOffset);
                                     string message = Encoding.ASCII.GetString(byteArrayOutputStream.ToArray());
-
-                                    Log.Debug($"REC MSG: {message}");
 
                                     lockObj.EnterReadLock();
                                     bool suppress = closed || error;
@@ -317,7 +321,6 @@ namespace ViennaDotNet.EventBus.Client
             {
                 try
                 {
-                    Log.Debug($"SEND CHID: {channelId}, MES: {message}");
                     outgoingMessageQueue.Add(channelId + " " + message + "\n");
                     break;
                 }

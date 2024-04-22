@@ -4,7 +4,7 @@ namespace ViennaDotNet.ApiServer.Utils
 {
     public static class TimeFormatter
     {
-        private static readonly string JSON_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'";
+        private static readonly string JSON_DATE_FORMAT = "yyyy-MM-ddTHH:mm:ssZ";
         private static readonly string JSON_DURATION_FORMAT = "{0}:{1:D2}:{2:D2}";
 
         public static string FormatTime(long time)

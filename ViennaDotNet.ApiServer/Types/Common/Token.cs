@@ -21,6 +21,7 @@ namespace ViennaDotNet.ApiServer.Types.Common
             TAPPABLE
         }
 
+        [JsonConverter(typeof(StringEnumConverter))]
         public enum Lifetime
         {
             [EnumMember(Value = "Persistent")]

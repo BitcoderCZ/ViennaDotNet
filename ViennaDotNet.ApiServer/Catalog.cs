@@ -39,6 +39,8 @@ namespace ViennaDotNet.ApiServer
                 recipesCatalog = JsonConvert.DeserializeObject<RecipesCatalogFile>(File.ReadAllText(Path.Combine(catalogDataDir, "recipes.json")))!.result;
                 journalCatalog = JsonConvert.DeserializeObject<JournalCatalogFile>(File.ReadAllText(Path.Combine(catalogDataDir, "journalCatalog.json")))!.result;
                 nfcBoostsCatalog = JsonConvert.DeserializeObject<NFCBoostsCatalogFile>(File.ReadAllText(Path.Combine(catalogDataDir, "productCatalog.json")))!.result;
+
+                Log.Information("Loaded catalog data");
             }
             catch (Exception exception)
             {

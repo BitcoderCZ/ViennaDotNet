@@ -26,7 +26,7 @@ namespace ViennaDotNet.ApiServer.Controllers
         private static Catalog catalog => Program.Catalog;
 
         [Route("locations/{lat}/{lon}")]
-        public IActionResult GetTappables(float lat, float lon)
+        public IActionResult GetTappables(double lat, double lon)
         {
             string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(playerId))
@@ -63,8 +63,8 @@ namespace ViennaDotNet.ApiServer.Controllers
 
                 string resp = JsonConvert.SerializeObject(new EarthApiResponse(new Dictionary<string, object>()
                 {
-                    { "activeLocations", activeLocations },
-                    { "killSwitchedTileIds", Array.Empty<int>() }
+                    { "killSwitchedTileIds", new List<object>() },
+                    { "activeLocations", activeLocations }
                 }));
                 return Content(resp, "application/json");
             }

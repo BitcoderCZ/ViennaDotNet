@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,9 +9,12 @@ using ViennaDotNet.DB.Models.Common;
 
 namespace ViennaDotNet.DB.Models.Player
 {
+    [JsonObject(MemberSerialization.OptIn)]
     public sealed class Inventory
     {
+        [JsonProperty]
         private Dictionary<string, int?> stackableItems;
+        [JsonProperty]
         private Dictionary<string, Dictionary<string, NonStackableItemInstance>> nonStackableItems;
 
         public Inventory()
@@ -90,7 +94,7 @@ namespace ViennaDotNet.DB.Models.Player
             if (count < 0)
                 throw new ArgumentException(nameof(count));
 
-            stackableItems.Add(id, stackableItems.GetOrDefault(id, 0) + count);
+            stackableItems[id] = stackableItems.GetOrDefault(id, 0) + count;
         }
 
         public void addItems(string id, NonStackableItemInstance[] instances)
@@ -110,7 +114,7 @@ namespace ViennaDotNet.DB.Models.Player
             if (currentCount < count)
                 return false;
 
-            stackableItems.Add(id, currentCount - count);
+            stackableItems[id] = currentCount - count;
             return true;
         }
 

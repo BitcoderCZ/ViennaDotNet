@@ -1,6 +1,7 @@
 ﻿using Microsoft.Data.Sqlite;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Serilog;
 using System;
 using System.Diagnostics;
 using System.Transactions;
@@ -46,7 +47,7 @@ namespace ViennaDotNet.DB
                 {
                     var connection = new SqliteConnection("Data Source=" + connectionString);
                     connection.Open();
-                    var transaction = connection.BeginTransaction(!write);// new Transaction(this, connection, write);
+                    var transaction = connection.BeginTransaction(/*!write*/false);// new Transaction(this, connection, write);
                     transactions.Add(transaction);
                     return transaction;
                 }
@@ -169,6 +170,7 @@ namespace ViennaDotNet.DB
                 write = _write;
             }
 
+            #region methods
             public Query Update(string type, string id, object value)
             {
                 if (!write)
@@ -201,6 +203,7 @@ namespace ViennaDotNet.DB
                 thenFunctions.Add(results => query);
                 return this;
             }
+            #endregion
 
             public Results Execute(EarthDB earthDB)
             {
@@ -231,63 +234,58 @@ namespace ViennaDotNet.DB
                 {
                     string json = JsonConvert.SerializeObject(entry.value);
 
-                    using (var command = transaction.Connection!.CreateCommand())
+                    var command = transaction.Connection!.CreateCommand();
+                    command.CommandText = "INSERT OR REPLACE INTO objects(type, id, value, version) VALUES ($type, $id, $value, COALESCE((SELECT version FROM objects WHERE type == $type AND id == $id), 1) + 1)";
+
+                    command.Parameters.AddWithValue("$type", entry.type);
+                    command.Parameters.AddWithValue("$id", entry.id);
+                    command.Parameters.AddWithValue("$value", json);
+                    command.ExecuteNonQuery();
+
+                    /*****************************/
+                    command = transaction.Connection.CreateCommand();
+                    command.CommandText = "SELECT version FROM objects WHERE type == $type AND id == $id";
+
+                    command.Parameters.AddWithValue("$type", entry.type);
+                    command.Parameters.AddWithValue("$id", entry.id);
+                    using (var reader = command.ExecuteReader())
                     {
-                        command.CommandText = "INSERT OR REPLACE INTO objects(type, id, value, version) VALUES ($type, $id, $value, COALESCE((SELECT version FROM objects WHERE type == $type AND id == $id), 1) + 1)";
-
-                        command.Parameters.AddWithValue("$type", entry.type);
-                        command.Parameters.AddWithValue("$id", entry.id);
-                        command.Parameters.AddWithValue("$value", json);
-                        command.ExecuteNonQuery();
-                    }
-
-                    using (var command = transaction.Connection.CreateCommand())
-                    {
-                        command.CommandText = "SELECT version FROM objects WHERE type == $type AND id == $id";
-
-                        command.Parameters.AddWithValue("$type", entry.type);
-                        command.Parameters.AddWithValue("$id", entry.id);
-                        using (var reader = command.ExecuteReader())
+                        if (reader.Read())
                         {
-                            if (reader.Read())
-                            {
-                                var version = reader.GetInt32(0);
-                                results.updates.Add(entry.type, version);
-                            }
-                            else
-                                throw new DatabaseException("Could not query updated object");
+                            var version = reader.GetInt32(0);
+                            results.updates[entry.type] = version;
                         }
+                        else
+                            throw new DatabaseException("Could not query updated object");
                     }
                 }
 
                 foreach (ReadObjectsEntry entry in readObjects)
                 {
-                    using (var command = transaction.Connection!.CreateCommand())
-                    {
-                        command.CommandText = "SELECT value, version FROM objects WHERE type == $type AND id == $id";
+                    var command = transaction.Connection!.CreateCommand();
+                    command.CommandText = "SELECT value, version FROM objects WHERE type == $type AND id == $id";
 
-                        command.Parameters.AddWithValue("$type", entry.type);
-                        command.Parameters.AddWithValue("$id", entry.id);
-                        using (var reader = command.ExecuteReader())
+                    command.Parameters.AddWithValue("$type", entry.type);
+                    command.Parameters.AddWithValue("$id", entry.id);
+                    using (var reader = command.ExecuteReader())
+                    {
+                        if (reader.Read())
                         {
-                            if (reader.Read())
+                            var json = reader.GetString(0);
+                            var version = reader.GetInt32(1);
+                            var value = JsonConvert.DeserializeObject(json, entry.valueType)!;
+                            results.getValues.Add(entry.type, new Results.Result(value, version));
+                        }
+                        else
+                        {
+                            try
                             {
-                                var json = reader.GetString(0);
-                                var version = reader.GetInt32(1);
-                                var value = JsonConvert.DeserializeObject(json, entry.valueType)!;
-                                results.getValues.Add(entry.type, new Results.Result(value, version));
+                                var value = Activator.CreateInstance(entry.valueType)!;
+                                results.getValues.Add(entry.type, new Results.Result(value, 1));
                             }
-                            else
+                            catch (Exception exception)
                             {
-                                try
-                                {
-                                    var value = Activator.CreateInstance(entry.valueType)!;
-                                    results.getValues.Add(entry.type, new Results.Result(value, 1));
-                                }
-                                catch (Exception exception)
-                                {
-                                    throw new DatabaseException(exception);
-                                }
+                                throw new DatabaseException(exception);
                             }
                         }
                     }

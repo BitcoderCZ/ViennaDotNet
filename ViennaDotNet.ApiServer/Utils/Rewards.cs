@@ -6,7 +6,6 @@ using ViennaDotNet.Common.Utils;
 using ViennaDotNet.DB;
 using ViennaDotNet.DB.Models.Common;
 using ViennaDotNet.DB.Models.Player;
-using static ViennaDotNet.ApiServer.Types.Common.Rewards;
 
 namespace ViennaDotNet.ApiServer.Utils
 {
@@ -65,15 +64,14 @@ namespace ViennaDotNet.ApiServer.Utils
         {
             EarthDB.Query getQuery = new EarthDB.Query(true);
             if (rubies > 0 || experiencePoints > 0)
-            {
                 getQuery.Get("profile", playerId, typeof(Profile));
-            }
-            if (!items.IsEmpty())
 
+            if (!items.IsEmpty())
             {
                 getQuery.Get("inventory", playerId, typeof(Inventory));
                 getQuery.Get("journal", playerId, typeof(Journal));
             }
+
             if (!buildplates.IsEmpty())
             {
                 // TODO

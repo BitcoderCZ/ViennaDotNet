@@ -13,6 +13,8 @@ namespace ViennaDotNet.EventBus.Server
 {
     public class NetworkServer
     {
+        //public const int Timeout = 15 * 1000;
+
         private readonly Server server;
         private readonly TcpListener serverSocket;
 
@@ -20,6 +22,8 @@ namespace ViennaDotNet.EventBus.Server
         {
             this.server = server;
             serverSocket = new TcpListener(IPAddress.Loopback, port);
+            //serverSocket.Server.ReceiveTimeout = Timeout;
+            //serverSocket.Server.SendTimeout = Timeout;
             serverSocket.Start();
             Log.Information($"Created server on port {port}");
         }
@@ -31,6 +35,8 @@ namespace ViennaDotNet.EventBus.Server
                 try
                 {
                     Socket socket = serverSocket.AcceptSocket();
+                    //socket.ReceiveTimeout = Timeout;
+                    //socket.SendTimeout = Timeout;
                     Log.Information($"Connection from {socket.RemoteEndPoint}");
                     Connection connection = new Connection(this, socket);
                     new Thread(connection.run).Start();
@@ -80,8 +86,6 @@ namespace ViennaDotNet.EventBus.Server
                                     byteArrayOutputStream.Write(readBuffer, startOffset, offset - startOffset);
                                     string command = Encoding.ASCII.GetString(byteArrayOutputStream.ToArray());
 
-                                    Log.Debug($"REC MSG: {command}");
-
                                     if (!handleCommand(command))
                                     {
                                         close = true;
@@ -114,7 +118,6 @@ namespace ViennaDotNet.EventBus.Server
                 {
                     try
                     {
-                        Log.Debug($"SEND MSG: {message}");
                         socket.Send(Encoding.ASCII.GetBytes(message + "\n"));
                     }
                     catch (IOException exception)

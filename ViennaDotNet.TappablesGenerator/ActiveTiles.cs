@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using ViennaDotNet.Common.Utils;
 using ViennaDotNet.EventBus.Client;
 using ViennaDotNet.TappablesGenerator;
-using static ViennaDotNet.TappablesGenerator.ActiveTiles;
 
 namespace ViennaDotNet.TappablesGenerator
 {

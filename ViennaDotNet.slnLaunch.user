@@ -9,10 +9,16 @@
       },
       {
         "Name": "ViennaDotNet.TappablesGenerator\\ViennaDotNet.TappablesGenerator.csproj",
-        "Action": "Start"
+        "Action": "Start",
+        "DebugTarget": ""
       },
       {
         "Name": "ViennaDotNet.EventBus.Server\\ViennaDotNet.EventBus.Server.csproj",
+        "Action": "Start",
+        "DebugTarget": ""
+      },
+      {
+        "Name": "ViennaDotNet.ObjectStore.Server\\ViennaDotNet.ObjectStore.Server.csproj",
         "Action": "Start"
       }
     ]

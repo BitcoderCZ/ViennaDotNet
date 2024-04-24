@@ -82,7 +82,7 @@ namespace ViennaDotNet.EventBus.Client
 
             outgoingThread = new Thread(() =>
             {
-
+                int sleepCounter = 0;
                 try
                 {
                     while (true)
@@ -93,7 +93,16 @@ namespace ViennaDotNet.EventBus.Client
                             byte[] bytes = Encoding.ASCII.GetBytes(message);
                             socket.Send(bytes);
                         }
-                        Thread.Sleep(0);
+
+                        // reduce CPU usage
+                        if (sleepCounter >= 2500)
+                        {
+                            sleepCounter = 0;
+                            Thread.Sleep(1);
+                        }
+                        else
+                            Thread.Sleep(0);
+                        sleepCounter++;
                     }
                 }
                 catch (ThreadAbortException)
@@ -117,6 +126,7 @@ namespace ViennaDotNet.EventBus.Client
 
             incomingThread = new Thread(() =>
             {
+                int sleepCounter = 0;
                 try
                 {
                     byte[] readBuffer = new byte[1024];
@@ -158,6 +168,16 @@ namespace ViennaDotNet.EventBus.Client
                             break;
                         else
                             throw new InvalidOperationException();
+
+                        // reduce CPU usage
+                        if (sleepCounter >= 2500)
+                        {
+                            sleepCounter = 0;
+                            Thread.Sleep(1);
+                        }
+                        else
+                            Thread.Sleep(0);
+                        sleepCounter++;
                     }
                 }
 

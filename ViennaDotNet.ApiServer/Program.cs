@@ -9,16 +9,20 @@ using ViennaDotNet.EventBus.Client;
 using ViennaDotNet.ApiServer.Utils;
 using CliUtils;
 using CliUtils.Exceptions;
+using ViennaDotNet.ObjectStore.Client;
 
 namespace ViennaDotNet.ApiServer
 {
     public static class Program
     {
+        // initialized in main
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         internal static EarthDB DB;
         internal static Catalog Catalog;
 
         internal static EventBusClient eventBus;
         internal static TappablesManager tappablesManager;
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
         public static void Main(string[] args)
         {
@@ -108,8 +112,6 @@ namespace ViennaDotNet.ApiServer
             }
 #endif
 
-            Catalog = new Catalog();
-
             Log.Information("Connecting to database");
             try
             {
@@ -135,6 +137,21 @@ namespace ViennaDotNet.ApiServer
                 return;
             }
             Log.Information("Connected to event bus");
+            Log.Information("Connecting to object storage");
+            ObjectStoreClient objectStoreClient;
+            try
+            {
+                objectStoreClient = ObjectStoreClient.create(objectStoreConnectionString);
+            }
+            catch (ObjectStoreClientException exception)
+            {
+                Log.Fatal($"Could not connect to object storage: {exception}");
+                Environment.Exit(1);
+                return;
+            }
+            Log.Information("Connected to object storage");
+
+            Catalog = new Catalog();
 
             tappablesManager = new TappablesManager(eventBus);
 

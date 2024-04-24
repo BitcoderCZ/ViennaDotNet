@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Primitives;
 using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
@@ -9,7 +10,7 @@ namespace ViennaDotNet.ApiServer.Authentication
 {
     public class GenoaAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
     {
-        public GenoaAuthenticationHandler(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder, ISystemClock clock) : base(options, logger, encoder, clock) { }
+        public GenoaAuthenticationHandler(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder) : base(options, logger, encoder) { }
 
         protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
         {
@@ -25,23 +26,25 @@ namespace ViennaDotNet.ApiServer.Authentication
             if (!Request.Headers.ContainsKey("Authorization"))
                 return AuthenticateResult.Fail("Missing Authorization Header");
 
-            string id;
+            string? id;
             try
             {
-                var authHeader = AuthenticationHeaderValue.Parse(Request.Headers["Authorization"]);
-                if (authHeader.Scheme.Equals("Genoa"))
-                {
-                    id = authHeader.Parameter;
-                }
-                else
-                {
+                if (!Request.Headers.TryGetValue("Authorization", out StringValues authorization))
                     return AuthenticateResult.Fail("Invalid Authorization Header");
-                }
+
+                var authHeader = AuthenticationHeaderValue.Parse(authorization.ToString());
+                if (authHeader.Scheme == "Genoa")
+                    id = authHeader.Parameter;
+                else
+                    return AuthenticateResult.Fail("Invalid Authorization Header");
             }
             catch
             {
                 return AuthenticateResult.Fail("Invalid Authorization Header");
             }
+
+            if (id is null)
+                return AuthenticateResult.Fail("Invalid Authorization Header");
 
             var claims = new[] { new Claim(ClaimTypes.NameIdentifier, id), };
 

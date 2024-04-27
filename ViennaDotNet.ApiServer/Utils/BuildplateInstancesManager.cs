@@ -32,7 +32,7 @@ namespace ViennaDotNet.ApiServer.Utils
             this.requestSender = eventBusClient.addRequestSender();
         }
 
-        public string? startBuildplateInstance(string playerId, string buildplateId, bool night)
+        public async Task<string?> startBuildplateInstance(string playerId, string buildplateId, bool night)
         {
             Log.Information($"Requesting buildplate instance for player {playerId} buildplate {buildplateId}");
 
@@ -57,7 +57,7 @@ namespace ViennaDotNet.ApiServer.Utils
                 }
             }
 
-            if (!completableFuture.Task.Result)
+            if (!(await completableFuture.Task))
             {
                 Log.Warning($"Could not start buildplate instance {instanceId}");
                 return null;
@@ -74,7 +74,6 @@ namespace ViennaDotNet.ApiServer.Utils
         }
 
         private void handleEvent(Subscriber.Event @event)
-
         {
             switch (@event.type)
             {
@@ -115,9 +114,8 @@ namespace ViennaDotNet.ApiServer.Utils
                     {
                         string instanceId = @event.data;
                         lock (instances)
-
                         {
-                            InstanceInfo? instanceInfo = this.instances.GetOrDefault(instanceId, null);
+                            InstanceInfo? instanceInfo = instances.GetOrDefault(instanceId, null);
                             if (instanceInfo != null)
                             {
                                 Log.Information($"Buildplate instance {instanceId} is ready");
@@ -137,12 +135,9 @@ namespace ViennaDotNet.ApiServer.Utils
                     {
                         string instanceId = @event.data;
                         lock (instances)
-
                         {
                             if (instances.JavaRemove(instanceId) != null)
-                            {
                                 Log.Information($"Buildplate instance {instanceId} has stopped");
-                            }
                         }
                     }
                     break;

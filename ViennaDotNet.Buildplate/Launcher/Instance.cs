@@ -293,10 +293,11 @@ namespace ViennaDotNet.Buildplate.Launcher
             {
                 case "playerConnected":
                     {
+                        Log.Debug("Player connecting...");
                         PlayerConnectedRequest? playerConnectedRequest = readJson<PlayerConnectedRequest>(request.data);
                         if (playerConnectedRequest != null)
                         {
-                            if (playerConnectedRequest.uuid == playerId)    // TODO: probably remove this eventually and put in API server
+                            if (playerConnectedRequest.uuid == playerId || true)    // TODO: probably remove this eventually and put in API server
                             {
                                 PlayerConnectedResponse? playerConnectedResponse = sendEventBusRequest<PlayerConnectedResponse>("playerConnected", playerConnectedRequest, true).Result;
                                 if (playerConnectedResponse != null)
@@ -306,12 +307,16 @@ namespace ViennaDotNet.Buildplate.Launcher
                                 }
                             }
                             else
+                            {
+                                Log.Warning($"BAD CODE request: {playerConnectedRequest.uuid}, actual id: {playerId}");
                                 return new PlayerConnectedResponse(false, null);
+                            }
                         }
                     }
                     break;
                 case "playerDisconnected":
                     {
+                        Log.Debug("Player dicconnecting...");
                         PlayerDisconnectedRequest? playerDisconnectedRequest = readJson<PlayerDisconnectedRequest>(request.data);
                         if (playerDisconnectedRequest != null)
                         {
@@ -464,7 +469,7 @@ namespace ViennaDotNet.Buildplate.Launcher
                 .Append("enforce-secure-profile=false\n")
                 .Append("spawn-protection=0\n")
                 .Append($"server-port={serverInternalPort}\n")
-                .Append($"fountain-connector-plugin-jar={connectorPluginJar.FullName}\n")
+                .Append($"fountain-connector-plugin-jar={connectorPluginJar.FullName.Replace('\\', '/')}\n")
                 .Append("fountain-connector-plugin-class=micheal65536.vienna.buildplate.connector.plugin.ViennaConnectorPlugin\n")
                 .Append($"fountain-connector-plugin-arg={eventBusConnectionString}/{eventBusQueueName}\n")
                 .Append($"gamemode={(survival ? "survival" : "creative")}\n")
@@ -492,10 +497,13 @@ namespace ViennaDotNet.Buildplate.Launcher
 
             TagCompound levelDatTag = createLevelDat(survival, night);
             using (FileStream fs = new FileStream(Path.Combine(worldDir.FullName, "level.dat"), FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read))
+            using (GZipStream gzs = new GZipStream(fs, CompressionLevel.Optimal))
             {
-                TagWriter writer = new BinaryTagWriter(fs);
+                BinaryTagWriter writer = new BinaryTagWriter(gzs);
                 writer.WriteStartDocument();
+                writer.WriteStartTag(null, TagType.Compound);
                 writer.WriteTag(levelDatTag);
+                writer.WriteEndTag();
                 writer.WriteEndDocument();
             }
             //NBTIO.writeFile(levelDatTag, new File(worldDir, "level.dat"));
@@ -516,24 +524,6 @@ namespace ViennaDotNet.Buildplate.Launcher
             }
 
             return workDir;
-            //    try (ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(serverData); ZipInputStream zipInputStream = new ZipInputStream(byteArrayInputStream))
-
-            //{
-            //        for (ZipEntry zipEntry = zipInputStream.getNextEntry(); zipEntry != null; zipEntry = zipInputStream.getNextEntry())
-            //        {
-            //            if (zipEntry.isDirectory())
-            //            {
-            //                zipInputStream.closeEntry();
-            //                continue;
-            //            }
-
-            //            File file = new File(worldDir, zipEntry.getName());
-            //            Files.copy(zipInputStream, file.toPath());
-            //            zipInputStream.closeEntry();
-            //        }
-            //    }
-
-            //    return workDir;
         }
 
         private static bool copyServerFile(string src, string dst, bool directory)
@@ -660,8 +650,7 @@ namespace ViennaDotNet.Buildplate.Launcher
                 .put("initialized", (byte)1)
                 .build("Data");
 
-            TagCompound tag = new TagCompound("", dataTag.Value);
-            return tag;
+            return dataTag;
         }
 
         private DirectoryInfo? setupBridgeFiles(byte[] serverData)
@@ -680,7 +669,8 @@ namespace ViennaDotNet.Buildplate.Launcher
 
         private void cleanupBaseDir()
         {
-            Log.Information("Cleaning up runtime directory");
+            Log.Information("Cleaning up runtime directory NOT");
+            return;
             try
             {
                 Files.WalkFileTree(baseDir.FullName, new FileVisitor(
@@ -739,7 +729,7 @@ namespace ViennaDotNet.Buildplate.Launcher
             {
                 ProcessStartInfo startInfo = new ProcessStartInfo(javaCmd, $"-jar ./{fabricJarName} -nogui")
                 {
-                    WorkingDirectory = serverWorkDir.FullName,
+                    WorkingDirectory = serverWorkDir!.FullName,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,
@@ -758,7 +748,7 @@ namespace ViennaDotNet.Buildplate.Launcher
                 };
 
                 StreamWriter? writer = new StreamWriter($"log_{instanceId}-server");
-                serverProcess.OutputDataReceived += (sender, e) => writer?.WriteLine(e.Data);
+                serverProcess.OutputDataReceived += (sender, e) => Console.WriteLine("S " + e.Data);//writer?.WriteLine(e.Data);
                 serverProcess.ErrorDataReceived += (sender, e) => writer?.WriteLine(e.Data);
 
                 serverProcess.Exited += (sender, e) =>
@@ -837,8 +827,14 @@ namespace ViennaDotNet.Buildplate.Launcher
                     StartInfo = startInfo,
                     EnableRaisingEvents = true
                 };
-                StreamWriter? writer = new StreamWriter($"log_{instanceId}-server");
-                process.OutputDataReceived += (sender, e) => writer?.WriteLine(e.Data);
+                StreamWriter? writer = new StreamWriter($"log_{instanceId}-server_bridge");
+                int c = 0;
+                process.OutputDataReceived += (sender, e) =>
+                {
+                    c++;
+                    if (c > 10000)
+                        Console.WriteLine("B " + e.Data);
+                };//writer?.WriteLine(e.Data);
                 process.ErrorDataReceived += (sender, e) => writer?.WriteLine(e.Data);
 
                 process.Exited += (sender, e) =>
@@ -943,12 +939,14 @@ namespace ViennaDotNet.Buildplate.Launcher
 
         public void waitForReady()
         {
+            Log.Debug("Waiting for ready");
             for (; ; )
             {
                 try
                 {
                     if (!readyFuture.Task.Wait(1000))
                         throw new TimeoutException();
+                    Log.Debug("Ready");
                     break;
                 }
                 catch (AggregateException ex) when (ex.InnerExceptions.Any(e => e is TaskCanceledException))
@@ -973,6 +971,11 @@ namespace ViennaDotNet.Buildplate.Launcher
             {
                 try
                 {
+                    if (thread is null)
+                    {
+                        Log.Debug("thread is null in waitForShutdown");
+                        continue;
+                    }
                     thread.Join();
                     break;
                 }

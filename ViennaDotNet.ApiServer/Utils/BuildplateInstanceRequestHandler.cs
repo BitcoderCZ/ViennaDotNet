@@ -60,6 +60,7 @@ namespace ViennaDotNet.ApiServer.Utils
                                 }
                             case "playerConnected":
                                 {
+                                    Log.Debug("RequestHandler playerConnected");
                                     RequestWithBuildplateId<PlayerConnectedRequest>? requestWithBuildplateId = readRequest<PlayerConnectedRequest>(request.data);
                                     if (requestWithBuildplateId == null)
                                         return null;
@@ -174,7 +175,7 @@ namespace ViennaDotNet.ApiServer.Utils
             }
 
             EarthDB.Results results = new EarthDB.Query(false)
-                    .Get("buildplates", playerId, typeof(Buildplates))
+                .Get("buildplates", playerId, typeof(Buildplates))
                 .Execute(earthDB);
             Buildplates.Buildplate? buildplateUnsafeForPreviewGenerator = ((Buildplates)results.Get("buildplates").Value).getBuildplate(buildplateId);
             if (buildplateUnsafeForPreviewGenerator == null)

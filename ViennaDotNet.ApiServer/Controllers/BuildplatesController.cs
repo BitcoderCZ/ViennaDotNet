@@ -28,7 +28,7 @@ namespace ViennaDotNet.ApiServer.Controllers
 
         [HttpGet]
         [Route("buildplates")]
-        public IActionResult GetBuildplates()
+        public async Task<IActionResult> GetBuildplates()
         {
             string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
             if (string.IsNullOrEmpty(playerId))
@@ -49,9 +49,9 @@ namespace ViennaDotNet.ApiServer.Controllers
 
             // not null is ensured in .Where
 #pragma warning disable CS8619 // Nullability of reference types in value doesn't match target type.
-            OwnedBuildplate[] ownedBuildplates = buildplatesModel.getBuildplates().Select(buildplateEntry =>
+            OwnedBuildplate[] ownedBuildplates = buildplatesModel.getBuildplates().Select(async buildplateEntry =>
             {
-                byte[]? previewData = objectStoreClient.get(buildplateEntry.buildplate.previewObjectId).Task.Result as byte[]/*.join()*/;
+                byte[]? previewData = (await objectStoreClient.get(buildplateEntry.buildplate.previewObjectId).Task) as byte[]/*.join()*/;
                 if (previewData == null)
                 {
                     Log.Error($"Preview object {buildplateEntry.buildplate.previewObjectId} for buildplate {buildplateEntry.id} could not be loaded from object store");
@@ -75,7 +75,8 @@ namespace ViennaDotNet.ApiServer.Controllers
                     0,    // TODO
                     ""
                 );
-            }).Where(ownedBuildplate => ownedBuildplate != null).ToArray();
+            }).Where(ownedBuildplate => ownedBuildplate != null)
+            .Select(task => task.Result).ToArray();
 #pragma warning restore CS8619 // Nullability of reference types in value doesn't match target type.
 
             string resp = JsonConvert.SerializeObject(new EarthApiResponse(ownedBuildplates));
@@ -106,17 +107,21 @@ namespace ViennaDotNet.ApiServer.Controllers
             if (buildplate is null)
                 return BadRequest();
 
-            string? instanceId = buildplateInstancesManager.startBuildplateInstance(playerId, buildplateId, buildplate.night);
+            string? instanceId = await buildplateInstancesManager.startBuildplateInstance(playerId, buildplateId, buildplate.night);
+            Log.Debug("Null instance :(");
             if (instanceId is null)
                 return BadRequest();
 
             BuildplateInstancesManager.InstanceInfo? instanceInfo = buildplateInstancesManager.getInstanceInfo(instanceId);
+            Log.Debug("Null instanceInfo :(");
             if (instanceInfo is null)
                 return BadRequest();
 
             BuildplateInstance buildplateInstance = instanceInfoToApiResponse(buildplate, instanceInfo);
 
             string resp = JsonConvert.SerializeObject(new EarthApiResponse(buildplateInstance));
+            Log.Debug("Sending instance :) ... get ready to crash ...");
+            Console.WriteLine($"Ins data: {resp}");
             return Content(resp, "application/json");
         }
 
@@ -166,8 +171,9 @@ namespace ViennaDotNet.ApiServer.Controllers
                     try
                     {
                         // TODO: Thread.Sleep instead?
-                        await Task.Delay(1000);
-                        //Thread.sleep(1000);
+                        //await Task.Delay(1000);
+                        Thread.Sleep(1000);
+                        Log.Debug("Sleeeeeep...");
                     }
                     catch (ThreadAbortException)
                     {
@@ -177,10 +183,12 @@ namespace ViennaDotNet.ApiServer.Controllers
                     waitCount++;
                 }
             }
-            while (!instanceInfo1.ready && waitCount < 30);
+            while (!instanceInfo1.ready && waitCount < 40);
+            Log.Debug("Ready!!!");
             BuildplateInstance buildplateInstance = instanceInfoToApiResponse(buildplate, instanceInfo1);
 
             string resp = JsonConvert.SerializeObject(new EarthApiResponse(buildplateInstance));
+            Log.Debug($"Response: {resp}");
             return Content(resp, "application/json");
         }
 

@@ -43,8 +43,8 @@ namespace ViennaDotNet.ApiServer
                 .WriteTo.File("logs/debug.txt", rollingInterval: RollingInterval.Day, rollOnFileSizeLimit: true, fileSizeLimitBytes: 8338607, outputTemplate: "{Timestamp:HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
                 .MinimumLevel.Debug()
                 .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
-                .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Information)
-                .MinimumLevel.Override("ViennaDotNet.ApiServer.Authentication", LogEventLevel.Information)
+                .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+                .MinimumLevel.Override("ViennaDotNet.ApiServer.Authentication", LogEventLevel.Warning)
                 .CreateLogger();
 
             Log.Logger = log;
@@ -84,7 +84,7 @@ namespace ViennaDotNet.ApiServer
                 .LongOpt("previewGenerator")
                 .HasArg()
                 .ArgName("command")
-                //.Required()
+                .Required()
                 .Desc("Command to run the buildplate preview generator")
                 .Build());
 

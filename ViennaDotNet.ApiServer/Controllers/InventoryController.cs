@@ -34,10 +34,10 @@ namespace ViennaDotNet.ApiServer.Controllers
             try
             {
                 EarthDB.Results results = new EarthDB.Query(false)
-                        .Get("inventory", playerId, typeof(Inventory))
-                        .Get("hotbar", playerId, typeof(Hotbar))
-                        .Get("journal", playerId, typeof(Journal))
-                        .Execute(earthDB);
+                    .Get("inventory", playerId, typeof(Inventory))
+                    .Get("hotbar", playerId, typeof(Hotbar))
+                    .Get("journal", playerId, typeof(Journal))
+                    .Execute(earthDB);
                 inventoryModel = (Inventory)results.Get("inventory").Value;
                 hotbarModel = (Hotbar)results.Get("hotbar").Value;
                 journalModel = (Journal)results.Get("journal").Value;

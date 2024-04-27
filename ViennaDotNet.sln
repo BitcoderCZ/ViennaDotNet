@@ -20,11 +20,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.editorconfig = .editorconfig
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ViennaDotNet.ObjectStore.Client", "ViennaDotNet.ObjectStore.Client\ViennaDotNet.ObjectStore.Client.csproj", "{F2C741F0-1916-4659-8E12-E5CB100217B2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ViennaDotNet.ObjectStore.Client", "ViennaDotNet.ObjectStore.Client\ViennaDotNet.ObjectStore.Client.csproj", "{F2C741F0-1916-4659-8E12-E5CB100217B2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ViennaDotNet.ObjectStore.Server", "ViennaDotNet.ObjectStore.Server\ViennaDotNet.ObjectStore.Server.csproj", "{4FB6F426-10BA-49A6-BF5E-A0754985AA25}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ViennaDotNet.ObjectStore.Server", "ViennaDotNet.ObjectStore.Server\ViennaDotNet.ObjectStore.Server.csproj", "{4FB6F426-10BA-49A6-BF5E-A0754985AA25}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ViennaDotNet.Buildplate", "ViennaDotNet.Buildplate\ViennaDotNet.Buildplate.csproj", "{0704D024-9218-4E07-999C-9D822B4963EB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ViennaDotNet.Buildplate", "ViennaDotNet.Buildplate\ViennaDotNet.Buildplate.csproj", "{0704D024-9218-4E07-999C-9D822B4963EB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -100,12 +100,12 @@ Global
 		{4FB6F426-10BA-49A6-BF5E-A0754985AA25}.Release|x64.Build.0 = Release|x64
 		{0704D024-9218-4E07-999C-9D822B4963EB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{0704D024-9218-4E07-999C-9D822B4963EB}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{0704D024-9218-4E07-999C-9D822B4963EB}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{0704D024-9218-4E07-999C-9D822B4963EB}.Debug|x64.Build.0 = Debug|Any CPU
+		{0704D024-9218-4E07-999C-9D822B4963EB}.Debug|x64.ActiveCfg = Debug|x64
+		{0704D024-9218-4E07-999C-9D822B4963EB}.Debug|x64.Build.0 = Debug|x64
 		{0704D024-9218-4E07-999C-9D822B4963EB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0704D024-9218-4E07-999C-9D822B4963EB}.Release|Any CPU.Build.0 = Release|Any CPU
-		{0704D024-9218-4E07-999C-9D822B4963EB}.Release|x64.ActiveCfg = Release|Any CPU
-		{0704D024-9218-4E07-999C-9D822B4963EB}.Release|x64.Build.0 = Release|Any CPU
+		{0704D024-9218-4E07-999C-9D822B4963EB}.Release|x64.ActiveCfg = Release|x64
+		{0704D024-9218-4E07-999C-9D822B4963EB}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

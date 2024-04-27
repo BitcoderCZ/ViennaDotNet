@@ -375,6 +375,12 @@ namespace ViennaDotNet.ObjectStore.Client
                                     if (length < 0)
                                         return -1;
 
+                                    if (length == 0)
+                                    {
+                                        // length 0 works (get's send) (probably maybe not, why would it work, is micheal just testing me???) in java, but not here
+                                        handleBinaryData(message, new byte[0]);
+                                    }
+
                                     return length;
                                 }
                                 catch (FormatException)

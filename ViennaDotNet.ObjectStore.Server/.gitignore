@@ -1,3 +1,4 @@
 obj/
 bin/
 logs/
+ViennaDotNet.ObjectStore.Server.csproj.user

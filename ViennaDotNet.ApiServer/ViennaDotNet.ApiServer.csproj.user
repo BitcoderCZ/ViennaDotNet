@@ -8,5 +8,6 @@
   </PropertyGroup>
   <PropertyGroup>
     <ActiveDebugProfile>http</ActiveDebugProfile>
+    <NameOfLastUsedPublishProfile>C:\dev\VSProjects\ViennaDotNet\ViennaDotNet.ApiServer\Properties\PublishProfiles\FolderProfile.pubxml</NameOfLastUsedPublishProfile>
   </PropertyGroup>
 </Project>

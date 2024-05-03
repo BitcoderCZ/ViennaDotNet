@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <Platforms>AnyCPU;x64</Platforms>
+    <AssemblyName>ApiServer</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,7 +21,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ViennaDotNet.Buildplate\ViennaDotNet.Buildplate.csproj" />
     <ProjectReference Include="..\ViennaDotNet.Common\ViennaDotNet.Common.csproj" />
     <ProjectReference Include="..\ViennaDotNet.DB\ViennaDotNet.DB.csproj" />
     <ProjectReference Include="..\ViennaDotNet.EventBus.Client\ViennaDotNet.EventBus.Client.csproj" />

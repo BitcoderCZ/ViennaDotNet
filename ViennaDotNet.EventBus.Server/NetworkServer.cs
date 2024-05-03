@@ -100,8 +100,8 @@ namespace ViennaDotNet.EventBus.Server
                         }
                         else if (readLength == -1)
                             close = true;
-                        else
-                            throw new InvalidOperationException();
+                        //else
+                        //    throw new InvalidOperationException();
                     }
                 }
                 catch (SocketException exception)

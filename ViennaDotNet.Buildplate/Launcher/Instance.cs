@@ -17,6 +17,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
 using ViennaDotNet.Buildplate.Connector.Model;
+using ViennaDotNet.Common;
 using ViennaDotNet.Common.Utils;
 using ViennaDotNet.DB;
 using ViennaDotNet.DB.Models.Player;
@@ -70,8 +71,8 @@ namespace ViennaDotNet.Buildplate.Launcher
 
         private DirectoryInfo? serverWorkDir;
         private DirectoryInfo? bridgeWorkDir;
-        private Process? serverProcess = null;
-        private Process? bridgeProcess = null;
+        private ConsoleProcess? serverProcess = null;
+        private ConsoleProcess? bridgeProcess = null;
         private bool shuttingDown = false;
         private readonly object subprocessLock = new object();
 
@@ -195,7 +196,7 @@ namespace ViennaDotNet.Buildplate.Launcher
                     if (serverProcess != null)
                     {
                         Monitor.Exit(subprocessLock);
-                        int exitCode = waitForProcess(serverProcess);
+                        int exitCode = waitForProcess(serverProcess.Process);
                         Monitor.Enter(subprocessLock);
                         serverProcess = null;
                         if (!shuttingDown)
@@ -208,9 +209,9 @@ namespace ViennaDotNet.Buildplate.Launcher
                         if (bridgeProcess != null)
                         {
                             Log.Information("Bridge is still running, shutting it down now");
-                            bridgeProcess.Kill();//destroy();
+                            bridgeProcess.StopAndWait();
                             Monitor.Exit(subprocessLock);
-                            exitCode = waitForProcess(bridgeProcess);
+                            exitCode = waitForProcess(bridgeProcess.Process);
                             Monitor.Enter(subprocessLock);
                             bridgeProcess = null;
                             Log.Information("Bridge has finished with exit code {}", exitCode);
@@ -729,43 +730,32 @@ namespace ViennaDotNet.Buildplate.Launcher
 
             try
             {
-                ProcessStartInfo startInfo = new ProcessStartInfo(javaCmd, $"-jar {fabricJarName} -nogui")
-                {
-                    WorkingDirectory = serverWorkDir!.FullName,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
+                bool useShellExecute = true;
                 //serverProcess = new ProcessBuilder()
                 //        .command(javaCmd, "-jar", "./" + fabricJarName, "-nogui")
                 //        .directory(serverWorkDir)
                 //        .redirectOutput(ProcessBuilder.Redirect.to(new File("log_%s-server".formatted(instanceId))))
                 //        .redirectErrorStream(true)
                 //        .start();
-                serverProcess = new Process()
-                {
-                    StartInfo = startInfo,
-                    EnableRaisingEvents = true // needed for Process.Exited
-                };
+                serverProcess = new ConsoleProcess(javaCmd, useShellExecute, !useShellExecute);
 
-                StreamWriter? writer = new StreamWriter($"log_{instanceId}-server") { AutoFlush = true };
-                serverProcess.OutputDataReceived += (sender, e) => writer?.WriteLine(e.Data);
-                serverProcess.ErrorDataReceived += (sender, e) => writer?.WriteLine(e.Data);
+                StreamWriter? writer = null;
+                if (!useShellExecute) {
+                    writer = new StreamWriter($"log_{instanceId}-server") { AutoFlush = true };
+                    serverProcess.StandartTextReceived += (sender, e) => writer?.WriteLine(e.Data);
+                    serverProcess.ErrorTextReceived += (sender, e) => writer?.WriteLine(e.Data);
+                }
 
-                serverProcess.Exited += (sender, e) =>
+                serverProcess.ProcessExited += (sender, e) =>
                 {
                     Log.Information("SERVER LOG CLOSED");
                     writer?.Close();
                     writer = null;
                 };
 
-                serverProcess.Start();
+                serverProcess.ExecuteAsync(serverWorkDir!.FullName, new string[] { "-jar", fabricJarName, "-nogui" });
 
-                serverProcess.BeginOutputReadLine();
-                serverProcess.BeginErrorReadLine();
-
-                Log.Information($"Server process started, PID {serverProcess.Id/*pid()*/}");
+                Log.Information($"Server process started, PID {serverProcess.Id}");
             }
             catch (IOException exception)
             {
@@ -796,6 +786,7 @@ namespace ViennaDotNet.Buildplate.Launcher
 
             try
             {
+                bool useShellExecute = true;
                 //Process process = new ProcessBuilder()
                 //        .command(javaCmd, "-jar", fountainBridgeJar.getAbsolutePath(),
                 //                "-port", Integer.toString(port),
@@ -808,33 +799,15 @@ namespace ViennaDotNet.Buildplate.Launcher
                 //        .redirectOutput(ProcessBuilder.Redirect.to(new File("log_%s-bridge".formatted(instanceId))))
                 //        .redirectErrorStream(true)
                 //        .start();
-                ProcessStartInfo startInfo = new ProcessStartInfo(javaCmd, new string[]
-                {
-                    "-jar", fountainBridgeJar.FullName,
-                    "-port", port.ToString(),
-                    "-serverAddress", "127.0.0.1",
-                    "-serverPort", serverInternalPort.ToString(),
-                    "-connectorPluginJar", connectorPluginJar.FullName,
-                    "-connectorPluginClass", "micheal65536.vienna.buildplate.connector.plugin.ViennaConnectorPlugin",
-                    "-connectorPluginArg", eventBusConnectionString + "/" + eventBusQueueName
-                })
-                {
-                    WorkingDirectory = bridgeWorkDir.FullName,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
-                Process process = new Process()
-                {
-                    StartInfo = startInfo,
-                    EnableRaisingEvents = true
-                };
-                StreamWriter? writer = new StreamWriter($"log_{instanceId}-bridge") { AutoFlush = true };
-                process.OutputDataReceived += (sender, e) => writer?.WriteLine(e.Data);
-                process.ErrorDataReceived += (sender, e) => writer?.WriteLine(e.Data);
+                bridgeProcess = new ConsoleProcess(javaCmd, useShellExecute, !useShellExecute);
+                StreamWriter? writer = null;
+                if (!useShellExecute) { 
+                    writer = new StreamWriter($"log_{instanceId}-bridge") { AutoFlush = true };
+                    bridgeProcess.StandartTextReceived += (sender, e) => writer?.WriteLine(e.Data);
+                    bridgeProcess.ErrorTextReceived += (sender, e) => writer?.WriteLine(e.Data);
+                }
 
-                process.Exited += (sender, e) =>
+                bridgeProcess.ProcessExited += (sender, e) =>
                 {
                     Log.Information("BRIDGE LOG CLOSED");
                     writer?.Close();
@@ -843,19 +816,27 @@ namespace ViennaDotNet.Buildplate.Launcher
                     Monitor.Enter(subprocessLock);
                     if (!shuttingDown)
                     {
-                        Log.Warning($"Bridge process has unexpectedly terminated with exit code {process.ExitCode}");
+                        Log.Warning($"Bridge process has unexpectedly terminated with exit code {bridgeProcess.ExitCode}");
                         bridgeProcess = null;
                         beginShutdown();
                     }
                     Monitor.Exit(subprocessLock);
                 };
 
-                process.Start();
+                bridgeProcess.ExecuteAsync(bridgeWorkDir!.FullName, new string[]
+                {
+                    "-jar", fountainBridgeJar.FullName,
+                    "-port", port.ToString(),
+                    "-serverAddress", "127.0.0.1",
+                    "-serverPort", serverInternalPort.ToString(),
+                    "-connectorPluginJar", connectorPluginJar.FullName,
+                    "-connectorPluginClass", "micheal65536.vienna.buildplate.connector.plugin.ViennaConnectorPlugin",
+                    "-connectorPluginArg", eventBusConnectionString + "/" + eventBusQueueName
+                });
 
-                process.BeginOutputReadLine();
-                process.BeginErrorReadLine();
+                //process.BeginOutputReadLine();
+                //process.BeginErrorReadLine();
 
-                bridgeProcess = process;
                 Log.Information($"Bridge process started, PID {bridgeProcess.Id/*.pid()*/}");
 
                 //new Thread(() =>
@@ -898,9 +879,9 @@ namespace ViennaDotNet.Buildplate.Launcher
                 if (bridgeProcess != null)
                 {
                     Log.Information("Waiting for bridge to shut down");
-                    bridgeProcess.Kill();
                     Monitor.Exit(subprocessLock);
-                    int exitCode = waitForProcess(bridgeProcess);
+                    bridgeProcess.StopAndWait();
+                    int exitCode = bridgeProcess.ExitCode;//waitForProcess(bridgeProcess.Process);
                     Monitor.Enter(subprocessLock);
                     bridgeProcess = null;
                     Log.Information($"Bridge has finished with exit code {exitCode}");
@@ -909,7 +890,7 @@ namespace ViennaDotNet.Buildplate.Launcher
                 if (serverProcess != null)
                 {
                     Log.Information("Asking the server to shut down");
-                    serverProcess.Kill();
+                    serverProcess.StopAndWait();
                 }
 
                 Monitor.Exit(subprocessLock);

@@ -150,8 +150,6 @@ namespace ViennaDotNet.ApiServer
             BuildplateInstanceRequestHandler.start(DB, eventBus, objectStore, Catalog);
 
             CreateHostBuilder(args, httpPort).Build().Run();
-
-            Log.Information("Server started!");
         }
 
         public static IHostBuilder CreateHostBuilder(string[] args, int httpPort) =>

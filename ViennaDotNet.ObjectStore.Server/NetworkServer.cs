@@ -7,8 +7,6 @@ using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using static System.Runtime.InteropServices.JavaScript.JSType;
-using static ViennaDotNet.Common.Utils.Java;
 
 namespace ViennaDotNet.ObjectStore.Server
 {
@@ -104,7 +102,7 @@ namespace ViennaDotNet.ObjectStore.Server
                                         {
                                             byteArrayOutputStream.Write(readBuffer, startOffset, offset - startOffset);
                                             lastCommand = Encoding.ASCII.GetString(byteArrayOutputStream.ToArray());
-                                            binaryReadLength = this.handleCommand(lastCommand);
+                                            binaryReadLength = handleCommand(lastCommand);
                                             if (binaryReadLength == -1)
                                             {
                                                 close = true;
@@ -195,9 +193,8 @@ namespace ViennaDotNet.ObjectStore.Server
                         {
                             string id = parts[1];
                             if (!validateObjectId(id))
-                            {
                                 return -1;
-                            }
+
                             byte[]? data = networkServer.server.load(id);
                             if (data != null)
                             {

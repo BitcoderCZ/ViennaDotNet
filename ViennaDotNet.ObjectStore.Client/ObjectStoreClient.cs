@@ -96,9 +96,9 @@ namespace ViennaDotNet.ObjectStore.Client
                 catch (IOException)
                 {
                     lock (lockObj)
-                        this.closed = true;
+                        closed = true;
                 }
-                this.initiateClose();
+                initiateClose();
             });
 
             incomingThread = new Thread(() =>

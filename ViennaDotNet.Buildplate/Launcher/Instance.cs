@@ -731,12 +731,7 @@ namespace ViennaDotNet.Buildplate.Launcher
             try
             {
                 bool useShellExecute = true;
-                //serverProcess = new ProcessBuilder()
-                //        .command(javaCmd, "-jar", "./" + fabricJarName, "-nogui")
-                //        .directory(serverWorkDir)
-                //        .redirectOutput(ProcessBuilder.Redirect.to(new File("log_%s-server".formatted(instanceId))))
-                //        .redirectErrorStream(true)
-                //        .start();
+
                 serverProcess = new ConsoleProcess(javaCmd, useShellExecute, !useShellExecute);
 
                 StreamWriter? writer = null;
@@ -787,18 +782,7 @@ namespace ViennaDotNet.Buildplate.Launcher
             try
             {
                 bool useShellExecute = true;
-                //Process process = new ProcessBuilder()
-                //        .command(javaCmd, "-jar", fountainBridgeJar.getAbsolutePath(),
-                //                "-port", Integer.toString(port),
-                //                "-serverAddress", "127.0.0.1",
-                //                "-serverPort", Integer.toString(serverInternalPort),
-                //                "-connectorPluginJar", connectorPluginJar.getAbsolutePath(),
-                //                "-connectorPluginClass", "micheal65536.vienna.buildplate.connector.plugin.ViennaConnectorPlugin",
-                //                "-connectorPluginArg", eventBusConnectionString + "/" + eventBusQueueName)
-                //        .directory(bridgeWorkDir)
-                //        .redirectOutput(ProcessBuilder.Redirect.to(new File("log_%s-bridge".formatted(instanceId))))
-                //        .redirectErrorStream(true)
-                //        .start();
+
                 bridgeProcess = new ConsoleProcess(javaCmd, useShellExecute, !useShellExecute);
                 StreamWriter? writer = null;
                 if (!useShellExecute) { 
@@ -834,23 +818,7 @@ namespace ViennaDotNet.Buildplate.Launcher
                     "-connectorPluginArg", eventBusConnectionString + "/" + eventBusQueueName
                 });
 
-                //process.BeginOutputReadLine();
-                //process.BeginErrorReadLine();
-
                 Log.Information($"Bridge process started, PID {bridgeProcess.Id/*.pid()*/}");
-
-                //new Thread(() =>
-                //{
-                //    waitForProcess(process);
-                //    Monitor.Enter(subprocessLock);
-                //    if (!shuttingDown)
-                //    {
-                //        logger.warn("Bridge process has unexpectedly terminated with exit code {}", process.exitValue());
-                //        bridgeProcess = null;
-                //        beginShutdown();
-                //    }
-                //    Monitor.Exit(subprocessLock);
-                //}).Start();
             }
             catch (IOException exception)
             {

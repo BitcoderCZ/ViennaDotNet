@@ -28,8 +28,8 @@ namespace ViennaDotNet.Buildplate_Importer
             [Option("id", Required = true, HelpText = "Player ID to import for")]
             public string PlayerId { get; set; }
 
-            [Option("dir", Required = true, HelpText = "World to import")]
-            public string WorldDir { get; set; }
+            [Option("file", Required = true, HelpText = "World to import (directory or zip)")]
+            public string WorldPath { get; set; }
         }
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         static async Task<int> Main(string[] args)
@@ -104,7 +104,7 @@ namespace ViennaDotNet.Buildplate_Importer
                 eventBusClient = null;
             }
 
-            byte[]? serverData = createServerDataFromWorldDir(options.WorldDir);
+            byte[]? serverData = createServerDataFromWorldPath(options.WorldPath);
             if (serverData == null)
             {
                 Log.Fatal("Could not get world data");
@@ -123,42 +123,53 @@ namespace ViennaDotNet.Buildplate_Importer
             return 0;
         }
 
-        private static byte[]? createServerDataFromWorldDir(string worldDir)
+        private static byte[]? createServerDataFromWorldPath(string worldPath)
         {
-            if (!Directory.Exists(worldDir))
+            if (File.Exists(worldPath))
             {
-                Log.Error("World directory cannot be accessed");
-                return null;
-            }
-
-            byte[] data;
-            try
-            {
-                using MemoryStream byteArrayOutputStream = new MemoryStream();
-
-                using (ZipArchive zipArchive = new ZipArchive(byteArrayOutputStream, ZipArchiveMode.Create))
+                try
                 {
-                    foreach (string dirName in new string[] { "region", "entities" })
+                    return File.ReadAllBytes(worldPath);
+                }
+                catch (IOException ex)
+                {
+                    Log.Error($"Could not read world file: {ex}");
+                    return null;
+                }
+            }
+            else if (Directory.Exists(worldPath))
+            {
+                try
+                {
+                    using MemoryStream byteArrayOutputStream = new MemoryStream();
+
+                    using (ZipArchive zipArchive = new ZipArchive(byteArrayOutputStream, ZipArchiveMode.Create))
                     {
-                        string dir = Path.Combine(worldDir, dirName);
-                        foreach (string regionName in new string[] { "r.0.0.mca", "r.0.-1.mca", "r.-1.0.mca", "r.-1.-1.mca" })
+                        foreach (string dirName in new string[] { "region", "entities" })
                         {
-                            ZipArchiveEntry zipEntry = zipArchive.CreateEntry(dirName + "/" + regionName, CompressionLevel.Optimal);
-                            using (FileStream fileInputStream = File.OpenRead(Path.Combine(dir, regionName)))
-                            using (Stream zipEntryStream = zipEntry.Open())
-                                fileInputStream.CopyTo(zipEntryStream);
+                            string dir = Path.Combine(worldPath, dirName);
+                            foreach (string regionName in new string[] { "r.0.0.mca", "r.0.-1.mca", "r.-1.0.mca", "r.-1.-1.mca" })
+                            {
+                                ZipArchiveEntry zipEntry = zipArchive.CreateEntry(dirName + "/" + regionName, CompressionLevel.Optimal);
+                                using (FileStream fileInputStream = File.OpenRead(Path.Combine(dir, regionName)))
+                                using (Stream zipEntryStream = zipEntry.Open())
+                                    fileInputStream.CopyTo(zipEntryStream);
+                            }
                         }
                     }
-                }
 
-                data = byteArrayOutputStream.ToArray();
-            }
-            catch (IOException ex)
+                    return byteArrayOutputStream.ToArray();
+                }
+                catch (IOException ex)
+                {
+                    Log.Error($"Could not get saved world data from world directory: {ex}");
+                    return null;
+                }
+            } else
             {
-                Log.Error($"Could not get saved world data from world directory: {ex}");
+                Log.Error("World file/directory cannot be accessed");
                 return null;
             }
-            return data;
         }
 
         record PreviewRequest(

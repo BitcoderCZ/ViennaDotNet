@@ -188,8 +188,17 @@ namespace ViennaDotNet.ObjectStore.Server
                         {
                             if (!int.TryParse(parts[1], out int length) || length < 0)
                                 return -1;
-                            else
-                                return length;
+
+                            if (length == 0)
+                            {
+                                string? id = networkServer.server.store(new byte[0]);
+                                if (id != null)
+                                    sendMessage("OK " + id);
+                                else
+                                    sendMessage("ERR");
+                            }
+
+                            return length;
                         }
                     case "GET":
                         {

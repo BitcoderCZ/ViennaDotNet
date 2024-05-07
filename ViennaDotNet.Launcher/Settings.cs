@@ -13,7 +13,6 @@ namespace ViennaDotNet.Launcher
             ObjectStorePort = 5396,
             IPv4 = "192.168.x.x",
             DatabaseConnectionString = $".{Path.DirectorySeparatorChar}..{Path.DirectorySeparatorChar}earth.db",
-            ObjectStoreDataDir = "data",
             SkipFileChecks = false,
         };
 
@@ -22,7 +21,6 @@ namespace ViennaDotNet.Launcher
         public ushort? ObjectStorePort { get; set; }
         public string? IPv4 { get; set; }
         public string? DatabaseConnectionString { get; set; }
-        public string? ObjectStoreDataDir { get; set; }
 
         public bool? SkipFileChecks { get; set; }
 
@@ -86,13 +84,6 @@ namespace ViennaDotNet.Launcher
             {
                 Log.Warning($"DatabaseConnectionString is invalid, using default: {Default.DatabaseConnectionString}");
                 settings.DatabaseConnectionString = Default.DatabaseConnectionString;
-                anyErrors = true;
-            }
-
-            if (settings.ObjectStoreDataDir is null)
-            {
-                Log.Warning($"ObjectStore Data Directory is invalid, using default: {Default.ObjectStoreDataDir}");
-                settings.ObjectStoreDataDir = Default.ObjectStoreDataDir;
                 anyErrors = true;
             }
 

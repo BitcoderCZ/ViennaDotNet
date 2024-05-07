@@ -26,7 +26,7 @@ namespace ViennaDotNet.Launcher.Programs
             Log.Information($"Running {DispName}");
             Process.Start(new ProcessStartInfo(Path.GetFullPath(Path.Combine(DirName, ExeName)), new string[]
             {
-                $"--dataDir={settings.ObjectStoreDataDir}",
+                $"--dataDir=data",
                 $"--port={settings.ObjectStorePort}"
             })
             {

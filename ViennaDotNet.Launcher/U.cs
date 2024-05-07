@@ -2,13 +2,9 @@
 {
     internal static class U
     {
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="exit">If <see langword="true"/> says 'Press any key to exit...'; otherwise says 'Press any key to continue...'</param>
-        public static void PAK(bool exit = false)
+        public static void PAK(string text = "continue")
         {
-            Console.WriteLine($"Press any key to {(exit ? "exit" : "continue")}...");
+            Console.WriteLine($"Press any key to {text}...");
             Console.ReadKey(true);
         }
 

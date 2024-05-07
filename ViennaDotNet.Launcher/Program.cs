@@ -30,6 +30,8 @@ namespace ViennaDotNet.Launcher
                 Environment.Exit(1);
             };
 
+            AutoUpdater.CheckAndUpdate().Wait();
+
             Settings = Settings.Load(settingsFile);
 
             UIList uIList = new UIList(new UIElement[]
@@ -66,7 +68,7 @@ namespace ViennaDotNet.Launcher
             if (!IPAddress.TryParse(Settings.IPv4, out var _))
             {
                 Log.Information($"IP is invalid, go to Configure and set IPv4 to IP of this computer");
-                U.PAK(true);
+                U.PAK();
                 Console.CursorVisible = false;
                 return;
             }
@@ -85,7 +87,7 @@ namespace ViennaDotNet.Launcher
                     !TappablesGenerator.Check()
                 )
                 {
-                    U.PAK(true);
+                    U.PAK();
                     Console.CursorVisible = false;
                     return;
                 }
@@ -100,7 +102,7 @@ namespace ViennaDotNet.Launcher
                     !Fountain.Check()
                 )
                 {
-                    U.PAK(true);
+                    U.PAK();
                     Console.CursorVisible = false;
                     return;
                 }
@@ -171,14 +173,6 @@ namespace ViennaDotNet.Launcher
                         Settings.Save(settingsFile);
                     }
                 },
-                new UIInputField("ObjectStore data directory")
-                {
-                    Value = Settings.ObjectStoreDataDir!,
-                    OnTextEnter = text => {
-                        Settings.ObjectStoreDataDir = text;
-                        Settings.Save(settingsFile);
-                    }
-                },
                 new UISpacer(new Vector2I(0, 1)),
                 new UIBool("Skip file validation before starting")
                 {
@@ -213,7 +207,7 @@ namespace ViennaDotNet.Launcher
 
             if (!BuildplateImporter.Check())
             {
-                U.PAK(true);
+                U.PAK();
                 Console.CursorVisible = false;
                 return;
             }
@@ -253,9 +247,9 @@ namespace ViennaDotNet.Launcher
             {
                 new UIText("***ViennaDotNet Launcher/Modify data***"),
                 new UISpacer(new Vector2I(0, 1)),
-                new UIButton("Import"),
-                new UIButton("Export"),
-                new UIButton("Delete"),
+                new UIButton("Import", Data.Import),
+                new UIButton("Export", () => Data.Export(Settings)),
+                new UIButton("Delete", () => Data.Delete(Settings)),
                 new UISpacer(new Vector2I(0, 1)),
                 new UIButton("Back")
                 {

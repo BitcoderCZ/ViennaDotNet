@@ -39,7 +39,7 @@ namespace ViennaDotNet.ApiServer.Controllers
                 new JProperty("player_journal_enabled", true),
                 new JProperty("player_stats_enabled", true),
                 new JProperty("activity_log_enabled", true),
-                new JProperty("seasons_enabled", true),
+                new JProperty("seasons_enabled", false),
                 new JProperty("daily_login_enabled", true),
                 new JProperty("store_pdp_enabled", true),
                 new JProperty("hotbar_stacksplitting_enabled", true),

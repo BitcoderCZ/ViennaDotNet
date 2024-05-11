@@ -1,0 +1,2 @@
+"C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\msbuild.exe" ViennaDotNet.ApiServer\ViennaDotNet.ApiServer.csproj /p:DeployOnBuild=true /p:PublishProfile=Folder_win-x64
+"C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\msbuild.exe" ViennaDotNet.Buildplate\ViennaDotNet.Buildplate.csproj /p:DeployOnBuild=true /p:PublishProfile=Folder_win-x64

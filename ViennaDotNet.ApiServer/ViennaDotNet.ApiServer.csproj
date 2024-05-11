@@ -8,6 +8,7 @@
     <AssemblyName>ApiServer</AssemblyName>
     <Version>1.0.0</Version>
     <TrimMode>partial</TrimMode>
+    <RuntimeIdentifiers>win-x64;win-x86</RuntimeIdentifiers>
   </PropertyGroup>
 
   <ItemGroup>

@@ -19,17 +19,13 @@ namespace ViennaDotNet.ApiServer.Controllers
     {
         private static EarthDB earthDB => Program.DB;
 
-        [Route("profile/{profileID}")]
-        public IActionResult GetProfile()
+        [Route("profile/{userId}")]
+        public IActionResult GetProfile(string userId)
         {
-            string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(playerId))
-                return BadRequest();
-
             Profile profile = (Profile)new EarthDB.Query(false)
-                    .Get("profile", playerId, typeof(Profile))
-                    .Execute(earthDB)
-                    .Get("profile").Value;
+                .Get("profile", userId.ToLowerInvariant(), typeof(Profile))
+                .Execute(earthDB)
+                .Get("profile").Value;
 
             LevelUtils.Level[] levels = LevelUtils.getLevels();
             int currentLevelExperience = profile.experience - (profile.level > 1 ? (profile.level - 2 < levels.Length ? levels[profile.level - 2].experienceRequired : levels[levels.Length - 1].experienceRequired) : 0);

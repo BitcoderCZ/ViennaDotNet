@@ -1,6 +1,6 @@
 ﻿namespace ViennaDotNet.Buildplate.Connector.Model
 {
-    public record InventoryRemoveItemMessage(
+    public record InventoryRemoveItemRequest(
          string playerId,
          string itemId,
          int count,

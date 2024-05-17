@@ -8,6 +8,7 @@ using System.IO.Compression;
 using System.Text;
 using ViennaDotNet.Buildplate.Connector.Model;
 using ViennaDotNet.Common;
+using ViennaDotNet.Common.Buildplate.Connector.Model;
 using ViennaDotNet.Common.Utils;
 using ViennaDotNet.EventBus.Client;
 
@@ -254,18 +255,12 @@ namespace ViennaDotNet.Buildplate.Launcher
                         }
                     }
                     break;
+
                 case "inventoryAdd":
                     {
                         InventoryAddItemMessage? inventoryAddItemMessage = readJson<InventoryAddItemMessage>(@event.data);
                         if (inventoryAddItemMessage != null)
                             sendEventBusRequest<object>("inventoryAdd", inventoryAddItemMessage, false);
-                    }
-                    break;
-                case "inventoryRemove":
-                    {
-                        InventoryRemoveItemMessage? inventoryRemoveItemMessage = readJson<InventoryRemoveItemMessage>(@event.data);
-                        if (inventoryRemoveItemMessage != null)
-                            sendEventBusRequest<object>("inventoryRemove", inventoryRemoveItemMessage, false);
                     }
                     break;
                 case "inventoryUpdateWear":
@@ -297,7 +292,7 @@ namespace ViennaDotNet.Buildplate.Launcher
                             if (!hostPlayerConnected && playerConnectedRequest.uuid != playerId)
                             {
                                 Log.Information($"Rejecting player connection for player {playerConnectedRequest.uuid} because the host player must connect first");
-                                return new PlayerConnectedResponse(false, null);
+                                return new PlayerConnectedResponse(false);
                             }
 
                             PlayerConnectedResponse? playerConnectedResponse = sendEventBusRequest<PlayerConnectedResponse>("playerConnected", playerConnectedRequest, true).Result;
@@ -331,6 +326,39 @@ namespace ViennaDotNet.Buildplate.Launcher
                                 }
 
                                 return playerDisconnectedResponse;
+                            }
+                        }
+                    }
+                    break;
+                case "getInventory":
+                    {
+                        string? playerId = readJson<string>(request.data);
+                        if (playerId != null)
+                        {
+                            InventoryResponse? inventoryResponse = sendEventBusRequest<InventoryResponse>("getInventory", playerId, true).Result;
+
+                            if (inventoryResponse != null)
+                                return inventoryResponse;
+                        }
+                    }
+                    break;
+                case "inventoryRemove":
+                    {
+                        InventoryRemoveItemRequest? inventoryRemoveItemRequest = readJson<InventoryRemoveItemRequest>(request.data);
+                        if (inventoryRemoveItemRequest != null)
+                        {
+                            if (inventoryRemoveItemRequest.instanceId != null)
+                            {
+                                bool? success = sendEventBusRequest<bool>("inventoryRemove", inventoryRemoveItemRequest, true).Result;
+
+                                if (success != null)
+                                    return success;
+                            }
+                            else
+                            {
+                                int? removedCount = sendEventBusRequest<int>("inventoryRemove", inventoryRemoveItemRequest, true).Result;
+                                if (removedCount != null)
+                                    return removedCount;
                             }
                         }
                     }

@@ -120,14 +120,16 @@ namespace ViennaDotNet.Buildplate_Importer
 
             string buildplateId = U.RandomUuid().ToString();
 
-            if (!await storeBuildplate(earthDB, eventBusClient, objectStoreClient, options.PlayerId, buildplateId, serverData, U.CurrentTimeMillis()))
+            string playerId = options.PlayerId.ToLowerInvariant();
+
+            if (!await storeBuildplate(earthDB, eventBusClient, objectStoreClient, playerId, buildplateId, serverData, U.CurrentTimeMillis()))
             {
                 Log.Fatal("Could not add buildplate");
                 Environment.Exit(3);
                 return;
             }
 
-            Log.Information($"Added buildplate with ID {buildplateId} for player {options.PlayerId}");
+            Log.Information($"Added buildplate with ID {buildplateId} for player {playerId}");
             Environment.Exit(0);
             return;
         }

@@ -3,6 +3,7 @@ using Serilog;
 using System.Text;
 using ViennaDotNet.ApiServer.Types.Catalog;
 using ViennaDotNet.Buildplate.Connector.Model;
+using ViennaDotNet.Common.Buildplate.Connector.Model;
 using ViennaDotNet.DB;
 using ViennaDotNet.DB.Models.Common;
 using ViennaDotNet.DB.Models.Player;
@@ -73,6 +74,15 @@ namespace ViennaDotNet.ApiServer.Utils
                                     PlayerDisconnectedResponse? playerDisconnectedResponse = handlePlayerDisconnected(requestWithBuildplateId.playerId, requestWithBuildplateId.buildplateId, requestWithBuildplateId.instanceId, requestWithBuildplateId.request);
                                     return playerDisconnectedResponse != null ? JsonConvert.SerializeObject(playerDisconnectedResponse) : null;
                                 }
+                            case "getInventory":
+                                {
+                                    RequestWithBuildplateId<string>? requestWithBuildplateId = readRequest<string>(request.data);
+                                    if (requestWithBuildplateId == null)
+                                        return null;
+
+                                    InventoryResponse? inventoryResponse = handleGetInventory(requestWithBuildplateId.playerId, requestWithBuildplateId.buildplateId, requestWithBuildplateId.instanceId, requestWithBuildplateId.request);
+                                    return inventoryResponse != null ? JsonConvert.SerializeObject(inventoryResponse) : null;
+                                }
                             case "inventoryAdd":
                                 {
                                     RequestWithBuildplateId<InventoryAddItemMessage>? requestWithBuildplateId = readRequest<InventoryAddItemMessage>(request.data);
@@ -83,11 +93,12 @@ namespace ViennaDotNet.ApiServer.Utils
                                 }
                             case "inventoryRemove":
                                 {
-                                    RequestWithBuildplateId<InventoryRemoveItemMessage>? requestWithBuildplateId = readRequest<InventoryRemoveItemMessage>(request.data);
+                                    RequestWithBuildplateId<InventoryRemoveItemRequest>? requestWithBuildplateId = readRequest<InventoryRemoveItemRequest>(request.data);
                                     if (requestWithBuildplateId == null)
                                         return null;
 
-                                    return handleInventoryRemove(requestWithBuildplateId.playerId, requestWithBuildplateId.buildplateId, requestWithBuildplateId.instanceId, requestWithBuildplateId.request) ? "" : null;
+                                    object response = handleInventoryRemove(requestWithBuildplateId.playerId, requestWithBuildplateId.buildplateId, requestWithBuildplateId.instanceId, requestWithBuildplateId.request);
+                                    return response != null ? JsonConvert.SerializeObject(response) : null;
                                 }
                             case "inventoryUpdateWear":
                                 {
@@ -270,26 +281,8 @@ namespace ViennaDotNet.ApiServer.Utils
         {
             // TODO: check join code etc.
 
-            EarthDB.Results results = new EarthDB.Query(false)
-                .Get("inventory", playerConnectedRequest.uuid, typeof(Inventory))
-                .Get("hotbar", playerConnectedRequest.uuid, typeof(Hotbar))
-                .Execute(earthDB);
-            Inventory inventory = (Inventory)results.Get("inventory").Value;
-            Hotbar hotbar = (Hotbar)results.Get("hotbar").Value;
-
-            PlayerConnectedResponse? playerConnectedResponse = new PlayerConnectedResponse(
-                true,
-                new PlayerConnectedResponse.Inventory(
-                    inventory.getStackableItems()
-                    .Select(item => new PlayerConnectedResponse.Inventory.Item(item.id, item.count ?? 0, null, 0))
-                    .Concat(
-                        inventory.getNonStackableItems()
-                        .SelectMany((item) => item.instances
-                            .Select(instance => new PlayerConnectedResponse.Inventory.Item(item.id, 1, instance.instanceId, instance.wear))
-                        )
-                    ).Where(item => item.count > 0).ToArray(),
-                    hotbar.items.Select(item => item != null && item.count > 0 ? new PlayerConnectedResponse.Inventory.HotbarItem(item.uuid, item.count, item.instanceId) : null).ToArray()
-                )
+            PlayerConnectedResponse playerConnectedResponse = new PlayerConnectedResponse(
+                true
             );
 
             return playerConnectedResponse;
@@ -300,6 +293,27 @@ namespace ViennaDotNet.ApiServer.Utils
             // TODO
 
             return new PlayerDisconnectedResponse();
+        }
+
+        private InventoryResponse? handleGetInventory(string playerId, string buildplateId, string instanceId, string requestedInventoryPlayerId)
+        {
+            EarthDB.Results results = new EarthDB.Query(false)
+                .Get("inventory", requestedInventoryPlayerId, typeof(Inventory))
+                .Get("hotbar", requestedInventoryPlayerId, typeof(Hotbar))
+                .Execute(earthDB);
+            Inventory inventory = (Inventory)results.Get("inventory").Value;
+            Hotbar hotbar = (Hotbar)results.Get("hotbar").Value;
+
+            return new InventoryResponse(
+                Enumerable.Concat(
+                    inventory.getStackableItems()
+                        .Select(item => new InventoryResponse.Item(item.id, item.count, null, 0)),
+                    inventory.getNonStackableItems()
+                        .SelectMany(item => item.instances
+                        .Select(instance => new InventoryResponse.Item(item.id, 1, instance.instanceId, instance.wear)))
+                ).Where(item => item.count > 0).ToArray(),
+                hotbar.items.Select(item => item != null && item.count > 0 ? new InventoryResponse.HotbarItem(item.uuid, item.count, item.instanceId) : null).ToArray()
+            );
         }
 
         private bool handleInventoryAdd(string playerId, string buildplateId, string instanceId, InventoryAddItemMessage inventoryAddItemMessage, long timestamp)
@@ -345,41 +359,52 @@ namespace ViennaDotNet.ApiServer.Utils
             return true;
         }
 
-        private bool handleInventoryRemove(string playerId, string buildplateId, string instanceId, InventoryRemoveItemMessage inventoryRemoveItemMessage)
+        private object handleInventoryRemove(string playerId, string buildplateId, string instanceId, InventoryRemoveItemRequest inventoryRemoveItemRequest)
         {
             EarthDB.Results results = new EarthDB.Query(true)
-            .Get("inventory", inventoryRemoveItemMessage.playerId, typeof(Inventory))
-                .Get("hotbar", inventoryRemoveItemMessage.playerId, typeof(Hotbar))
+                .Get("inventory", inventoryRemoveItemRequest.playerId, typeof(Inventory))
+                .Get("hotbar", inventoryRemoveItemRequest.playerId, typeof(Hotbar))
                 .Then(results1 =>
                 {
                     Inventory inventory = (Inventory)results1.Get("inventory").Value;
                     Hotbar hotbar = (Hotbar)results1.Get("hotbar").Value;
 
-                    if (inventoryRemoveItemMessage.instanceId != null)
+                    object result;
+                    if (inventoryRemoveItemRequest.instanceId != null)
                     {
-                        if (inventory.takeItems(inventoryRemoveItemMessage.itemId, new string[] { inventoryRemoveItemMessage.instanceId }) == null)
-                            Log.Warning($"Buildplate instance {instanceId} attempted to remove item {inventoryRemoveItemMessage.itemId} {inventoryRemoveItemMessage.instanceId} from player {inventoryRemoveItemMessage.playerId} that is not in inventory");
+                        if (inventory.takeItems(inventoryRemoveItemRequest.itemId, new string[] { inventoryRemoveItemRequest.instanceId }) == null)
+                        {
+                            Log.Warning($"Buildplate instance {instanceId} attempted to remove item {inventoryRemoveItemRequest.itemId} {inventoryRemoveItemRequest.instanceId} from player {inventoryRemoveItemRequest.playerId} that is not in inventory");
+                            result = false;
+                        }
+                        else
+                            result = true;
                     }
                     else
                     {
-                        if (!inventory.takeItems(inventoryRemoveItemMessage.itemId, inventoryRemoveItemMessage.count))
+                        if (inventory.takeItems(inventoryRemoveItemRequest.itemId, inventoryRemoveItemRequest.count))
+                            result = inventoryRemoveItemRequest.count;
+                        else
                         {
-                            int count = inventory.getItemCount(inventoryRemoveItemMessage.itemId);
-                            if (!inventory.takeItems(inventoryRemoveItemMessage.itemId, count))
+                            int count = inventory.getItemCount(inventoryRemoveItemRequest.itemId);
+                            if (!inventory.takeItems(inventoryRemoveItemRequest.itemId, count))
                                 count = 0;
 
-                            Log.Warning($"Buildplate instance {instanceId} attempted to remove item {inventoryRemoveItemMessage.itemId} {inventoryRemoveItemMessage.count - count} from player {inventoryRemoveItemMessage.playerId} that is not in inventory");
+                            Log.Warning($"Buildplate instance {instanceId} attempted to remove item {inventoryRemoveItemRequest.itemId} {inventoryRemoveItemRequest.count - count} from player {inventoryRemoveItemRequest.playerId} that is not in inventory");
+                            result = count;
                         }
                     }
 
                     hotbar.limitToInventory(inventory);
 
                     return new EarthDB.Query(true)
-                        .Update("inventory", inventoryRemoveItemMessage.playerId, inventory)
-                        .Update("hotbar", inventoryRemoveItemMessage.playerId, hotbar);
+                        .Update("inventory", inventoryRemoveItemRequest.playerId, inventory)
+                        .Update("hotbar", inventoryRemoveItemRequest.playerId, hotbar)
+                        .Extra("result", result);
                 })
                 .Execute(earthDB);
-            return true;
+
+            return results.getExtra("result");
         }
 
         private bool handleInventoryUpdateWear(string playerId, string buildplateId, string instanceId, InventoryUpdateItemWearMessage inventoryUpdateItemWearMessage)

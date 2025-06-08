@@ -1,9 +1,13 @@
 ﻿using Cyotek.Data.Nbt;
 using Cyotek.Data.Nbt.Serialization;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using Serilog;
+using System;
 using System.Diagnostics;
 using System.IO.Compression;
+using System.Numerics;
+using System.Runtime.InteropServices;
 using System.Text;
 using ViennaDotNet.Buildplate.Connector.Model;
 using ViennaDotNet.Common;
@@ -17,9 +21,14 @@ public class Instance
 {
     private const int HOST_PLAYER_CONNECT_TIMEOUT = 20000;
 
-    public static Instance run(EventBusClient eventBusClient, string playerId, string buildplateId, bool fromShared, string instanceId, bool survival, bool night, bool saveEnabled, InventoryType inventoryType, string publicAddress, int port, int serverInternalPort, string javaCmd, FileInfo fountainBridgeJar, DirectoryInfo serverTemplateDir, string fabricJarName, FileInfo connectorPluginJar, DirectoryInfo baseDir, string eventBusConnectionstring)
+    public static Instance run(EventBusClient eventBusClient, string? playerId, string buildplateId, BuildplateSource buildplateSource, string instanceId, bool survival, bool night, bool saveEnabled, InventoryType inventoryType, long? shutdownTime, string publicAddress, int port, int serverInternalPort, string javaCmd, FileInfo fountainBridgeJar, DirectoryInfo serverTemplateDir, string fabricJarName, FileInfo connectorPluginJar, DirectoryInfo baseDir, string eventBusConnectionstring)
     {
-        Instance instance = new Instance(eventBusClient, playerId, buildplateId, fromShared, instanceId, survival, night, saveEnabled, inventoryType, publicAddress, port, serverInternalPort, javaCmd, fountainBridgeJar, serverTemplateDir, fabricJarName, connectorPluginJar, baseDir, eventBusConnectionstring);
+        if (playerId is null && buildplateSource == BuildplateSource.PLAYER)
+        {
+            throw new ArgumentException($"{nameof(playerId)} was not while {nameof(buildplateSource)} was {nameof(BuildplateSource.PLAYER)}.", nameof(playerId));
+        }
+
+        Instance instance = new Instance(eventBusClient, playerId, buildplateId, buildplateSource, instanceId, survival, night, saveEnabled, inventoryType, shutdownTime, publicAddress, port, serverInternalPort, javaCmd, fountainBridgeJar, serverTemplateDir, fabricJarName, connectorPluginJar, baseDir, eventBusConnectionstring);
 
         new Thread(instance.run)
         {
@@ -31,14 +40,15 @@ public class Instance
 
     private readonly EventBusClient eventBusClient;
 
-    private readonly string playerId;
+    private readonly string? playerId;
     private readonly string buildplateId;
-    private readonly bool fromShared;
+    private readonly BuildplateSource buildplateSource;
     public readonly string instanceId;
     private readonly bool survival;
     private readonly bool night;
     private readonly bool saveEnabled;
     private readonly InventoryType inventoryType;
+    private readonly long? shutdownTime;
 
     public readonly string publicAddress;
     public readonly int port;
@@ -70,18 +80,19 @@ public class Instance
 
     private volatile bool hostPlayerConnected = false;
 
-    private Instance(EventBusClient eventBusClient, string playerId, string buildplateId, bool fromShared, string instanceId, bool survival, bool night, bool saveEnabled, InventoryType inventoryType, string publicAddress, int port, int serverInternalPort, string javaCmd, FileInfo fountainBridgeJar, DirectoryInfo serverTemplateDir, string fabricJarName, FileInfo connectorPluginJar, DirectoryInfo baseDir, string eventBusConnectionstring)
+    private Instance(EventBusClient eventBusClient, string? playerId, string buildplateId, BuildplateSource buildplateSource, string instanceId, bool survival, bool night, bool saveEnabled, InventoryType inventoryType, long? shutdownTime, string publicAddress, int port, int serverInternalPort, string javaCmd, FileInfo fountainBridgeJar, DirectoryInfo serverTemplateDir, string fabricJarName, FileInfo connectorPluginJar, DirectoryInfo baseDir, string eventBusConnectionstring)
     {
         this.eventBusClient = eventBusClient;
 
         this.playerId = playerId;
         this.buildplateId = buildplateId;
-        this.fromShared = fromShared;
+        this.buildplateSource = buildplateSource;
         this.instanceId = instanceId;
         this.survival = survival;
         this.night = night;
         this.saveEnabled = saveEnabled;
         this.inventoryType = inventoryType;
+        this.shutdownTime = shutdownTime;
 
         this.publicAddress = publicAddress;
         this.port = port;
@@ -103,32 +114,24 @@ public class Instance
 
         try
         {
-            Log.Information($"Starting for {(fromShared ? "shared" : "")} buildplate {buildplateId} player {playerId} (survival = {survival}, saveEnabled = {saveEnabled}, inventoryType = {inventoryType})");
-            Log.Information($"Using port {port} internal port {serverInternalPort}");
+            Log.Information(buildplateSource switch
+            {
+                BuildplateSource.PLAYER => $"Starting for player {playerId} buildplate {buildplateId} (survival = {survival}, saveEnabled = {saveEnabled}, inventoryType = {inventoryType})",
+                BuildplateSource.SHARED => $"Starting for shared buildplate {buildplateId} (player = {playerId}, survival = {survival}, saveEnabled = {saveEnabled}, inventoryType = {inventoryType})",
+                BuildplateSource.ENCOUNTER => $"Starting for encounter buildplate {buildplateId} (player = {playerId}, survival = {survival}, saveEnabled = {saveEnabled}, inventoryType = {inventoryType})",
+                _ => throw new UnreachableException(),
+            });
 
             requestSender = eventBusClient.addRequestSender();
 
             Log.Information("Setting up server");
 
-            BuildplateLoadResponse? buildplateLoadResponse;
-            if (!fromShared)
+            BuildplateLoadResponse? buildplateLoadResponse = buildplateSource switch
             {
-                buildplateLoadResponse = sendEventBusRequestRaw<BuildplateLoadResponse>("load", new BuildplateLoadRequest(playerId, buildplateId), true).Result;
-                if (buildplateLoadResponse is null)
-                {
-                    Log.Error($"Could not load buildplate information for buildplate {buildplateId} player {playerId}");
-                    return;
-                }
-            }
-            else
-            {
-                buildplateLoadResponse = this.sendEventBusRequestRaw<BuildplateLoadResponse>("loadShared", new SharedBuildplateLoadRequest(buildplateId), true).Result;
-                if (buildplateLoadResponse == null)
-                {
-                    Log.Error("Could not load buildplate information for shared buildplate {buildplateId}");
-                    return;
-                }
-            }
+                BuildplateSource.PLAYER => sendEventBusRequestRaw<BuildplateLoadResponse>("load", new BuildplateLoadRequest(playerId!, buildplateId), true).Result,
+                BuildplateSource.SHARED => sendEventBusRequestRaw<BuildplateLoadResponse>("loadShared", new SharedBuildplateLoadRequest(buildplateId), true).Result,
+                BuildplateSource.ENCOUNTER => sendEventBusRequestRaw<BuildplateLoadResponse>("loadEncounter", new EncounterBuildplateLoadRequest(buildplateId), true).Result,
+            };
 
             byte[] serverData;
             try
@@ -256,7 +259,14 @@ public class Instance
                     Log.Information("Server is ready");
                     startBridgeProcess();
                     readyFuture.SetResult(/*null*/);
-                    startHostPlayerConnectTimeout();
+                    if (shutdownTime is not null)
+                    {
+                        startShutdownTimer();
+                    }
+                    else
+                    {
+                        startHostPlayerConnectTimeout();
+                    }
                 }
 
                 break;
@@ -311,21 +321,23 @@ public class Instance
             case "playerConnected":
                 {
                     PlayerConnectedRequest? playerConnectedRequest = readJson<PlayerConnectedRequest>(request.data);
-                    if (playerConnectedRequest != null)
+                    if (playerConnectedRequest is not null)
                     {
-                        if (!hostPlayerConnected && playerConnectedRequest.uuid != playerId)
+                        if (playerId is not null && !hostPlayerConnected && playerConnectedRequest.uuid != playerId)
                         {
                             Log.Information($"Rejecting player connection for player {playerConnectedRequest.uuid} because the host player must connect first");
                             return new PlayerConnectedResponse(false, null);
                         }
 
                         PlayerConnectedResponse? playerConnectedResponse = sendEventBusRequest<PlayerConnectedResponse>("playerConnected", playerConnectedRequest, true).Result;
-                        if (playerConnectedResponse != null)
+                        if (playerConnectedResponse is not null)
                         {
                             Log.Information($"Player {playerConnectedRequest.uuid} has connected");
 
-                            if (!hostPlayerConnected && playerConnectedRequest.uuid == playerId)
+                            if (playerId is not null && !hostPlayerConnected && playerConnectedRequest.uuid == playerId)
+                            {
                                 hostPlayerConnected = true;
+                            }
 
                             return playerConnectedResponse;
                         }
@@ -337,14 +349,14 @@ public class Instance
                 {
                     Log.Debug("Player dicconnecting...");
                     PlayerDisconnectedRequest? playerDisconnectedRequest = readJson<PlayerDisconnectedRequest>(request.data);
-                    if (playerDisconnectedRequest != null)
+                    if (playerDisconnectedRequest is not null)
                     {
                         PlayerDisconnectedResponse? playerDisconnectedResponse = sendEventBusRequest<PlayerDisconnectedResponse>("playerDisconnected", playerDisconnectedRequest, true).Result;
-                        if (playerDisconnectedResponse != null)
+                        if (playerDisconnectedResponse is not null)
                         {
                             Log.Information($"Player {playerDisconnectedRequest.playerId} has disconnected");
 
-                            if (playerDisconnectedRequest.playerId == playerId)
+                            if (shutdownTime is null && playerId is not null && playerDisconnectedRequest.playerId == playerId)
                             {
                                 Log.Information("Host player has disconnected, beginning shutdown");
                                 beginShutdown();
@@ -359,11 +371,11 @@ public class Instance
             case "getInventory":
                 {
                     string? playerId = readJson<string>(request.data);
-                    if (playerId != null)
+                    if (playerId is not null)
                     {
                         InventoryResponse? inventoryResponse = sendEventBusRequest<InventoryResponse>("getInventory", playerId, true).Result;
 
-                        if (inventoryResponse != null)
+                        if (inventoryResponse is not null)
                             return inventoryResponse;
                     }
                 }
@@ -372,19 +384,19 @@ public class Instance
             case "inventoryRemove":
                 {
                     InventoryRemoveItemRequest? inventoryRemoveItemRequest = readJson<InventoryRemoveItemRequest>(request.data);
-                    if (inventoryRemoveItemRequest != null)
+                    if (inventoryRemoveItemRequest is not null)
                     {
-                        if (inventoryRemoveItemRequest.instanceId != null)
+                        if (inventoryRemoveItemRequest.instanceId is not null)
                         {
                             bool? success = sendEventBusRequest<bool>("inventoryRemove", inventoryRemoveItemRequest, true).Result;
 
-                            if (success != null)
+                            if (success is not null)
                                 return success;
                         }
                         else
                         {
                             int? removedCount = sendEventBusRequest<int>("inventoryRemove", inventoryRemoveItemRequest, true).Result;
-                            if (removedCount != null)
+                            if (removedCount is not null)
                                 return removedCount;
                         }
                     }
@@ -410,16 +422,14 @@ public class Instance
         }
     }
 
-    private sealed record RequestWithBuildplateIds(
-        string playerId,
-        string buildplateId,
+    private sealed record RequestWithInstanceId(
         string instanceId,
         object request
     );
 
     private async Task<T?> sendEventBusRequest<T>(string type, object obj, bool returnResponse)
     {
-        RequestWithBuildplateIds request = new RequestWithBuildplateIds(playerId, buildplateId, instanceId, obj);
+        RequestWithInstanceId request = new RequestWithInstanceId(instanceId, obj);
 
         try
         {
@@ -919,6 +929,40 @@ public class Instance
         }).Start();
     }
 
+    private void startShutdownTimer()
+    {
+        new Thread(() =>
+        {
+            if (shutdownTime is { } shutdownTimeVal)
+            {
+                long currentTime = U.CurrentTimeMillis();
+                while (currentTime < shutdownTimeVal)
+                {
+                    long duration = shutdownTimeVal - currentTime;
+                    if (duration > 0)
+                    {
+                        Log.Information($"Server will shut down in {duration} milliseconds");
+
+                        /*try
+                        {*/
+                        Debug.Assert((duration > 2000 ? (duration / 2) : duration) < int.MaxValue);
+                            Thread.Sleep((int)(duration > 2000 ? (duration / 2) : duration));
+                        /*}
+                        catch (ThreadInterruptedException exception)
+                        {
+                            throw new AssertionError(exception);
+                        }*/
+                    }
+
+                    currentTime = U.CurrentTimeMillis();
+                }
+            }
+
+            Log.Information("Shutdown time has been reached, shutting down");
+            beginShutdown();
+        }).Start();
+    }
+
     private void beginShutdown()
     {
         new Thread(() =>
@@ -1031,11 +1075,23 @@ public class Instance
         string buildplateId
     );
 
-    private record SharedBuildplateLoadRequest(
+    private sealed record EncounterBuildplateLoadRequest(
+        string encounterBuildplateId
+    );
+
+    private sealed record SharedBuildplateLoadRequest(
         string sharedBuildplateId
     );
 
     private sealed record BuildplateLoadResponse(
         string serverDataBase64
     );
+
+    [JsonConverter(typeof(StringEnumConverter))]
+    public enum BuildplateSource
+    {
+        PLAYER,
+        SHARED,
+        ENCOUNTER
+    }
 }

@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using Serilog;
+using System;
 using ViennaDotNet.Common.Utils;
 using ViennaDotNet.EventBus.Client;
 
@@ -10,7 +11,8 @@ public class Spawner
     private static readonly long SPAWN_INTERVAL = 15 * 1000;
 
     private readonly ActiveTiles activeTiles;
-    private readonly Generator generator;
+    private readonly TappableGenerator tappableGenerator;
+	private readonly EncounterGenerator encounterGenerator;
     private readonly Publisher publisher;
 
     private readonly int maxTappableLifetimeIntervals;
@@ -19,13 +21,15 @@ public class Spawner
     private int spawnCycleIndex;
     private readonly Dictionary<int, int> lastSpawnCycleForTile = [];
 
-    public Spawner(EventBusClient eventBusClient, ActiveTiles activeTiles, Generator generator)
+    public Spawner(EventBusClient eventBusClient, ActiveTiles activeTiles, TappableGenerator tappableGenerator, EncounterGenerator encounterGenerator)
     {
         this.activeTiles = activeTiles;
-        this.generator = generator;
+
+        this.tappableGenerator = tappableGenerator;
+        this.encounterGenerator = encounterGenerator;
         this.publisher = eventBusClient.addPublisher();
 
-        this.maxTappableLifetimeIntervals = (int)(this.generator.getMaxTappableLifetime() / SPAWN_INTERVAL + 1);
+        this.maxTappableLifetimeIntervals = (int)(long.Max(this.tappableGenerator.getMaxTappableLifetime(), this.encounterGenerator.getMaxEncounterLifetime()) / SPAWN_INTERVAL + 1);
 
         this.spawnCycleTime = U.CurrentTimeMillis();
         this.spawnCycleIndex = maxTappableLifetimeIntervals;
@@ -96,10 +100,20 @@ public class Spawner
 
     private void spawnTappablesForTile(int tileX, int tileY, long currentTime)
     {
-        foreach (Tappable tappable in generator.generateTappables(tileX, tileY, currentTime))
+        foreach (Tappable tappable in tappableGenerator.generateTappables(tileX, tileY, currentTime))
         {
             if (!publisher.publish("tappables", "tappableSpawn", JsonConvert.SerializeObject(tappable)).Result)
+            {
                 Log.Error("Event bus server rejected tappable spawn event");
+            }
+        }
+
+        foreach (Encounter encounter in encounterGenerator.generateEncounters(tileX, tileY, currentTime))
+        {
+            if (!publisher.publish("tappables", "encounterSpawn", JsonConvert.SerializeObject(encounter)).Result)
+            {
+                Log.Error("Event bus server rejected encounter spawn event");
+            }
         }
     }
 }

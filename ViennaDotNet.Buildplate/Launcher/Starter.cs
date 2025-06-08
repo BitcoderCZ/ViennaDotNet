@@ -1,4 +1,5 @@
 ﻿using Serilog;
+using System.Runtime.InteropServices;
 using ViennaDotNet.Buildplate.Connector.Model;
 using ViennaDotNet.Common.Utils;
 using ViennaDotNet.EventBus.Client;
@@ -40,15 +41,17 @@ public class Starter
         this.connectorPluginJar = new FileInfo(connectorPluginJar);
     }
 
-    public Instance? startInstance(string instanceId, string playerId, string buildplateId, bool fromShared, bool survival, bool night, bool saveEnabled, InventoryType inventoryType)
+    public Instance? startInstance(string instanceId, string? playerId, string buildplateId, Instance.BuildplateSource buildplateSource, bool survival, bool night, bool saveEnabled, InventoryType inventoryType, long? shutdownTime)
     {
         DirectoryInfo? baseDir = createInstanceBaseDir(instanceId);
-        if (baseDir == null)
+        if (baseDir is null)
+        {
             return null;
+        }
 
         int port = findPort(portsInUse, BASE_PORT);
         int serverInternalPort = findPort(serverInternalPortsInUse, SERVER_INTERNAL_BASE_PORT);
-        Instance instance = Instance.run(eventBusClient, playerId, buildplateId, fromShared, instanceId, survival, night, saveEnabled, inventoryType, publicAddress, port, serverInternalPort, javaCmd, fountainBridgeJar, serverTemplateDir, fabricJarName, connectorPluginJar, baseDir, eventBusConnectionString);
+        Instance instance = Instance.run(eventBusClient, playerId, buildplateId, buildplateSource, instanceId, survival, night, saveEnabled, inventoryType, shutdownTime, publicAddress, port, serverInternalPort, javaCmd, fountainBridgeJar, serverTemplateDir, fabricJarName, connectorPluginJar, baseDir, eventBusConnectionString);
         new Thread(() =>
         {
             instance.waitForShutdown();

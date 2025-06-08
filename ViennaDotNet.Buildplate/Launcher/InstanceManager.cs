@@ -1,6 +1,9 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Serilog;
+using System;
+using System.Diagnostics;
+using Uma.Uuid;
 using ViennaDotNet.Buildplate.Connector.Model;
 using ViennaDotNet.Common.Utils;
 using ViennaDotNet.EventBus.Client;
@@ -25,19 +28,22 @@ public class InstanceManager
         PLAY,
         SHARED_BUILD,
         SHARED_PLAY,
+        ENCOUNTER,
     }
 
     private sealed record StartRequest(
-        string instanceId,
-        string playerId,
+        string? playerId,
+        string? encounterId,
         string buildplateId,
         bool night,
-        InstanceType type
+        InstanceType type,
+        long shutdownTime
     );
 
     private sealed record StartNotification(
         string instanceId,
-        string playerId,
+        string? playerId,
+        string? encounterId,
         string buildplateId,
         string address,
         int port,
@@ -82,19 +88,27 @@ public class InstanceManager
                         return null;
                     }
 
-                    string instanceId = U.RandomUuid().ToString();
-                    Log.Information($"Starting buildplate instance {instanceId} for player {startRequest.playerId} buildplate {startRequest.buildplateId}");
-
-                    var (survival, saveEnabled, inventoryType, fromShared) = startRequest.type switch
+                    var (survival, saveEnabled, inventoryType, buildplateSource, shutdownTime) = startRequest.type switch
                     {
-                        InstanceType.BUILD => (false, true, InventoryType.SYNCED, false),
-                        InstanceType.PLAY => (true, false, InventoryType.DISCARD, false),
-                        InstanceType.SHARED_BUILD => (false, false, InventoryType.DISCARD, true),
-                        InstanceType.SHARED_PLAY => (true, false, InventoryType.DISCARD, true),
-                        _ => (false, false, InventoryType.DISCARD, false),
+                        InstanceType.BUILD => (false, true, InventoryType.SYNCED, Instance.BuildplateSource.PLAYER, (long?)null),
+                        InstanceType.PLAY => (true, false, InventoryType.DISCARD, Instance.BuildplateSource.PLAYER, null),
+                        InstanceType.SHARED_BUILD => (false, false, InventoryType.DISCARD, Instance.BuildplateSource.SHARED, null),
+                        InstanceType.SHARED_PLAY => (true, false, InventoryType.DISCARD, Instance.BuildplateSource.SHARED, null),
+                        InstanceType.ENCOUNTER => (true, false, InventoryType.BACKPACK, Instance.BuildplateSource.ENCOUNTER, startRequest.shutdownTime),
+                        _ => throw new UnreachableException(),
                     };
 
-                    Instance? instance = starter.startInstance(instanceId, startRequest.playerId, startRequest.buildplateId, fromShared, survival, startRequest.night, saveEnabled, inventoryType);
+                    if (buildplateSource is Instance.BuildplateSource.PLAYER && startRequest.playerId is null)
+                    {
+                        Log.Warning("Bad start request");
+                        return null;
+                    }
+
+                    string instanceId = U.RandomUuid().ToString();
+
+                    Log.Information($"Starting buildplate instance {instanceId}");
+
+                    Instance? instance = starter.startInstance(instanceId, startRequest.playerId, startRequest.buildplateId, buildplateSource, survival, startRequest.night, saveEnabled, inventoryType, shutdownTime);
                     if (instance == null)
                     {
                         Log.Error($"Error starting buildplate instance {instanceId}");
@@ -104,6 +118,7 @@ public class InstanceManager
                     sendEventBusMessageJson("started", new StartNotification(
                         instanceId,
                         startRequest.playerId,
+                        startRequest.encounterId,
                         startRequest.buildplateId,
                         instance.publicAddress,
                         instance.port,

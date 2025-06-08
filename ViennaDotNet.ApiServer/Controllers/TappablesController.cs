@@ -10,6 +10,8 @@ using ViennaDotNet.ApiServer.Utils;
 using ViennaDotNet.Common.Utils;
 using ViennaDotNet.DB;
 using ViennaDotNet.DB.Models.Player;
+using static ViennaDotNet.ApiServer.Utils.TappablesManager;
+using static ViennaDotNet.DB.Models.Player.ActivityLog;
 
 namespace ViennaDotNet.ApiServer.Controllers;
 
@@ -33,7 +35,8 @@ public class TappablesController : ControllerBase
 
         tappablesManager.notifyTileActive(playerId, lat, lon);
 
-        TappablesManager.Tappable[] tappables = tappablesManager.getTappablesAround(lat, lon, 5.0f);    // TODO: radius
+        TappablesManager.Tappable[] tappables = tappablesManager.getTappablesAround(lat, lon, 5.0);    // TODO: radius
+        TappablesManager.Encounter[] encounters = tappablesManager.getEncountersAround(lat, lon, 5.0);    // TODO: radius
 
         try
         {
@@ -42,7 +45,7 @@ public class TappablesController : ControllerBase
                 .ExecuteAsync(earthDB, cancellationToken);
             RedeemedTappables redeemedTappables = (RedeemedTappables)results.Get("redeemedTappables").Value;
 
-            ActiveLocation[] activeLocations = tappables
+            IEnumerable<ActiveLocation> activeLocationTappables = tappables
                 .Where(tappable => tappable.spawnTime + tappable.validFor > requestStartedOn && !redeemedTappables.isRedeemed(tappable.id))
                 .Select(tappable => new ActiveLocation(
                     tappable.id,
@@ -55,8 +58,32 @@ public class TappablesController : ControllerBase
                     new ActiveLocation.Metadata(U.RandomUuid().ToString(), Enum.Parse<Rarity>(tappable.rarity.ToString())),
                     new ActiveLocation.TappableMetadata(Enum.Parse<Rarity>(tappable.rarity.ToString())),
                     null
-                ))
-                .ToArray();
+                ));
+
+            IEnumerable<ActiveLocation> activeLocationEncounters = encounters
+                .Where(encounter => encounter.spawnTime + encounter.validFor > requestStartedOn)
+                .Select(encounter => new ActiveLocation(
+                    encounter.id,
+                    TappablesManager.locationToTileId(encounter.lat, encounter.lon),
+                    new Coordinate(encounter.lat, encounter.lon),
+                    TimeFormatter.FormatTime(encounter.spawnTime),
+                    TimeFormatter.FormatTime(encounter.spawnTime + encounter.validFor),
+                    ActiveLocation.Type.ENCOUNTER,
+                    encounter.icon,
+                    new ActiveLocation.Metadata(U.RandomUuid().ToString(), Enum.Parse<Rarity>(encounter.rarity.ToString())),
+                    null,
+                    new ActiveLocation.EncounterMetadata(
+                        ActiveLocation.EncounterMetadata.EncounterType.SHORT_4X4_PEACEFUL,    // TODO
+                                                                                              //UUID.randomUUID().toString(),    // TODO: what is this field for and does it matter what we put here?
+                        encounter.id,
+                        encounter.encounterBuildplateId,
+                        ActiveLocation.EncounterMetadata.AnchorState.OFF,
+                        "",
+                        ""
+                    )
+                ));
+
+            ActiveLocation[] activeLocations = [.. activeLocationTappables, .. activeLocationEncounters];
 
             string resp = JsonConvert.SerializeObject(new EarthApiResponse(new Dictionary<string, object>()
             {
@@ -146,8 +173,38 @@ public class TappablesController : ControllerBase
         }
     }
 
+    [HttpPost("multiplayer/encounters/state")]
+    public async Task<IActionResult> EncountersState(CancellationToken cancellationToken)
+    {
+        var requestedIds = await Request.Body.AsJsonAsync<Dictionary<string, object>>(cancellationToken);
+
+        if (requestedIds is null)
+        {
+            return BadRequest();
+        }
+
+        foreach (var entry in requestedIds)
+        {
+            if (entry.Value is not string)
+            {
+                return BadRequest();
+            }
+        }
+
+        // TODO
+
+        var encounterStates = new Dictionary<string, EncounterState>();
+        foreach (var (encounterId, tileId) in requestedIds)
+        {
+            encounterStates[encounterId] = new EncounterState(EncounterState.ActiveEncounterState.PRISTINE);
+        }
+
+        string resp = JsonConvert.SerializeObject(new EarthApiResponse(encounterStates));
+        return Content(resp, "application/json");
+    }
+
     private sealed record TappableRequest(
-            string id,
-            Coordinate playerCoordinate
-        );
+        string id,
+        Coordinate playerCoordinate
+    );
 }

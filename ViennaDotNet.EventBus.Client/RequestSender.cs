@@ -134,7 +134,11 @@ public sealed class RequestSender
             currentPendingResponse = null;
         }
 
-        queuedRequestResponses.ForEach(completableFuture => completableFuture.TrySetResult(null));
+        foreach (var completableFuture in queuedRequestResponses)
+        {
+            completableFuture.TrySetResult(null);
+        }
+
         queuedRequestResponses.Clear();
         queuedRequests.Clear();
         Monitor.Exit(_lock);

@@ -1,9 +1,12 @@
 ﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using Serilog;
+using System.Diagnostics.Metrics;
 using ViennaDotNet.Common;
 using ViennaDotNet.Common.Utils;
 using ViennaDotNet.EventBus.Client;
-using static ViennaDotNet.ApiServer.Utils.TappablesManager.Tappable;
+using static ViennaDotNet.ApiServer.Utils.TappablesManager;
+using static ViennaDotNet.DB.Models.Player.ActivityLog;
 
 namespace ViennaDotNet.ApiServer.Utils;
 
@@ -13,6 +16,7 @@ public sealed class TappablesManager
     private readonly RequestSender requestSender;
 
     private readonly Dictionary<string, Dictionary<string, Tappable>> tappables = [];
+    private readonly Dictionary<string, Dictionary<string, Encounter>> encounters = [];
     private int pruneCounter = 0;
 
     public TappablesManager(EventBusClient eventBusClient)
@@ -27,19 +31,33 @@ public sealed class TappablesManager
 
     public Tappable[] getTappablesAround(double lat, double lon, double radius)
     {
-        return getTileIdsAround(lat, lon, radius)
+        return [.. getTileIdsAround(lat, lon, radius)
             .Select(tileId => tappables.GetOrDefault(tileId, null))
             .Where(tappables => tappables != null)
             .Select(items => items!.Values)
-            .SelectMany(stream => stream) //.flatMap(Collection::stream)
+            .SelectMany(stream => stream)
             .Where(tappable =>
             {
                 double dx = lonToX(tappable.lon) * (1 << 16) - lonToX(lon) * (1 << 16);
                 double dy = latToY(tappable.lat) * (1 << 16) - latToY(lat) * (1 << 16);
                 double distanceSquared = dx * dx + dy * dy;
                 return distanceSquared <= radius * radius;
-            })
-            .ToArray();
+            })];
+    }
+
+    public Encounter[] getEncountersAround(double lat, double lon, double radius)
+    {
+        return [.. getTileIdsAround(lat, lon, radius)
+            .Select(tileId => encounters.GetOrDefault(tileId))
+            .Where(encounters => encounters is not null)
+            .SelectMany(encounters => encounters!.Values)
+            .Where(encounter =>
+            {
+                double dx = lonToX(encounter.lon) * (1 << 16) - lonToX(lon) * (1 << 16);
+                double dy = latToY(encounter.lat) * (1 << 16) - latToY(lat) * (1 << 16);
+                double distanceSquared = dx * dx + dy * dy;
+                return distanceSquared <= radius * radius;
+            })];
     }
 
     private static string[] getTileIdsAround(double lat, double lon, double radius)
@@ -58,6 +76,21 @@ public sealed class TappablesManager
             Tappable? tappable = tappablesInTile.GetOrDefault(id, null);
             if (tappable != null)
                 return tappable;
+        }
+
+        return null;
+    }
+
+    public Encounter? getEncounterWithId(string id, string tileId)
+    {
+        var encountersInTile = encounters.GetOrDefault(tileId);
+        if (encountersInTile is not null)
+        {
+            var encounter = encountersInTile.GetOrDefault(id);
+            if (encounter is not null)
+            {
+                return encounter;
+            }
         }
 
         return null;
@@ -101,7 +134,7 @@ public sealed class TappablesManager
                     if (pruneCounter++ == 10)
                     {
                         pruneCounter = 0;
-                        pruneTappables(@event.timestamp);
+                        prune(@event.timestamp);
                     }
 
                     break;
@@ -115,15 +148,37 @@ public sealed class TappablesManager
         tappables.ComputeIfAbsent(tileId, tileId1 => [])![tappable.id] = tappable;
     }
 
-    private void pruneTappables(long currentTime)
+    private void addEncounter(Encounter encounter)
     {
-        tappables.Values.ForEach(tileTappables => tileTappables.RemoveIf(entry =>
+        string tileId = locationToTileId(encounter.lat, encounter.lon);
+        encounters.ComputeIfAbsent(tileId, tileId1 => [])![encounter.id] = encounter;
+    }
+
+    private void prune(long currentTime)
+    {
+        foreach (var tileTappables in tappables.Values)
         {
-            Tappable tappable = entry.Value;
-            long expiresAt = tappable.spawnTime + tappable.validFor;
-            return expiresAt <= currentTime;
-        }));
+            tileTappables.RemoveIf(entry =>
+            {
+                Tappable tappable = entry.Value;
+                long expiresAt = tappable.spawnTime + tappable.validFor;
+                return expiresAt <= currentTime;
+            });
+        }
+
         tappables.RemoveIf(entry => entry.Value.IsEmpty());
+
+        foreach (var tileEncounters in encounters.Values)
+        {
+            tileEncounters.RemoveIf(entry =>
+            {
+                Encounter encounter = entry.Value;
+                long expiresAt = encounter.spawnTime + encounter.validFor;
+                return expiresAt <= currentTime;
+            });
+        }
+
+        encounters.RemoveIf(entry => entry.Value.Count == 0);
     }
 
     public static string locationToTileId(float lat, float lon)
@@ -158,10 +213,11 @@ public sealed class TappablesManager
         long spawnTime,
         long validFor,
         string icon,
-        Rarity rarity,
-        Drops drops
+        Tappable.Rarity rarity,
+        Tappable.Drops drops
     )
     {
+        [JsonConverter(typeof(StringEnumConverter))]
         public enum Rarity
         {
             COMMON,
@@ -182,6 +238,28 @@ public sealed class TappablesManager
             )
             {
             }
+        }
+    }
+
+    public sealed record Encounter(
+        string id,
+        float lat,
+        float lon,
+        long spawnTime,
+        long validFor,
+        string icon,
+        Encounter.Rarity rarity,
+        string encounterBuildplateId
+    )
+    {
+        [JsonConverter(typeof(StringEnumConverter))]
+        public enum Rarity
+        {
+            COMMON,
+            UNCOMMON,
+            RARE,
+            EPIC,
+            LEGENDARY
         }
     }
 }

@@ -5,11 +5,11 @@ using System.Runtime.Serialization;
 using ViennaDotNet.Common;
 using ViennaDotNet.Common.Utils;
 
-using Rarity = ViennaDotNet.TappablesGenerator.Generator.TappableConfig.Rarity;
+using Rarity = ViennaDotNet.TappablesGenerator.TappableGenerator.TappableConfig.Rarity;
 
 namespace ViennaDotNet.TappablesGenerator;
 
-internal static class RarityE
+file static class RarityE
 {
     private static readonly Dictionary<Rarity, float> valueToWeight = new Dictionary<Rarity, float>()
     {
@@ -24,7 +24,7 @@ internal static class RarityE
         => valueToWeight[rarity];
 }
 
-public class Generator
+public class TappableGenerator
 {
     // TODO: make these configurable
     private static readonly int MIN_COUNT = 1;
@@ -64,7 +64,7 @@ public class Generator
 
     private readonly Random random;
 
-    public Generator()
+    public TappableGenerator()
     {
         try
         {
@@ -100,17 +100,16 @@ public class Generator
             if (tappableConfig.possibleDropSets.Length == 0)
                 Log.Warning($"Tappable config {tappableConfig.tappableID} has no drop sets");
 
-            tappableConfig.possibleDropSets
-                 .SelectMany(a => a)
-                 .ForEach(itemId =>
-                 {
-                     if (!tappableConfig.possibleItemCount.ContainsKey(itemId))
-                     {
-                         Log.Fatal($"Tappable config {tappableConfig.tappableID} has no item count for item {itemId}");
-                         Environment.Exit(1);
-                         throw new InvalidOperationException();
-                     }
-                 });
+            foreach (string? itemId in tappableConfig.possibleDropSets
+                 .SelectMany(a => a))
+            {
+                if (!tappableConfig.possibleItemCount.ContainsKey(itemId))
+                {
+                    Log.Fatal($"Tappable config {tappableConfig.tappableID} has no item count for item {itemId}");
+                    Environment.Exit(1);
+                    throw new InvalidOperationException();
+                }
+            }
         }
 
         random = new Random();

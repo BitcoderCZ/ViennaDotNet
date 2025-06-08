@@ -4,7 +4,10 @@ public static class DictionaryExtensions
 {
     public static void AddRange<TKey, TValue>(this IDictionary<TKey, TValue> dic, IDictionary<TKey, TValue> dicToAdd)
     {
-        dicToAdd.ForEach(x => dic[x.Key] = x.Value);
+        foreach (var item in dicToAdd)
+        {
+            dic[item.Key] = item.Value;
+        }
     }
 
     public static TValue? GetOrDefault<TKey, TValue>(this IDictionary<TKey, TValue> dic, TKey key)

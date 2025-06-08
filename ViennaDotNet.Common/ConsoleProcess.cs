@@ -149,7 +149,7 @@ public class ConsoleProcess
     [DllImport("kernel32.dll", SetLastError = true, ExactSpelling = true)]
     internal static extern bool FreeConsole();
     [DllImport("kernel32.dll")]
-    static extern bool SetConsoleCtrlHandler(ConsoleCtrlDelegate HandlerRoutine, bool Add);
+    static extern bool SetConsoleCtrlHandler(ConsoleCtrlDelegate? HandlerRoutine, bool Add);
     // Delegate type to be used as the Handler Routine for SCCH
-    delegate bool ConsoleCtrlDelegate(uint CtrlType);
+    private delegate bool ConsoleCtrlDelegate(uint CtrlType);
 }

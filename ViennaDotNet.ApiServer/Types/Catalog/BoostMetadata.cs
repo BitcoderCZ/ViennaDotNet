@@ -20,7 +20,7 @@ public record BoostMetadata(
         string type,
         string? duration,
         double? value,
-        string unit,
+        string? unit,
         string targets,
         string[] items,
         string[] itemScenarios,

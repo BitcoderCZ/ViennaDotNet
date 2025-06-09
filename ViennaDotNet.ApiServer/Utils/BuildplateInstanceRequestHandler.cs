@@ -12,6 +12,7 @@ using ViennaDotNet.DB.Models.Global;
 using ViennaDotNet.DB.Models.Player;
 using ViennaDotNet.EventBus.Client;
 using ViennaDotNet.ObjectStore.Client;
+using ViennaDotNet.StaticData;
 
 namespace ViennaDotNet.ApiServer.Utils;
 

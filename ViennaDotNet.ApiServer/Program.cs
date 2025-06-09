@@ -8,6 +8,8 @@ using ViennaDotNet.Common.Utils;
 using ViennaDotNet.DB;
 using ViennaDotNet.EventBus.Client;
 using ViennaDotNet.ObjectStore.Client;
+using ViennaDotNet.StaticData;
+using SData = ViennaDotNet.StaticData.StaticData;
 
 namespace ViennaDotNet.ApiServer;
 
@@ -16,7 +18,7 @@ public static class Program
     // initialized in main
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
     internal static EarthDB DB;
-    internal static Catalog Catalog;
+    internal static SData staticData;
 
     internal static EventBusClient eventBus;
     internal static ObjectStoreClient objectStore;
@@ -32,6 +34,9 @@ public static class Program
 
         [Option("db", Default = "./earth.db", Required = false, HelpText = "Database connection string")]
         public string DatabaseConnectionString { get; set; }
+
+        [Option("dir", Default = "./data", Required = false, HelpText = "Static data path")]
+        public string StaticDataPath { get; set; }
 
         [Option("eventbus", Default = "localhost:5532", Required = false, HelpText = "Event bus address")]
         public string EventBusConnectionString { get; set; }
@@ -126,12 +131,23 @@ public static class Program
 
         Log.Information("Connected to object storage");
 
-        Catalog = new Catalog();
+        Log.Information("Loading static data");
+        try
+        {
+            staticData = new SData(options.StaticDataPath);
+        }
+        catch (StaticDataException staticDataException)
+        {
+            Log.Fatal($"Failed to load static data: {staticDataException}");
+            return 1;
+        }
+
+        Log.Information("Loaded static data");
 
         tappablesManager = new TappablesManager(eventBus);
         buildplateInstancesManager = new BuildplateInstancesManager(eventBus);
 
-        BuildplateInstanceRequestHandler.start(DB, eventBus, objectStore, Catalog);
+        BuildplateInstanceRequestHandler.start(DB, eventBus, objectStore, staticData.catalog);
 
         CreateHostBuilder(args, options.HttpPort).Build().Run();
 

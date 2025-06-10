@@ -9,6 +9,7 @@ using ViennaDotNet.ApiServer.Utils;
 using ViennaDotNet.Common.Utils;
 using ViennaDotNet.DB;
 using ViennaDotNet.DB.Models.Player;
+using ViennaDotNet.StaticData;
 using Rewards = ViennaDotNet.ApiServer.Utils.Rewards;
 
 namespace ViennaDotNet.ApiServer.Controllers;
@@ -19,6 +20,7 @@ namespace ViennaDotNet.ApiServer.Controllers;
 public class TokensController : ControllerBase
 {
     private static EarthDB earthDB => Program.DB;
+    private static StaticData.StaticData staticData => Program.staticData;
 
     [HttpGet]
     public async Task<IActionResult> Get(CancellationToken cancellationToken)
@@ -45,13 +47,15 @@ public class TokensController : ControllerBase
         return Content(resp, "application/json");
     }
 
-    // TODO: some token types might have actions to perform when they're redeemed?
     [HttpPost("{tokenId}/redeem")]
     public async Task<IActionResult> Redeem(string tokenId, CancellationToken cancellationToken)
     {
         string? playerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (string.IsNullOrEmpty(playerId))
             return BadRequest();
+
+        // request.timestamp
+        long requestStartedOn = ((DateTime)HttpContext.Items["RequestStartedOn"]!).ToUnixTimeMilliseconds();
 
         Tokens.Token? token;
         try
@@ -63,13 +67,21 @@ public class TokensController : ControllerBase
                     Tokens tokens = (Tokens)results1.Get("tokens").Value;
                     Tokens.Token? removedToken = tokens.removeToken(tokenId);
                     if (removedToken != null)
+                    {
                         return new EarthDB.Query(true)
                             .Update("tokens", playerId, tokens)
-                            .Extra("success", true)
-                            .Extra("token", removedToken);
+                            .Then(TokenUtils.doActionsOnRedeemedToken(removedToken, playerId, requestStartedOn, staticData))
+                            .Then(
+                                new EarthDB.Query(false)
+                                    .Extra("success", true)
+                                    .Extra("token", removedToken)
+                            );
+                    }
                     else
+                    {
                         return new EarthDB.Query(false)
                             .Extra("success", false);
+                    }
                 })
                 .ExecuteAsync(earthDB, cancellationToken);
             token = (bool)results.getExtra("success") ? (Tokens.Token)results.getExtra("token") : null;

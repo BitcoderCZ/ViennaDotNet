@@ -123,7 +123,6 @@ public sealed class Rewards
                         journal.touchItem(id, currentTime);
                         if (item.journalEntry is not null && journal.getItem(id)!.amountCollected == 0)
                         {
-                            updateQuery.Then(ActivityLogUtils.addEntry(playerId, new ActivityLog.JournalItemUnlockedEntry(currentTime, id)));
                             updateQuery.Then(TokenUtils.addToken(playerId, new JournalItemUnlockedToken(id)));
                         }
 

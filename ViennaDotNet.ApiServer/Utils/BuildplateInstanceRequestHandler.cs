@@ -617,7 +617,6 @@ public sealed class BuildplateInstanceRequestHandler
                             .Update("journal", playerDisconnectedRequest.playerId, journal);
                     foreach (string itemId in unlockedJournalItems)
                     {
-                        query.Then(ActivityLogUtils.addEntry(playerDisconnectedRequest.playerId, new ActivityLog.JournalItemUnlockedEntry(timestamp, itemId)));
                         query.Then(TokenUtils.addToken(playerDisconnectedRequest.playerId, new Tokens.JournalItemUnlockedToken(itemId)));
                     }
 
@@ -686,7 +685,6 @@ public sealed class BuildplateInstanceRequestHandler
 
                 if (journalItemUnlocked)
                 {
-                    query.Then(ActivityLogUtils.addEntry(inventoryAddItemMessage.playerId, new ActivityLog.JournalItemUnlockedEntry(timestamp, inventoryAddItemMessage.itemId)));
                     query.Then(TokenUtils.addToken(inventoryAddItemMessage.playerId, new Tokens.JournalItemUnlockedToken(inventoryAddItemMessage.itemId)));
                 }
 

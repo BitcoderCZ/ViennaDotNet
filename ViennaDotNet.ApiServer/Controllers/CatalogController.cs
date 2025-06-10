@@ -152,7 +152,21 @@ public class CatalogController : ControllerBase
                 mobDamage = 0;
             }
 
-            Types.Catalog.BoostMetadata? boostMetadata;
+            ItemsCatalog.Item.ItemData.BlockMetadata? blockMetadata;
+            if (item.blockInfo is not null)
+            {
+                blockMetadata = new ItemsCatalog.Item.ItemData.BlockMetadata(item.blockInfo.breakingHealth, item.blockInfo.efficiencyCategory);
+            }
+            else if (item.mobInfo is not null)
+            {
+                blockMetadata = new ItemsCatalog.Item.ItemData.BlockMetadata(item.mobInfo.health, "instant");
+            }
+            else
+            {
+                blockMetadata = null;
+            }
+
+            BoostMetadata? boostMetadata;
             if (item.boostInfo is not null)
             {
                 string boostTypeString = item.boostInfo.type switch
@@ -313,7 +327,7 @@ public class CatalogController : ControllerBase
                     mobDamage,
                     blockDamage,
                     health,
-                    item.blockInfo is not null ? new ItemsCatalog.Item.ItemData.BlockMetadata(item.blockInfo.breakingHealth, item.blockInfo.efficiencyCategory) : null,
+                    blockMetadata,
                     new ItemsCatalog.Item.ItemData.ItemMetadata(
                         useTypeString,
                         alternativeUseTypeString,

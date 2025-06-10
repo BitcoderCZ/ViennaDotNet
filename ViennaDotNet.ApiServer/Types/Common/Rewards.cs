@@ -6,7 +6,7 @@ public record Rewards(
     int? experiencePoints,
     int? level,
     Rewards.Item[] inventory,
-    Rewards.Buildplate[] buildplates,
+    string[] buildplates,
     Rewards.Challenge[] challenges,
     string[] personaItems,
     Rewards.UtilityBlock[] utilityBlocks
@@ -15,12 +15,6 @@ public record Rewards(
     public record Item(
         string id,
         int amount
-    )
-    {
-    }
-
-    public record Buildplate(
-        string id
     )
     {
     }

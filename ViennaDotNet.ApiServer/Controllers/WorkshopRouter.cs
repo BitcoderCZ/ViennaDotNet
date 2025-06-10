@@ -43,7 +43,7 @@ namespace ViennaDotNet.ApiServer.Controllers;
 public class WorkshopRouter : ControllerBase
 {
     private static EarthDB earthDB => Program.DB;
-    private static Catalog catalog => Program.staticData.catalog;
+    private static StaticData.StaticData staticData => Program.staticData;
 
     [HttpGet("player/utilityBlocks")]
     public async Task<IActionResult> GetUtilityBlocks(CancellationToken cancellationToken)
@@ -172,7 +172,7 @@ public class WorkshopRouter : ControllerBase
             return BadRequest();
         }
 
-        Catalog.RecipesCatalog.CraftingRecipe? recipe = catalog.recipesCatalog.getCraftingRecipe(startRequest.recipeId);
+        Catalog.RecipesCatalog.CraftingRecipe? recipe = staticData.catalog.recipesCatalog.getCraftingRecipe(startRequest.recipeId);
 
         if (recipe is null)
         {
@@ -341,8 +341,8 @@ public class WorkshopRouter : ControllerBase
         if (startRequest.fuel != null && startRequest.fuel.quantity > 0 && startRequest.fuel.itemInstanceIds != null && startRequest.fuel.itemInstanceIds.Length > 0 && startRequest.fuel.itemInstanceIds.Length != startRequest.fuel.quantity)
             return BadRequest();
 
-        Catalog.RecipesCatalog.SmeltingRecipe? recipe = catalog.recipesCatalog.getSmeltingRecipe(startRequest.recipeId);
-        Catalog.ItemsCatalog.Item? fuelCatalogItem = startRequest.fuel is not null ? catalog.itemsCatalog.getItem(startRequest.fuel.itemId) : null;
+        Catalog.RecipesCatalog.SmeltingRecipe? recipe = staticData.catalog.recipesCatalog.getSmeltingRecipe(startRequest.recipeId);
+        Catalog.ItemsCatalog.Item? fuelCatalogItem = startRequest.fuel is not null ? staticData.catalog.itemsCatalog.getItem(startRequest.fuel.itemId) : null;
         if (recipe is null)
         {
             return BadRequest();
@@ -503,7 +503,7 @@ public class WorkshopRouter : ControllerBase
                     Rewards rewards = new Rewards();
                     if (craftingSlot.activeJob != null)
                     {
-                        CraftingCalculator.State state = CraftingCalculator.calculateState(requestStartedOn, craftingSlot.activeJob, catalog);
+                        CraftingCalculator.State state = CraftingCalculator.calculateState(requestStartedOn, craftingSlot.activeJob, staticData.catalog);
 
                         int quantity = state.availableRounds * state.output.count;
                         if (quantity > 0)
@@ -521,7 +521,7 @@ public class WorkshopRouter : ControllerBase
                     return new EarthDB.Query(true)
                         .Update("crafting", playerId, craftingSlots)
                         .Then(ActivityLogUtils.addEntry(playerId, new ActivityLog.CraftingCompletedEntry(requestStartedOn, rewards.toDBRewardsModel())))
-                        .Then(rewards.toRedeemQuery(playerId, requestStartedOn, catalog));
+                        .Then(rewards.toRedeemQuery(playerId, requestStartedOn, staticData));
                 })
                 .ExecuteAsync(earthDB, cancellationToken);
 
@@ -559,7 +559,7 @@ public class WorkshopRouter : ControllerBase
                     Rewards rewards = new Rewards();
                     if (smeltingSlot.activeJob != null)
                     {
-                        SmeltingCalculator.State state = SmeltingCalculator.calculateState(requestStartedOn, smeltingSlot.activeJob, smeltingSlot.burning, catalog);
+                        SmeltingCalculator.State state = SmeltingCalculator.calculateState(requestStartedOn, smeltingSlot.activeJob, smeltingSlot.burning, staticData.catalog);
 
                         int quantity = state.availableRounds * state.output.count;
                         if (quantity > 0)
@@ -586,7 +586,7 @@ public class WorkshopRouter : ControllerBase
                     return new EarthDB.Query(true)
                         .Update("smelting", playerId, smeltingSlots)
                         .Then(ActivityLogUtils.addEntry(playerId, new ActivityLog.SmeltingCompletedEntry(requestStartedOn, rewards.toDBRewardsModel())))
-                        .Then(rewards.toRedeemQuery(playerId, requestStartedOn, catalog));
+                        .Then(rewards.toRedeemQuery(playerId, requestStartedOn, staticData));
                 })
                 .ExecuteAsync(earthDB, cancellationToken);
 
@@ -631,7 +631,7 @@ public class WorkshopRouter : ControllerBase
                     if (craftingSlot.activeJob == null)
                         return query;
 
-                    CraftingCalculator.State state = CraftingCalculator.calculateState(requestStartedOn, craftingSlot.activeJob, catalog);
+                    CraftingCalculator.State state = CraftingCalculator.calculateState(requestStartedOn, craftingSlot.activeJob, staticData.catalog);
 
                     foreach (InputItem inputItem in state.input)
                     {
@@ -646,7 +646,7 @@ public class WorkshopRouter : ControllerBase
                     int outputQuantity = state.availableRounds * state.output.count;
                     if (outputQuantity > 0)
                     {
-                        Catalog.ItemsCatalog.Item? item = catalog.itemsCatalog.getItem(state.output.id);
+                        Catalog.ItemsCatalog.Item? item = staticData.catalog.itemsCatalog.getItem(state.output.id);
 
                         Debug.Assert(item is not null);
 
@@ -710,7 +710,7 @@ public class WorkshopRouter : ControllerBase
                     if (smeltingSlot.activeJob == null)
                         return query;
 
-                    SmeltingCalculator.State state = SmeltingCalculator.calculateState(requestStartedOn, smeltingSlot.activeJob, smeltingSlot.burning, catalog);
+                    SmeltingCalculator.State state = SmeltingCalculator.calculateState(requestStartedOn, smeltingSlot.activeJob, smeltingSlot.burning, staticData.catalog);
 
                     if (state.input.instances.Length > 0)
                         inventory.addItems(state.input.id, [.. state.input.instances.Select(instance => new NonStackableItemInstance(instance.instanceId, instance.wear))]);
@@ -722,7 +722,7 @@ public class WorkshopRouter : ControllerBase
                     int outputQuantity = state.availableRounds * state.output.count;
                     if (outputQuantity > 0)
                     {
-                        Catalog.ItemsCatalog.Item? item = catalog.itemsCatalog.getItem(state.output.id);
+                        Catalog.ItemsCatalog.Item? item = staticData.catalog.itemsCatalog.getItem(state.output.id);
 
                         Debug.Assert(item is not null);
 
@@ -802,7 +802,7 @@ public class WorkshopRouter : ControllerBase
                     if (craftingSlot.activeJob == null)
                         return query;
 
-                    CraftingCalculator.State state = CraftingCalculator.calculateState(requestStartedOn, craftingSlot.activeJob, catalog);
+                    CraftingCalculator.State state = CraftingCalculator.calculateState(requestStartedOn, craftingSlot.activeJob, staticData.catalog);
                     if (state.completed)
                         return query;
 
@@ -868,7 +868,7 @@ public class WorkshopRouter : ControllerBase
                     if (smeltingSlot.activeJob == null)
                         return query;
 
-                    SmeltingCalculator.State state = SmeltingCalculator.calculateState(requestStartedOn, smeltingSlot.activeJob, smeltingSlot.burning, catalog);
+                    SmeltingCalculator.State state = SmeltingCalculator.calculateState(requestStartedOn, smeltingSlot.activeJob, smeltingSlot.burning, staticData.catalog);
                     if (state.completed)
                         return query;
 
@@ -1076,7 +1076,7 @@ public class WorkshopRouter : ControllerBase
         CraftingSlot.ActiveJob? activeJob = craftingSlotModel.activeJob;
         if (activeJob != null)
         {
-            CraftingCalculator.State state = CraftingCalculator.calculateState(currentTime, activeJob, catalog);
+            CraftingCalculator.State state = CraftingCalculator.calculateState(currentTime, activeJob, staticData.catalog);
             return new Types.Workshop.CraftingSlot(
                 activeJob.sessionId,
                 activeJob.recipeId,
@@ -1101,7 +1101,7 @@ public class WorkshopRouter : ControllerBase
             return new Types.Workshop.CraftingSlot(null, null, null, null, 0, 0, 0, null, null, State.EMPTY, null, null, streamVersion);
     }
 
-    private Types.Workshop.SmeltingSlot SmeltingSlotModelToResponseIncludingLocked(SmeltingSlot smeltingSlotModel, long currentTime, int streamVersion, int slotIndex)
+    private static Types.Workshop.SmeltingSlot SmeltingSlotModelToResponseIncludingLocked(SmeltingSlot smeltingSlotModel, long currentTime, int streamVersion, int slotIndex)
     {
         if (smeltingSlotModel.locked)
             return new Types.Workshop.SmeltingSlot(null, null, null, null, null, null, 0, 0, 0, null, null, State.LOCKED, null, new UnlockPrice(SmeltingCalculator.calculateUnlockPrice(slotIndex), 0), streamVersion);
@@ -1117,7 +1117,7 @@ public class WorkshopRouter : ControllerBase
         SmeltingSlot.ActiveJob? activeJob = smeltingSlotModel.activeJob;
         if (activeJob != null)
         {
-            SmeltingCalculator.State state = SmeltingCalculator.calculateState(currentTime, activeJob, smeltingSlotModel.burning, catalog);
+            SmeltingCalculator.State state = SmeltingCalculator.calculateState(currentTime, activeJob, smeltingSlotModel.burning, staticData.catalog);
 
             Types.Workshop.SmeltingSlot.Fuel? fuel;
             if (state.remainingAddedFuel != null && state.remainingAddedFuel.item.count > 0)

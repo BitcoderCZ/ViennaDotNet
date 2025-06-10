@@ -3,6 +3,8 @@ using Cyotek.Data.Nbt.Serialization;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Serilog;
+using Serilog.Core;
+using System;
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Text;
@@ -57,6 +59,7 @@ public class Instance
     private readonly string fabricJarName;
     private readonly FileInfo connectorPluginJar;
     private readonly DirectoryInfo baseDir;
+    private readonly string eventBusAddress;
     private readonly string eventBusQueueName;
     private readonly string connectorPluginArgString;
 
@@ -77,7 +80,7 @@ public class Instance
 
     private volatile bool hostPlayerConnected = false;
 
-    private Instance(EventBusClient eventBusClient, string? playerId, string buildplateId, BuildplateSource buildplateSource, string instanceId, bool survival, bool night, bool saveEnabled, InventoryType inventoryType, long? shutdownTime, string publicAddress, int port, int serverInternalPort, string javaCmd, FileInfo fountainBridgeJar, DirectoryInfo serverTemplateDir, string fabricJarName, FileInfo connectorPluginJar, DirectoryInfo baseDir, string eventBusConnectionstring)
+    private Instance(EventBusClient eventBusClient, string? playerId, string buildplateId, BuildplateSource buildplateSource, string instanceId, bool survival, bool night, bool saveEnabled, InventoryType inventoryType, long? shutdownTime, string publicAddress, int port, int serverInternalPort, string javaCmd, FileInfo fountainBridgeJar, DirectoryInfo serverTemplateDir, string fabricJarName, FileInfo connectorPluginJar, DirectoryInfo baseDir, string eventBusConnectionString)
     {
         this.eventBusClient = eventBusClient;
 
@@ -101,8 +104,9 @@ public class Instance
         this.fabricJarName = fabricJarName;
         this.connectorPluginJar = connectorPluginJar;
         this.baseDir = baseDir;
+        this.eventBusAddress = eventBusConnectionString;
         this.eventBusQueueName = "buildplate_" + this.instanceId;
-        this.connectorPluginArgString = JsonConvert.SerializeObject(new ConnectorPluginArg(eventBusConnectionstring, this.eventBusQueueName, saveEnabled, inventoryType));
+        this.connectorPluginArgString = JsonConvert.SerializeObject(new ConnectorPluginArg(this.eventBusAddress, this.eventBusQueueName, this.inventoryType));
     }
 
     private void run()
@@ -275,16 +279,26 @@ public class Instance
                 break;
             case "saved":
                 {
-                    WorldSavedMessage? worldSavedMessage = readJson<WorldSavedMessage>(@event.data);
-                    if (worldSavedMessage != null)
+                    if (saveEnabled)
                     {
-                        if (hostPlayerConnected)
+                        WorldSavedMessage? worldSavedMessage = readJson<WorldSavedMessage>(@event.data);
+                        if (worldSavedMessage is not null)
                         {
-                            Log.Information("Saving snapshot");
-                            sendEventBusRequest<object>("saved", worldSavedMessage, false);
+                            if (hostPlayerConnected)
+
+                            {
+                                Log.Information("Saving snapshot");
+                                _ = sendEventBusRequest<object>("saved", worldSavedMessage, false);
+                            }
+                            else
+                            {
+                                Log.Information("Not saving snapshot because host player never connected");
+                            }
                         }
-                        else
-                            Log.Information("Not saving snapshot because host player never connected");
+                    }
+                    else
+                    {
+                        Log.Information("Ignoring save data because saving is disabled");
                     }
                 }
 
@@ -531,7 +545,7 @@ public class Instance
 
         if (!copyServerFile(Path.Combine(serverTemplateDir.FullName, "mods"), Path.Combine(workDir.FullName, "mods"), true))
         {
-            Log.Error("Mods directory was not present in server template directory, the buildplate server instance will not function correctly without the Fountain Fabric mod installed");
+            Log.Error("Mods directory was not present in server template directory, the buildplate server instance will not function correctly without the Fountain and Vienna Fabric mods installed");
         }
 
         File.WriteAllText(Path.Combine(workDir.FullName, "eula.txt"), "eula=true");
@@ -542,10 +556,9 @@ public class Instance
             .Append("sync-chunk-writes=false\n")
             .Append("spawn-protection=0\n")
             .Append($"server-port={serverInternalPort}\n")
-            .Append($"fountain-connector-plugin-jar={connectorPluginJar.FullName.Replace('\\', '/')}\n")
-            .Append("fountain-connector-plugin-class=micheal65536.vienna.buildplate.connector.plugin.ViennaConnectorPlugin\n")
-            .Append($"fountain-connector-plugin-arg={connectorPluginArgString}\n")
             .Append($"gamemode={(survival ? "survival" : "creative")}\n")
+            .Append($"vienna-event-bus-address={eventBusAddress}\n")
+            .Append($"vienna-event-bus-queue-name={eventBusQueueName}\n")
             .ToString();
         File.WriteAllText(Path.Combine(workDir.FullName, "server.properties"), serverProperties);
 
@@ -904,6 +917,7 @@ public class Instance
                 "-connectorPluginJar", connectorPluginJar.FullName,
                 "-connectorPluginClass", "micheal65536.vienna.buildplate.connector.plugin.ViennaConnectorPlugin",
                 "-connectorPluginArg", connectorPluginArgString,
+                "-useUUIDAsUsername",
             ]);
 
             Log.Information($"Bridge process started, PID {bridgeProcess.Id}");

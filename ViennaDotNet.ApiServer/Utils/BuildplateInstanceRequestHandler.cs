@@ -591,7 +591,7 @@ public sealed class BuildplateInstanceRequestHandler
                         }
 
                         journal.touchItem(item.id, timestamp);
-                        if (journal.getItem(item.id)!.amountCollected == 0)
+                        if (catalogItem.journalEntry is not null && journal.getItem(item.id)!.amountCollected == 0)
                         {
                             unlockedJournalItems.AddLast(item.id);
                         }
@@ -673,7 +673,10 @@ public sealed class BuildplateInstanceRequestHandler
 
                 journal.touchItem(inventoryAddItemMessage.itemId, timestamp);
                 bool journalItemUnlocked = false;
-                if (journal.getItem(inventoryAddItemMessage.itemId)!.amountCollected == 0) journalItemUnlocked = true;
+                if (catalogItem.journalEntry is not null && journal.getItem(inventoryAddItemMessage.itemId)!.amountCollected == 0)
+                {
+                    journalItemUnlocked = true;
+                }
 
                 journal.addCollectedItem(inventoryAddItemMessage.itemId, inventoryAddItemMessage.count);
 

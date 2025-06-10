@@ -8,6 +8,7 @@ using ViennaDotNet.ApiServer.Utils;
 using ViennaDotNet.Common.Utils;
 using ViennaDotNet.DB;
 using ViennaDotNet.DB.Models.Player;
+using ViennaDotNet.StaticData;
 using DatabaseException = ViennaDotNet.DB.EarthDB.DatabaseException;
 
 namespace ViennaDotNet.ApiServer.Controllers;
@@ -18,6 +19,7 @@ namespace ViennaDotNet.ApiServer.Controllers;
 public class ProfileController : ControllerBase
 {
     private static EarthDB earthDB => Program.DB;
+    private static StaticData.StaticData staticData => Program.staticData;
 
     [HttpGet("profile/{userId}")]
     public async Task<IActionResult> GetProfile(string userId, CancellationToken cancellationToken)
@@ -27,15 +29,15 @@ public class ProfileController : ControllerBase
             .ExecuteAsync(earthDB, cancellationToken))
             .Get("profile").Value;
 
-        LevelUtils.Level[] levels = LevelUtils.getLevels();
+        Levels.Level[] levels = staticData.levels.levels;
         int currentLevelExperience = profile.experience - (profile.level > 1 ? (profile.level - 2 < levels.Length ? levels[profile.level - 2].experienceRequired : levels[^1].experienceRequired) : 0);
         int experienceRemaining = profile.level - 1 < levels.Length ? levels[profile.level - 1].experienceRequired - profile.experience : 0;
 
         string resp = JsonConvert.SerializeObject(new EarthApiResponse(new Types.Profile.Profile(
             Java.IntStream.Range(0, levels.Length).Collect(() => new Dictionary<int, Types.Profile.Profile.Level>(), (hashMap, levelIndex) =>
             {
-                LevelUtils.Level level = levels[levelIndex];
-                hashMap[levelIndex + 1] = new Types.Profile.Profile.Level(level.experienceRequired, level.rewards.toApiResponse());
+                Levels.Level level = levels[levelIndex];
+                hashMap[levelIndex + 1] = new Types.Profile.Profile.Level(level.experienceRequired, LevelUtils.makeLevelRewards(level).toApiResponse());
             }, DictionaryExtensions.AddRange),
             profile.experience,
             profile.level,
@@ -96,4 +98,9 @@ public class ProfileController : ControllerBase
             return StatusCode(500);
         }
     }
+
+    // required for the language selection option in the client to work
+    [HttpPost("profile/language")]
+    public IActionResult ChangeLanguage()
+        => Ok();
 }

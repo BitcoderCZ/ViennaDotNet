@@ -13,6 +13,7 @@ public static class ActivityLogUtils
         {
             ActivityLog activityLog = (ActivityLog)results.Get("activityLog").Value;
             activityLog.addEntry(entry);
+            activityLog.prune();
             EarthDB.Query updateQuery = new EarthDB.Query(true);
             updateQuery.Update("activityLog", playerId, activityLog);
             return updateQuery;

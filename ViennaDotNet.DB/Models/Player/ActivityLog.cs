@@ -33,6 +33,15 @@ public sealed class ActivityLog
         entries.AddLast(entry);
     }
 
+    public void prune()
+    {
+        // it is widely known that the activity log is length limited but there is only ONE person who has stated how long it was limited to and apparently it is 40 entires
+        while (entries.Count > 40)
+        {
+            entries.RemoveFirst();
+        }
+    }
+
     [JsonObject(MemberSerialization.OptIn)]
     public abstract class Entry
     {

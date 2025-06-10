@@ -27,14 +27,18 @@ public sealed class Journal
     public ItemJournalEntry? getItem(string uuid)
         => items.GetValueOrDefault(uuid);
 
-    public void touchItem(string uuid, long timestamp)
+    public ItemJournalEntry touchItem(string uuid, long timestamp)
     {
         ItemJournalEntry? itemJournalEntry = items.GetOrDefault(uuid, null);
 
         if (itemJournalEntry == null)
-            items[uuid] = new ItemJournalEntry(timestamp, timestamp, 0);
+        {
+            return items[uuid] = new ItemJournalEntry(timestamp, timestamp, 0);
+        }
         else
-            items[uuid] = new ItemJournalEntry(itemJournalEntry.firstSeen, timestamp, itemJournalEntry.amountCollected);
+        {
+            return items[uuid] = new ItemJournalEntry(itemJournalEntry.firstSeen, timestamp, itemJournalEntry.amountCollected);
+        }
     }
 
     public void addCollectedItem(string uuid, int count)

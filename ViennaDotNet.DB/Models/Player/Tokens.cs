@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using ViennaDotNet.Common.Utils;
+using ViennaDotNet.DB.Models.Common;
 
 namespace ViennaDotNet.DB.Models.Player;
 
@@ -93,11 +94,13 @@ public sealed class Tokens
         }
     }
 
+    [JsonObject(MemberSerialization.Fields)]
     public class LevelUpToken : Token
     {
         public readonly int level;
+        public readonly Rewards rewards;
 
-        public LevelUpToken(int level)
+        public LevelUpToken(int level, Rewards rewards)
             : base(Type.LEVEL_UP)
         {
             this.level = level;

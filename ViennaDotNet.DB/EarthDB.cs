@@ -8,6 +8,8 @@ namespace ViennaDotNet.DB;
 
 public sealed class EarthDB : IDisposable
 {
+    private const int TRANSACTION_TIMEOUT = 60;
+
     public static EarthDB Open(string connectionString)
     {
         return new EarthDB(connectionString);
@@ -26,7 +28,7 @@ public sealed class EarthDB : IDisposable
         {
             using var connection = new SqliteConnection("Data Source=" + connectionString);
             connection.Open();
-            using (var command = new SqliteCommand("CREATE TABLE IF NOT EXISTS objects (type STRING NOT NULL, id STRING NOT NULL, value STRING NOT NULL, version INTEGER NOT NULL, PRIMARY KEY (type, id))", connection))
+            using (var command = new SqliteCommand("CREATE TABLE IF NOT EXISTS objects (type STRING NOT NULL, id STRING NOT NULL, value STRING NOT NULL, version INTEGER NOT NULL, PRIMARY KEY (type, id))", connection) { CommandTimeout = TRANSACTION_TIMEOUT })
                 command.ExecuteNonQuery();
 
         }
@@ -178,6 +180,7 @@ public sealed class EarthDB : IDisposable
                 string json = JsonConvert.SerializeObject(entry.value);
 
                 var command = transaction.Connection!.CreateCommand();
+                command.CommandTimeout = TRANSACTION_TIMEOUT;
                 command.CommandText = "INSERT OR REPLACE INTO objects(type, id, value, version) VALUES ($type, $id, $value, COALESCE((SELECT version FROM objects WHERE type == $type AND id == $id), 1) + 1)";
 
                 command.Parameters.AddWithValue("$type", entry.type);
@@ -187,6 +190,7 @@ public sealed class EarthDB : IDisposable
 
                 /*****************************/
                 command = transaction.Connection.CreateCommand();
+                command.CommandTimeout = TRANSACTION_TIMEOUT;
                 command.CommandText = "SELECT version FROM objects WHERE type == $type AND id == $id";
 
                 command.Parameters.AddWithValue("$type", entry.type);
@@ -208,6 +212,7 @@ public sealed class EarthDB : IDisposable
             foreach (ReadObjectsEntry entry in readObjects)
             {
                 var command = transaction.Connection!.CreateCommand();
+                command.CommandTimeout = TRANSACTION_TIMEOUT;
                 command.CommandText = "SELECT value, version FROM objects WHERE type == $type AND id == $id";
 
                 command.Parameters.AddWithValue("$type", entry.type);
@@ -265,6 +270,7 @@ public sealed class EarthDB : IDisposable
                 string json = JsonConvert.SerializeObject(entry.value);
 
                 var command = transaction.Connection!.CreateCommand();
+                command.CommandTimeout = TRANSACTION_TIMEOUT;
                 command.CommandText = "INSERT OR REPLACE INTO objects(type, id, value, version) VALUES ($type, $id, $value, COALESCE((SELECT version FROM objects WHERE type == $type AND id == $id), 1) + 1)";
 
                 command.Parameters.AddWithValue("$type", entry.type);
@@ -274,6 +280,7 @@ public sealed class EarthDB : IDisposable
 
                 /*****************************/
                 command = transaction.Connection.CreateCommand();
+                command.CommandTimeout = TRANSACTION_TIMEOUT;
                 command.CommandText = "SELECT version FROM objects WHERE type == $type AND id == $id";
 
                 command.Parameters.AddWithValue("$type", entry.type);
@@ -293,6 +300,7 @@ public sealed class EarthDB : IDisposable
             foreach (ReadObjectsEntry entry in readObjects)
             {
                 var command = transaction.Connection!.CreateCommand();
+                command.CommandTimeout = TRANSACTION_TIMEOUT;
                 command.CommandText = "SELECT value, version FROM objects WHERE type == $type AND id == $id";
 
                 command.Parameters.AddWithValue("$type", entry.type);

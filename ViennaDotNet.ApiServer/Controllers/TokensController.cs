@@ -100,7 +100,7 @@ public class TokensController : ControllerBase
 
         Rewards rewards = token.type switch
         {
-            Tokens.Token.Type.LEVEL_UP => new Rewards().setLevel(((Tokens.LevelUpToken)token).level),
+            Tokens.Token.Type.LEVEL_UP => Rewards.fromDBRewardsModel(((Tokens.LevelUpToken)token).rewards).setLevel(((Tokens.LevelUpToken)token).level),
             _ => new Rewards(),
         };
 

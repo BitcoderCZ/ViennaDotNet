@@ -3,6 +3,5 @@
 public sealed record ConnectorPluginArg(
     string eventBusAddress,
     string eventBusQueueName,
-    bool saveEnabled,
     InventoryType inventoryType
 );

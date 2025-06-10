@@ -59,7 +59,7 @@ public sealed class Rewards
         return this;
     }
 
-    public EarthDB.Query toRedeemQuery(string playerId, long currentTime, Catalog catalog)
+    public EarthDB.Query toRedeemQuery(string playerId, long currentTime, StaticData.StaticData staticData)
     {
         EarthDB.Query getQuery = new EarthDB.Query(true);
         if (rubies > 0 || experiencePoints > 0)
@@ -97,7 +97,9 @@ public sealed class Rewards
                 updateQuery.Update("profile", playerId, profile);
 
                 if (experiencePoints > 0)
+                {
                     checkLevelUp = true;
+                }
             }
 
             if (!items.IsEmpty())
@@ -110,7 +112,7 @@ public sealed class Rewards
                     int quantity = entry.Value ?? 0; // idk, no null checks here, so I added ?? 0
                     if (quantity > 0)
                     {
-                        Catalog.ItemsCatalog.Item? item = catalog.itemsCatalog.getItem(id);
+                        Catalog.ItemsCatalog.Item? item = staticData.catalog.itemsCatalog.getItem(id);
                         Debug.Assert(item is not null);
 
                         if (item.stackable)
@@ -119,7 +121,7 @@ public sealed class Rewards
                             inventory.addItems(id, [.. Java.IntStream.Range(0, quantity).Select(index => new NonStackableItemInstance(U.RandomUuid().ToString(), 0))]);
 
                         journal.touchItem(id, currentTime);
-                        if (journal.getItem(id)!.amountCollected == 0)
+                        if (item.journalEntry is not null && journal.getItem(id)!.amountCollected == 0)
                         {
                             updateQuery.Then(ActivityLogUtils.addEntry(playerId, new ActivityLog.JournalItemUnlockedEntry(currentTime, id)));
                             updateQuery.Then(TokenUtils.addToken(playerId, new JournalItemUnlockedToken(id)));
@@ -145,7 +147,7 @@ public sealed class Rewards
 
             if (checkLevelUp)
             {
-                updateQuery.Then(LevelUtils.checkAndHandlePlayerLevelUp(playerId, currentTime, catalog));
+                updateQuery.Then(LevelUtils.checkAndHandlePlayerLevelUp(playerId, currentTime, staticData));
             }
 
             return updateQuery;
@@ -162,7 +164,7 @@ public sealed class Rewards
             experiencePoints,
             level,
             [.. items.Select(item => new Types.Common.Rewards.Item(item.Key, item.Value ?? 0))],
-            [.. buildplates.Select(buildplate => new Types.Common.Rewards.Buildplate(buildplate))],
+            [.. buildplates],
             [.. challenges.Select(challenge => new Types.Common.Rewards.Challenge(challenge))],
             [],
             []

@@ -21,7 +21,7 @@ public class TappablesController : ControllerBase
 {
     private static TappablesManager tappablesManager => Program.tappablesManager;
     private static EarthDB earthDB => Program.DB;
-    private static Catalog catalog => Program.staticData.catalog;
+    private static StaticData.StaticData staticData => Program.staticData;
 
     [HttpGet("locations/{lat}/{lon}")]
     public async Task<IActionResult> GetTappables(double lat, double lon, CancellationToken cancellationToken)
@@ -144,7 +144,7 @@ public class TappablesController : ControllerBase
                     redeemedTappables.prune(requestStartedOn);
                     query.Update("redeemedTappables", playerId, redeemedTappables);
                     query.Then(ActivityLogUtils.addEntry(playerId, new ActivityLog.TappableEntry(requestStartedOn, rewards.toDBRewardsModel())));
-                    query.Then(rewards.toRedeemQuery(playerId, requestStartedOn, catalog));
+                    query.Then(rewards.toRedeemQuery(playerId, requestStartedOn, staticData));
                     query.Then(results2 => new EarthDB.Query(false).Extra("success", true).Extra("rewards", rewards));
 
                     return query;

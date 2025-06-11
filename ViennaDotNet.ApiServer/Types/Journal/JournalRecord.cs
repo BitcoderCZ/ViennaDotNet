@@ -33,7 +33,8 @@ public record JournalRecord(
             [EnumMember(Value = "TappableCollected")] TAPPABLE,
             [EnumMember(Value = "JournalContentCollected")] JOURNAL_ITEM_UNLOCKED,
             [EnumMember(Value = "CraftingJobCompleted")] CRAFTING_COMPLETED,
-            [EnumMember(Value = "SmeltingJobCompleted")] SMELTING_COMPLETED
+            [EnumMember(Value = "SmeltingJobCompleted")] SMELTING_COMPLETED,
+            [EnumMember(Value = "BoostActivated")] BOOST_ACTIVATED,
         }
     }
 }

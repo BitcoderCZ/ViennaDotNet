@@ -1,6 +1,7 @@
 ﻿using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Serilog;
 using System;
@@ -177,6 +178,7 @@ public class BoostsController : ControllerBase
 
                     return new EarthDB.Query(true)
                         .Update("inventory", playerId, inventory)
+                        .Then(ActivityLogUtils.addEntry(playerId, new ActivityLog.BoostActivatedEntry(requestStartedOn, itemId)))
                         .Then(BoostUtils.activatePotion(playerId, itemId, requestStartedOn, catalog.itemsCatalog));
                 })
                 .ExecuteAsync(earthDB, cancellationToken);

@@ -1,5 +1,7 @@
 ﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
+using System;
 using ViennaDotNet.Common.Utils;
 using ViennaDotNet.DB.Models.Common;
 
@@ -56,13 +58,15 @@ public sealed class ActivityLog
             this.type = type;
         }
 
+        [JsonConverter(typeof(StringEnumConverter))]
         public enum Type
         {
             LEVEL_UP,
             TAPPABLE,
             JOURNAL_ITEM_UNLOCKED,
             CRAFTING_COMPLETED,
-            SMELTING_COMPLETED
+            SMELTING_COMPLETED,
+            BOOST_ACTIVATED,
         }
 
         public class EntryConverter : JsonConverter<Entry>
@@ -87,6 +91,8 @@ public sealed class ActivityLog
                         return jsonObject.ToObject<CraftingCompletedEntry>();
                     case Type.SMELTING_COMPLETED:
                         return jsonObject.ToObject<SmeltingCompletedEntry>();
+                    case Type.BOOST_ACTIVATED:
+                        return jsonObject.ToObject<BoostActivatedEntry>();
                     default:
                         throw new JsonSerializationException("Invalid token type.");
                 }
@@ -161,6 +167,19 @@ public sealed class ActivityLog
             : base(timestamp, Type.SMELTING_COMPLETED)
         {
             this.rewards = rewards;
+        }
+    }
+
+    [JsonObject(MemberSerialization.OptIn)]
+    public sealed class BoostActivatedEntry : Entry
+    {
+        [JsonProperty]
+        public readonly string itemId;
+
+        public BoostActivatedEntry(long timestamp, string itemId)
+            : base(timestamp, Type.BOOST_ACTIVATED)
+        {
+            this.itemId = itemId;
         }
     }
 }

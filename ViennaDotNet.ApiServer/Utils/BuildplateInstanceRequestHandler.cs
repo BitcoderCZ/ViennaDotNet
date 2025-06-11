@@ -154,6 +154,7 @@ public sealed class BuildplateInstanceRequestHandler
             () =>
             {
                 Log.Fatal("Buildplates event bus request handler error");
+                Log.CloseAndFlush();
                 Environment.Exit(1);
             }
         ));

@@ -4,6 +4,7 @@ using ConsoleUI.TextValidators;
 using ConsoleUI.Utils;
 using MathUtils.Vectors;
 using Serilog;
+using System.Diagnostics;
 using System.Net;
 using ViennaDotNet.Launcher.Programs;
 
@@ -24,11 +25,15 @@ internal static class Program
 
         Log.Logger = log;
 
-        AppDomain.CurrentDomain.UnhandledException += (object sender, UnhandledExceptionEventArgs e) =>
+        if (!Debugger.IsAttached)
         {
-            Log.Fatal($"Unhandeled exception: {e.ExceptionObject}");
-            Environment.Exit(1);
-        };
+            AppDomain.CurrentDomain.UnhandledException += (object sender, UnhandledExceptionEventArgs e) =>
+            {
+                Log.Fatal($"Unhandeled exception: {e.ExceptionObject}");
+                Log.CloseAndFlush();
+                Environment.Exit(1);
+            };
+        }
 
         AutoUpdater.CheckAndUpdate().Wait();
 

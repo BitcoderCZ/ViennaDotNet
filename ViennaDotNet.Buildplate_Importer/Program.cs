@@ -1,5 +1,6 @@
 ﻿using CommandLine;
 using Serilog;
+using System.Diagnostics;
 using System.IO.Compression;
 using System.Text;
 using System.Text.Json;
@@ -44,11 +45,15 @@ internal static class Program
 
         Log.Logger = log;
 
-        AppDomain.CurrentDomain.UnhandledException += (object sender, UnhandledExceptionEventArgs e) =>
+        if (!Debugger.IsAttached)
         {
-            Log.Fatal($"Unhandeled exception: {e.ExceptionObject}");
-            Environment.Exit(1);
-        };
+            AppDomain.CurrentDomain.UnhandledException += (object sender, UnhandledExceptionEventArgs e) =>
+            {
+                Log.Fatal($"Unhandeled exception: {e.ExceptionObject}");
+                Log.CloseAndFlush();
+                Environment.Exit(1);
+            };
+        }
 
         ParserResult<Options> res = Parser.Default.ParseArguments<Options>(args);
 
@@ -80,6 +85,7 @@ internal static class Program
         catch (EarthDB.DatabaseException ex)
         {
             Log.Fatal($"Could not connect to database: {ex}");
+            Log.CloseAndFlush();
             Environment.Exit(1);
             return;
         }
@@ -95,6 +101,7 @@ internal static class Program
         catch (ObjectStoreClientException ex)
         {
             Log.Fatal($"Could not connect to object storage: {ex}");
+            Log.CloseAndFlush();
             Environment.Exit(1);
             return;
         }
@@ -118,6 +125,7 @@ internal static class Program
         if (worldData is null)
         {
             Log.Fatal("Could not get world data");
+            Log.CloseAndFlush();
             Environment.Exit(2);
             return;
         }
@@ -129,6 +137,7 @@ internal static class Program
         if (!await storeBuildplate(earthDB, eventBusClient, objectStoreClient, playerId, buildplateId, worldData, U.CurrentTimeMillis()))
         {
             Log.Fatal("Could not add buildplate");
+            Log.CloseAndFlush();
             Environment.Exit(3);
             return;
         }

@@ -15,6 +15,7 @@ public static class DataFile
         catch (Exception ex)
         {
             Log.Fatal($"Cannot read resource '{path}': {ex}");
+            Log.CloseAndFlush();
         }
     }
 }

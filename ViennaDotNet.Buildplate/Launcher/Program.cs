@@ -1,5 +1,6 @@
 ﻿using CommandLine;
 using Serilog;
+using System.Diagnostics;
 using ViennaDotNet.EventBus.Client;
 
 namespace ViennaDotNet.Buildplate.Launcher;
@@ -40,12 +41,15 @@ internal static class Program
             e.Cancel = true;
         };
 
-        AppDomain.CurrentDomain.UnhandledException += (object sender, UnhandledExceptionEventArgs e) =>
+        if (!Debugger.IsAttached)
         {
-            Log.Fatal($"Unhandeled exception: {e.ExceptionObject}");
-            Log.CloseAndFlush();
-            Environment.Exit(1);
-        };
+            AppDomain.CurrentDomain.UnhandledException += (object sender, UnhandledExceptionEventArgs e) =>
+            {
+                Log.Fatal($"Unhandeled exception: {e.ExceptionObject}");
+                Log.CloseAndFlush();
+                Environment.Exit(1);
+            };
+        }
 
         ParserResult<Options> res = Parser.Default.ParseArguments<Options>(args);
 
@@ -73,6 +77,7 @@ internal static class Program
         catch (EventBusClientException ex)
         {
             Log.Fatal($"Could not connect to event bus: {ex}");
+            Log.CloseAndFlush();
             return 1;
         }
 

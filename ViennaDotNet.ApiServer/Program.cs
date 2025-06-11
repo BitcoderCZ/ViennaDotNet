@@ -2,6 +2,7 @@ using CommandLine;
 using Serilog;
 using Serilog.Events;
 using System.ComponentModel;
+using System.Diagnostics;
 using Uma.Uuid;
 using ViennaDotNet.ApiServer.Utils;
 using ViennaDotNet.Common.Utils;
@@ -71,12 +72,15 @@ public static class Program
 
         Log.Logger = log;
 
-        AppDomain.CurrentDomain.UnhandledException += (object sender, UnhandledExceptionEventArgs e) =>
+        if (!Debugger.IsAttached)
         {
-            Log.Fatal($"Unhandeled exception: {e.ExceptionObject}");
-            Log.CloseAndFlush();
-            Environment.Exit(1);
-        };
+            AppDomain.CurrentDomain.UnhandledException += (object sender, UnhandledExceptionEventArgs e) =>
+            {
+                Log.Fatal($"Unhandeled exception: {e.ExceptionObject}");
+                Log.CloseAndFlush();
+                Environment.Exit(1);
+            };
+        }
 
         ParserResult<Options> res = Parser.Default.ParseArguments<Options>(args);
 
@@ -103,6 +107,7 @@ public static class Program
         catch (EarthDB.DatabaseException ex)
         {
             Log.Fatal($"Could not connect to database: {ex}");
+            Log.CloseAndFlush();
             return 1;
         }
 
@@ -116,6 +121,7 @@ public static class Program
         catch (EventBusClientException ex)
         {
             Log.Fatal($"Could not connect to event bus: {ex}");
+            Log.CloseAndFlush();
             return 1;
         }
 
@@ -128,6 +134,7 @@ public static class Program
         catch (ObjectStoreClientException ex)
         {
             Log.Fatal($"Could not connect to object storage: {ex}");
+            Log.CloseAndFlush();
             return 1;
         }
 
@@ -141,6 +148,7 @@ public static class Program
         catch (StaticDataException staticDataException)
         {
             Log.Fatal($"Failed to load static data: {staticDataException}");
+            Log.CloseAndFlush();
             return 1;
         }
 

@@ -1,5 +1,6 @@
 ﻿using CommandLine;
 using Serilog;
+using System.Diagnostics;
 
 namespace ViennaDotNet.ObjectStore.Server;
 
@@ -24,11 +25,15 @@ internal static class Program
 
         Log.Logger = log;
 
-        AppDomain.CurrentDomain.UnhandledException += (object sender, UnhandledExceptionEventArgs e) =>
+        if (!Debugger.IsAttached)
         {
-            Log.Fatal($"Unhandeled exception: {e.ExceptionObject}");
-            Environment.Exit(1);
-        };
+            AppDomain.CurrentDomain.UnhandledException += (object sender, UnhandledExceptionEventArgs e) =>
+            {
+                Log.Fatal($"Unhandeled exception: {e.ExceptionObject}");
+                Log.CloseAndFlush();
+                Environment.Exit(1);
+            };
+        }
 
         ParserResult<Options> res = Parser.Default.ParseArguments<Options>(args);
 
@@ -58,6 +63,7 @@ internal static class Program
         )
         {
             Log.Fatal(ex.ToString());
+            Log.CloseAndFlush();
             return 1;
         }
 

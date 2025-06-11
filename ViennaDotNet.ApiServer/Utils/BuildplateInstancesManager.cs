@@ -24,6 +24,7 @@ public sealed class BuildplateInstancesManager
             () =>
             {
                 Log.Fatal("Buildplates event bus subscriber error");
+                Log.CloseAndFlush();
                 Environment.Exit(1);
             }
         ));

@@ -24,6 +24,7 @@ public sealed class TappablesManager
         subscriber = eventBusClient.addSubscriber("tappables", new Subscriber.SubscriberListener(handleEvent, () =>
         {
             Log.Fatal("Tappables event bus subscriber error");
+            Log.CloseAndFlush();
             Environment.Exit(1);
         }));
         requestSender = eventBusClient.addRequestSender();

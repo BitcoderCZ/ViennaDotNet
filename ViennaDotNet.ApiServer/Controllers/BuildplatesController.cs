@@ -360,8 +360,10 @@ public class BuildplatesController : ControllerBase
             return BadRequest();
 
         BuildplateInstancesManager.InstanceInfo? instanceInfo = buildplateInstancesManager.getInstanceInfo(instanceId);
-        if (instanceInfo is null)
+        if (instanceInfo is null || instanceInfo.shuttingDown)
+        {
             return NotFound();
+        }
 
         Buildplates.Buildplate? buildplate;
         try
@@ -377,7 +379,9 @@ public class BuildplatesController : ControllerBase
         }
 
         if (buildplate is null)
+        {
             return NotFound();
+        }
 
         // TODO: the client is supposed to poll until the buildplate server is ready, but instead it just crashes if we tell it that the buildplate server is not ready yet
         // TODO: so instead we just stall the request until it's ready, this is really ugly and eventually we need to figure out why it's crashing and implement this properly
@@ -388,8 +392,10 @@ public class BuildplatesController : ControllerBase
         do
         {
             instanceInfo1 = buildplateInstancesManager.getInstanceInfo(instanceId);
-            if (instanceInfo1 is null)
+            if (instanceInfo1 is null || instanceInfo1.shuttingDown)
+            {
                 return NotFound();
+            }
 
             if (!instanceInfo1.ready)
             {

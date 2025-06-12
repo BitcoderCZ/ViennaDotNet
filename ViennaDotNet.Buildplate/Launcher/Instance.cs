@@ -3,6 +3,7 @@ using Cyotek.Data.Nbt.Serialization;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Serilog;
+using System;
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Text;
@@ -62,8 +63,8 @@ public class Instance
     private readonly string connectorPluginArgString;
 
     private Thread thread;
-    private readonly TaskCompletionSource readyFuture = new TaskCompletionSource();
 
+    private Publisher? publisher = null;
     private RequestSender? requestSender = null;
 
     private Subscriber? subscriber = null;
@@ -120,7 +121,9 @@ public class Instance
                 BuildplateSource.ENCOUNTER => $"Starting for encounter buildplate {buildplateId} (player = {playerId}, survival = {survival}, saveEnabled = {saveEnabled}, inventoryType = {inventoryType})",
                 _ => throw new UnreachableException(),
             });
+            Log.Information($"Using port {port} internal port {serverInternalPort}");
 
+            publisher = eventBusClient.addPublisher();
             requestSender = eventBusClient.addRequestSender();
 
             Log.Information("Setting up server");
@@ -130,6 +133,7 @@ public class Instance
                 BuildplateSource.PLAYER => sendEventBusRequestRaw<BuildplateLoadResponse>("load", new BuildplateLoadRequest(playerId!, buildplateId), true).Result,
                 BuildplateSource.SHARED => sendEventBusRequestRaw<BuildplateLoadResponse>("loadShared", new SharedBuildplateLoadRequest(buildplateId), true).Result,
                 BuildplateSource.ENCOUNTER => sendEventBusRequestRaw<BuildplateLoadResponse>("loadEncounter", new EncounterBuildplateLoadRequest(buildplateId), true).Result,
+                _ => throw new UnreachableException(),
             };
 
             byte[] serverData;
@@ -243,6 +247,11 @@ public class Instance
 
             requestHandler?.close();
 
+            if (publisher is not null)
+            {
+                publisher.flush();
+                publisher.close();
+            }
             if (requestSender is not null)
             {
                 requestSender.flush();
@@ -263,8 +272,8 @@ public class Instance
                 {
                     Log.Information("Server is ready");
                     startBridgeProcess();
-                    readyFuture.SetResult(/*null*/);
-                    if (shutdownTime is not null)
+                    sendEventBusInstanceStatusNotification("ready");
+                    if (shutdownTime != null)
                     {
                         startShutdownTimer();
                     }
@@ -383,6 +392,20 @@ public class Instance
                 }
 
                 break;
+            case "playerDead":
+                {
+                    string? playerId = readJson<string>(request.data);
+                    if (playerId is not null)
+                    {
+                        bool? respawn = sendEventBusRequest<bool?>("playerDead", playerId, true).Result;
+                        if (respawn is not null)
+                        {
+                            return respawn.Value;
+                        }
+                    }
+                }
+
+                break;
             case "getInventory":
                 {
                     string? playerId = readJson<string>(request.data);
@@ -429,6 +452,20 @@ public class Instance
                 }
 
                 break;
+            case "getInitialPlayerState":
+                {
+                    string? playerId = readJson<string>(request.data);
+                    if (playerId != null)
+                    {
+                        InitialPlayerStateResponse? initialPlayerStateResponse = sendEventBusRequest<InitialPlayerStateResponse>("getInitialPlayerState", playerId, true).Result;
+                        if (initialPlayerStateResponse != null)
+                        {
+                            return initialPlayerStateResponse;
+                        }
+                    }
+                }
+
+                break;
         }
 
         return null;
@@ -453,32 +490,25 @@ public class Instance
         object request
     );
 
-    private async Task<T?> sendEventBusRequest<T>(string type, object obj, bool returnResponse)
+    private void sendEventBusInstanceStatusNotification(string status)
+    {
+        Debug.Assert(publisher is not null);
+
+        publisher.publish("buildplates", status, instanceId).ContinueWith(successTask =>
+        {
+            if (!successTask.Result)
+            {
+                Log.Error("Event bus publisher error");
+                beginShutdown();
+            }
+        });
+    }
+
+    private Task<T?> sendEventBusRequest<T>(string type, object obj, bool returnResponse)
     {
         RequestWithInstanceId request = new RequestWithInstanceId(instanceId, obj);
 
-        try
-        {
-            string? response = await requestSender!.request("buildplates", type, JsonConvert.SerializeObject(request)).Task;
-
-            if (response == null)
-            {
-                Log.Error("Event bus request failed (no response)");
-                beginShutdown();
-                return default;
-            }
-
-            if (returnResponse)
-                return JsonConvert.DeserializeObject<T>(response);
-            else
-                return default;
-        }
-        catch (Exception ex)
-        {
-            Log.Error("Event bus request failed", ex);
-            beginShutdown();
-            return default;
-        }
+        return sendEventBusRequestRaw<T>(type, request, returnResponse);
     }
 
     private async Task<T?> sendEventBusRequestRaw<T>(string type, object obj, bool returnResponse)
@@ -939,6 +969,7 @@ public class Instance
         Monitor.Exit(subprocessLock);
     }
 
+#pragma warning disable IDE0022
     private void startHostPlayerConnectTimeout()
     {
         new Thread(() =>
@@ -1017,6 +1048,8 @@ public class Instance
 
             Log.Information("Beginning shutdown");
 
+            this.sendEventBusInstanceStatusNotification("shuttingDown");
+            
             if (bridgeProcess != null)
             {
                 Log.Information("Waiting for bridge to shut down");
@@ -1037,6 +1070,7 @@ public class Instance
             Monitor.Exit(subprocessLock);
         }).Start();
     }
+#pragma warning restore IDE0022
 
     private static int waitForProcess(Process process)
     {
@@ -1057,34 +1091,7 @@ public class Instance
 
         return exitCode;
     }
-
-    public void waitForReady()
-    {
-        for (; ; )
-        {
-            try
-            {
-                if (!readyFuture.Task.Wait(1000))
-                    throw new TimeoutException();
-
-                break;
-            }
-            catch (AggregateException ex) when (ex.InnerExceptions.Any(e => e is TaskCanceledException))
-            {
-                continue;
-            }
-            catch (ThreadInterruptedException)
-            {
-                continue;
-            }
-            catch (TimeoutException)
-            {
-                if (!thread.IsAlive)
-                    break;
-            }
-        }
-    }
-
+    
     public void waitForShutdown()
     {
         for (; ; )

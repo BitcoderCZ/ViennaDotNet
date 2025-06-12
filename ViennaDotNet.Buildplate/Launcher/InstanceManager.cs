@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Serilog;
+using System;
 using System.Diagnostics;
 using ViennaDotNet.Buildplate.Connector.Model;
 using ViennaDotNet.Common.Utils;
@@ -113,7 +114,7 @@ public class InstanceManager
                         return null;
                     }
 
-                    sendEventBusMessageJson("started", new StartNotification(
+                    sendEventBusMessage("started", JsonConvert.SerializeObject(new StartNotification(
                         instanceId,
                         startRequest.playerId,
                         startRequest.encounterId,
@@ -121,14 +122,10 @@ public class InstanceManager
                         instance.publicAddress,
                         instance.port,
                         startRequest.type
-                    ));
+                    )));
 
                     new Thread(() =>
                     {
-                        instance.waitForReady();
-
-                        sendEventBusMessage("ready", instance.instanceId);
-
                         instance.waitForShutdown();
 
                         sendEventBusMessage("stopped", instance.instanceId);
@@ -182,11 +179,6 @@ public class InstanceManager
         });
     }
 
-    private void sendEventBusMessageJson(string type, object messageObject)
-    {
-        sendEventBusMessage(type, JsonConvert.SerializeObject(messageObject));
-    }
-
     public void shutdown()
     {
         requestHandler.close();
@@ -215,6 +207,7 @@ public class InstanceManager
 
         Monitor.Exit(_lock);
 
+        publisher.flush();
         publisher.close();
     }
 }

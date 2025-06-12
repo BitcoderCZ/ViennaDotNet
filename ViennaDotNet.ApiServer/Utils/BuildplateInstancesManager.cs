@@ -68,7 +68,7 @@ public sealed class BuildplateInstancesManager
                 foreach (string loopInstanceId in instanceIds)
                 {
                     InstanceInfo? instanceInfo = instances.GetOrDefault(loopInstanceId);
-                    if (instanceInfo is not null)
+                    if (instanceInfo is not null && instanceInfo.shuttingDown == false)
                     {
                         if (instanceInfo.type == type &&
                             instanceInfo.playerId == playerId &&
@@ -158,6 +158,7 @@ public sealed class BuildplateInstancesManager
                                 startNotification.buildplateId,
                                 startNotification.address,
                                 startNotification.port,
+                                false,
                                 false
                             );
 
@@ -194,6 +195,32 @@ public sealed class BuildplateInstancesManager
                                 instanceInfo.buildplateId,
                                 instanceInfo.address,
                                 instanceInfo.port,
+                                true,
+                                instanceInfo.shuttingDown
+                            );
+                        }
+                    }
+                }
+
+                break;
+            case "shuttingDown":
+                {
+                    string instanceId = @event.data;
+                    lock (instances)
+                    {
+                        InstanceInfo? instanceInfo = instances.GetValueOrDefault(instanceId);
+                        if (instanceInfo is not null)
+                        {
+                            Log.Information($"Buildplate instance {instanceId} is shutting down");
+                            instances[instanceId] = new InstanceInfo(
+                                instanceInfo.type,
+                                instanceInfo.instanceId,
+                                instanceInfo.playerId,
+                                instanceInfo.encounterId,
+                                instanceInfo.buildplateId,
+                                instanceInfo.address,
+                                instanceInfo.port,
+                                instanceInfo.ready,
                                 true
                             );
                         }
@@ -267,6 +294,7 @@ public sealed class BuildplateInstancesManager
         string address,
         int port,
 
-        bool ready
+        bool ready,
+        bool shuttingDown
     );
 }

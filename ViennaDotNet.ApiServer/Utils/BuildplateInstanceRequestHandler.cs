@@ -12,6 +12,7 @@ using ViennaDotNet.DB.Models.Player;
 using ViennaDotNet.EventBus.Client;
 using ViennaDotNet.ObjectStore.Client;
 using ViennaDotNet.StaticData;
+using CICIBIEType = ViennaDotNet.StaticData.Catalog.ItemsCatalog.Item.BoostInfo.Effect.Type;
 
 namespace ViennaDotNet.ApiServer.Utils;
 
@@ -86,7 +87,7 @@ public sealed class BuildplateInstanceRequestHandler
                                     return null;
 
                                 PlayerConnectedResponse? playerConnectedResponse = handlePlayerConnected(requestWithInstanceId.instanceId, requestWithInstanceId.request);
-                                return playerConnectedResponse != null ? JsonConvert.SerializeObject(playerConnectedResponse) : null;
+                                return playerConnectedResponse is not null ? JsonConvert.SerializeObject(playerConnectedResponse) : null;
                             }
                         case "playerDisconnected":
                             {
@@ -95,7 +96,29 @@ public sealed class BuildplateInstanceRequestHandler
                                     return null;
 
                                 PlayerDisconnectedResponse? playerDisconnectedResponse = handlePlayerDisconnected(requestWithInstanceId.instanceId, requestWithInstanceId.request, request.timestamp);
-                                return playerDisconnectedResponse != null ? JsonConvert.SerializeObject(playerDisconnectedResponse) : null;
+                                return playerDisconnectedResponse is not null ? JsonConvert.SerializeObject(playerDisconnectedResponse) : null;
+                            }
+                        case "playerDead":
+                            {
+                                RequestWithInstanceId<string>? requestWithInstanceId = readRequest<string>(request.data);
+                                if (requestWithInstanceId is null)
+                                {
+                                    return null;
+                                }
+
+                                bool? respawn = handlePlayerDead(requestWithInstanceId.instanceId, requestWithInstanceId.request, request.timestamp);
+                                return respawn is not null ? JsonConvert.SerializeObject(respawn.Value) : null;
+                            }
+                        case "getInitialPlayerState":
+                            {
+                                RequestWithInstanceId<string>? requestWithInstanceId = readRequest<string>(request.data);
+                                if (requestWithInstanceId is null)
+                                {
+                                    return null;
+                                }
+
+                                InitialPlayerStateResponse? initialPlayerStateResponse = handleGetInitialPlayerState(requestWithInstanceId.instanceId, requestWithInstanceId.request, request.timestamp);
+                                return initialPlayerStateResponse is not null ? JsonConvert.SerializeObject(initialPlayerStateResponse) : null;
                             }
                         case "getInventory":
                             {
@@ -628,6 +651,85 @@ public sealed class BuildplateInstanceRequestHandler
         }
 
         return new PlayerDisconnectedResponse();
+    }
+
+    private bool? handlePlayerDead(string instanceId, string playerId, long currentTime)
+    {
+        BuildplateInstancesManager.InstanceInfo? instanceInfo = buildplateInstancesManager.getInstanceInfo(instanceId);
+		if (instanceInfo is null)
+		{
+			return null;
+		}
+
+        return instanceInfo.type is BuildplateInstancesManager.InstanceType.BUILD or BuildplateInstancesManager.InstanceType.SHARED_BUILD;
+	}
+
+    private sealed record EffectInfo(
+        long endTime,
+        Catalog.ItemsCatalog.Item.BoostInfo.Effect effect
+    );
+    private InitialPlayerStateResponse? handleGetInitialPlayerState(string instanceId, string playerId, long currentTime)
+    {
+        BuildplateInstancesManager.InstanceInfo? instanceInfo = buildplateInstancesManager.getInstanceInfo(instanceId);
+
+        if (instanceInfo is null)
+        {
+            return null;
+        }
+
+        var (useHealth, useBoosts) = instanceInfo.type switch
+        {
+            BuildplateInstancesManager.InstanceType.BUILD => (false, false),
+            BuildplateInstancesManager.InstanceType.PLAY => (false, true),
+            BuildplateInstancesManager.InstanceType.SHARED_BUILD => (false, false),
+            BuildplateInstancesManager.InstanceType.SHARED_PLAY => (false, true),
+            BuildplateInstancesManager.InstanceType.ENCOUNTER => (true, true),
+            _ => (false, false),
+        };
+
+        if (!useHealth && !useBoosts)
+        {
+            return new InitialPlayerStateResponse(20.0f, []);
+        }
+        else
+        {
+            if (!useBoosts)
+            {
+                throw new UnreachableException();
+            }
+
+            EarthDB.Results results = new EarthDB.Query(false)
+                .Get("profile", playerId, typeof(Profile))
+                .Get("boosts", playerId, typeof(Boosts))
+                .Execute(earthDB);
+            Profile profile = (Profile)results.Get("profile").Value;
+            Boosts boosts = (Boosts)results.Get("boosts").Value;
+
+            float maxHealth = BoostUtils.getMaxPlayerHealth(boosts, currentTime, catalog.itemsCatalog);
+
+            return new InitialPlayerStateResponse(
+                useHealth ? float.Min(profile.health, maxHealth) : maxHealth,
+                [.. boosts.activeBoosts
+                .Where(activeBoost => activeBoost is not null)
+                .Where(activeBoost => activeBoost!.startTime + activeBoost.duration >= currentTime)
+                .SelectMany(activeBoost => catalog.itemsCatalog.getItem(activeBoost!.itemId)!.boostInfo!.effects.Select(effect => new EffectInfo(activeBoost.startTime + activeBoost.duration, effect)))
+                .Where(effectInfo => effectInfo.effect.type is CICIBIEType.ADVENTURE_XP or CICIBIEType.DEFENSE or CICIBIEType.EATING or CICIBIEType.HEALTH or CICIBIEType.MINING_SPEED or CICIBIEType.STRENGTH)
+                .Select(effectInfo => new InitialPlayerStateResponse.BoostStatusEffect(
+                    effectInfo.effect.type switch
+                    {
+                        CICIBIEType.ADVENTURE_XP => InitialPlayerStateResponse.BoostStatusEffect.Type.ADVENTURE_XP,
+                        CICIBIEType.DEFENSE => InitialPlayerStateResponse.BoostStatusEffect.Type.DEFENSE,
+                        CICIBIEType.EATING => InitialPlayerStateResponse.BoostStatusEffect.Type.EATING,
+                        CICIBIEType.HEALTH => InitialPlayerStateResponse.BoostStatusEffect.Type.HEALTH,
+                        CICIBIEType.MINING_SPEED => InitialPlayerStateResponse.BoostStatusEffect.Type.MINING_SPEED,
+                        CICIBIEType.STRENGTH => InitialPlayerStateResponse.BoostStatusEffect.Type.STRENGTH,
+                        _ => throw new UnreachableException(),
+                    },
+                    effectInfo.effect.value,
+                    effectInfo.endTime - currentTime
+                ))]
+            );
+        }
     }
 
     private InventoryResponse? handleGetInventory(string instanceId, string requestedInventoryPlayerId)

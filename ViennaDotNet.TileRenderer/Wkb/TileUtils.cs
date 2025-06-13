@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Runtime.CompilerServices;
 
 namespace ViennaDotNet.TileRenderer.Wkb;
 
@@ -18,15 +13,15 @@ internal static class TileUtils
         double latRad = DegToRad(lonLat.Y);
         return new Point(
             (lonLat.X + 180.0) / 360.0 * (1 << zoom),
-            (1.0 - double.Asinh(double.Tan(latRad)) / Pi) / 2.0 * (double)(1 << zoom)
+            (1.0 - double.Asinh(double.Tan(latRad)) / Pi) / 2.0 * (1 << zoom)
         );
     }
 
     public static Point SlippyTolonLat(Point slippy, int zoom)
     {
-        double n = Pi - 2.0 * Pi * slippy.Y / (double)(1 << zoom);
+        double n = Pi - 2.0 * Pi * slippy.Y / (1 << zoom);
         return new Point(
-            slippy.X / (double)(1 << zoom) * 360.0 - 180,
+            slippy.X / (1 << zoom) * 360.0 - 180,
             180.0 / Pi * double.Atan(0.5 * (double.Exp(n) - double.Exp(-n)))
         );
     }
@@ -47,10 +42,10 @@ internal static class TileUtils
         );
     }
 
-    public static Point SphereMercToSlippy(Point sphereMerc, int zoom) 
+    public static Point SphereMercToSlippy(Point sphereMerc, int zoom)
         => LonLatToSlippy(SphereMercToLonLat(sphereMerc), zoom);
 
-    public static Point SlippyToSphereMerc(Point slippy, int zoom) 
+    public static Point SlippyToSphereMerc(Point slippy, int zoom)
         => LonLatToSphereMerc(SlippyTolonLat(slippy, zoom));
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

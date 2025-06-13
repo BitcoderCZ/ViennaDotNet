@@ -153,7 +153,7 @@ public sealed class TappablesManager
         string playerId
     );
 
-    private void handleEvent(Subscriber.Event @event)
+    private Task handleEvent(Subscriber.Event @event)
     {
         switch (@event.type)
         {
@@ -215,6 +215,8 @@ public sealed class TappablesManager
 
                 break;
         }
+
+        return Task.CompletedTask;
     }
 
     private void addTappable(Tappable tappable)

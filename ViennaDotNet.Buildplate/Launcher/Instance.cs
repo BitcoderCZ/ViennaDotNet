@@ -179,7 +179,7 @@ public class Instance
             Log.Information("Running server");
 
             subscriber = eventBusClient.addSubscriber(eventBusQueueName, new Subscriber.SubscriberListener(
-                @event => handleConnectorEvent(@event),
+                async @event => await handleConnectorEvent(@event),
                 () =>
                 {
                     Log.Error("Event bus subscriber error");
@@ -187,7 +187,7 @@ public class Instance
                 }
             ));
             requestHandler = eventBusClient.addRequestHandler(eventBusQueueName, new RequestHandler.Handler(
-                request =>
+                async request =>
                 {
                     object? responseObject = handleConnectorRequest(request);
                     if (responseObject != null)
@@ -263,7 +263,7 @@ public class Instance
         }
     }
 
-    private void handleConnectorEvent(Subscriber.Event @event)
+    private async Task handleConnectorEvent(Subscriber.Event @event)
     {
         switch (@event.type)
         {
@@ -271,7 +271,7 @@ public class Instance
                 {
                     Log.Information("Server is ready");
                     startBridgeProcess();
-                    sendEventBusInstanceStatusNotification("ready");
+                    await sendEventBusInstanceStatusNotification("ready");
                     if (shutdownTime != null)
                     {
                         startShutdownTimer();
@@ -314,7 +314,7 @@ public class Instance
                 {
                     InventoryAddItemMessage? inventoryAddItemMessage = readJson<InventoryAddItemMessage>(@event.data);
                     if (inventoryAddItemMessage != null)
-                        sendEventBusRequest<object>("inventoryAdd", inventoryAddItemMessage, false);
+                        await sendEventBusRequest<object>("inventoryAdd", inventoryAddItemMessage, false);
                 }
 
                 break;
@@ -322,7 +322,7 @@ public class Instance
                 {
                     InventoryUpdateItemWearMessage? inventoryUpdateItemWearMessage = readJson<InventoryUpdateItemWearMessage>(@event.data);
                     if (inventoryUpdateItemWearMessage != null)
-                        sendEventBusRequest<object>("inventoryUpdateWear", inventoryUpdateItemWearMessage, false);
+                        await sendEventBusRequest<object>("inventoryUpdateWear", inventoryUpdateItemWearMessage, false);
                 }
 
                 break;
@@ -330,14 +330,14 @@ public class Instance
                 {
                     InventorySetHotbarMessage? inventorySetHotbarMessage = readJson<InventorySetHotbarMessage>(@event.data);
                     if (inventorySetHotbarMessage != null)
-                        sendEventBusRequest<object>("inventorySetHotbar", inventorySetHotbarMessage, false);
+                        await sendEventBusRequest<object>("inventorySetHotbar", inventorySetHotbarMessage, false);
                 }
 
                 break;
         }
     }
 
-    private object? handleConnectorRequest(RequestHandler.Request request)
+    private async Task<object?> handleConnectorRequest(RequestHandler.Request request)
     {
         switch (request.type)
         {
@@ -352,7 +352,7 @@ public class Instance
                             return new PlayerConnectedResponse(false, null);
                         }
 
-                        PlayerConnectedResponse? playerConnectedResponse = sendEventBusRequest<PlayerConnectedResponse>("playerConnected", playerConnectedRequest, true).Result;
+                        PlayerConnectedResponse? playerConnectedResponse = await sendEventBusRequest<PlayerConnectedResponse>("playerConnected", playerConnectedRequest, true);
                         if (playerConnectedResponse is not null)
                         {
                             Log.Information($"Player {playerConnectedRequest.uuid} has connected");
@@ -374,7 +374,7 @@ public class Instance
                     PlayerDisconnectedRequest? playerDisconnectedRequest = readJson<PlayerDisconnectedRequest>(request.data);
                     if (playerDisconnectedRequest is not null)
                     {
-                        PlayerDisconnectedResponse? playerDisconnectedResponse = sendEventBusRequest<PlayerDisconnectedResponse>("playerDisconnected", playerDisconnectedRequest, true).Result;
+                        PlayerDisconnectedResponse? playerDisconnectedResponse = await sendEventBusRequest<PlayerDisconnectedResponse>("playerDisconnected", playerDisconnectedRequest, true);
                         if (playerDisconnectedResponse is not null)
                         {
                             Log.Information($"Player {playerDisconnectedRequest.playerId} has disconnected");
@@ -396,7 +396,7 @@ public class Instance
                     string? playerId = readJson<string>(request.data);
                     if (playerId is not null)
                     {
-                        bool? respawn = sendEventBusRequest<bool?>("playerDead", playerId, true).Result;
+                        bool? respawn = await sendEventBusRequest<bool?>("playerDead", playerId, true);
                         if (respawn is not null)
                         {
                             return respawn.Value;
@@ -410,7 +410,7 @@ public class Instance
                     string? playerId = readJson<string>(request.data);
                     if (playerId is not null)
                     {
-                        InventoryResponse? inventoryResponse = sendEventBusRequest<InventoryResponse>("getInventory", playerId, true).Result;
+                        InventoryResponse? inventoryResponse = await sendEventBusRequest<InventoryResponse>("getInventory", playerId, true);
 
                         if (inventoryResponse is not null)
                             return inventoryResponse;
@@ -425,14 +425,14 @@ public class Instance
                     {
                         if (inventoryRemoveItemRequest.instanceId is not null)
                         {
-                            bool? success = sendEventBusRequest<bool>("inventoryRemove", inventoryRemoveItemRequest, true).Result;
+                            bool? success = await sendEventBusRequest<bool>("inventoryRemove", inventoryRemoveItemRequest, true);
 
                             if (success is not null)
                                 return success;
                         }
                         else
                         {
-                            int? removedCount = sendEventBusRequest<int>("inventoryRemove", inventoryRemoveItemRequest, true).Result;
+                            int? removedCount = await sendEventBusRequest<int>("inventoryRemove", inventoryRemoveItemRequest, true);
                             if (removedCount is not null)
                                 return removedCount;
                         }
@@ -456,7 +456,7 @@ public class Instance
                     string? playerId = readJson<string>(request.data);
                     if (playerId != null)
                     {
-                        InitialPlayerStateResponse? initialPlayerStateResponse = sendEventBusRequest<InitialPlayerStateResponse>("getInitialPlayerState", playerId, true).Result;
+                        InitialPlayerStateResponse? initialPlayerStateResponse = await sendEventBusRequest<InitialPlayerStateResponse>("getInitialPlayerState", playerId, true);
                         if (initialPlayerStateResponse != null)
                         {
                             return initialPlayerStateResponse;
@@ -489,18 +489,17 @@ public class Instance
         object request
     );
 
-    private void sendEventBusInstanceStatusNotification(string status)
+    private async Task sendEventBusInstanceStatusNotification(string status)
     {
         Debug.Assert(publisher is not null);
 
-        publisher.publish("buildplates", status, instanceId).ContinueWith(successTask =>
+        bool result = await publisher.publish("buildplates", status, instanceId);
+
+        if (!result)
         {
-            if (!successTask.Result)
-            {
-                Log.Error("Event bus publisher error");
-                beginShutdown();
-            }
-        });
+            Log.Error("Event bus publisher error");
+            beginShutdown();
+        }
     }
 
     private Task<T?> sendEventBusRequest<T>(string type, object obj, bool returnResponse)
@@ -1033,8 +1032,11 @@ public class Instance
 
     private void beginShutdown()
     {
-        new Thread(() =>
+        // a "bit" ugly
+        ((Func<Task>)(async () =>
         {
+            await Task.Yield();
+
             Monitor.Enter(subprocessLock);
 
             if (shuttingDown)
@@ -1048,7 +1050,7 @@ public class Instance
 
             Log.Information("Beginning shutdown");
 
-            this.sendEventBusInstanceStatusNotification("shuttingDown");
+            await sendEventBusInstanceStatusNotification("shuttingDown");
 
             if (bridgeProcess != null)
             {
@@ -1068,7 +1070,10 @@ public class Instance
             }
 
             Monitor.Exit(subprocessLock);
-        }).Start();
+        }))().Forget(ex =>
+        {
+
+        });
     }
 #pragma warning restore IDE0022
 

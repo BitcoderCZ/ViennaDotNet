@@ -17,7 +17,7 @@ public sealed class ActiveTiles
     {
         this.activeTileListener = activeTileListener;
 
-        eventBusClient.addRequestHandler("tappables", new RequestHandler.Handler(request =>
+        eventBusClient.addRequestHandler("tappables", new RequestHandler.Handler(async request =>
         {
             if (request.type == "activeTile")
             {
@@ -51,7 +51,7 @@ public sealed class ActiveTiles
 
                 if (newActiveTiles.Count > 0)
                 {
-                    activeTileListener.active(newActiveTiles);
+                    await activeTileListener.active(newActiveTiles);
                 }
 
                 return string.Empty;
@@ -126,26 +126,26 @@ public sealed class ActiveTiles
 
     public interface IActiveTileListener
     {
-        void active(IEnumerable<ActiveTile> activeTiles);
+        Task active(IEnumerable<ActiveTile> activeTiles);
 
-        void inactive(IEnumerable<ActiveTile> activeTiles);
+        Task inactive(IEnumerable<ActiveTile> activeTiles);
     }
 
     public class ActiveTileListener : IActiveTileListener
     {
-        public Action<IEnumerable<ActiveTile>>? Active;
-        public Action<IEnumerable<ActiveTile>>? Inactive;
+        public Func<IEnumerable<ActiveTile>, Task>? Active;
+        public Func<IEnumerable<ActiveTile>, Task>? Inactive;
 
-        public ActiveTileListener(Action<IEnumerable<ActiveTile>>? _active, Action<IEnumerable<ActiveTile>>? _inactive)
+        public ActiveTileListener(Func<IEnumerable<ActiveTile>, Task>? _active, Func<IEnumerable<ActiveTile>, Task>? _inactive)
         {
             Active = _active;
             Inactive = _inactive;
         }
 
-        public void active(IEnumerable<ActiveTile> activeTiles)
-            => Active?.Invoke(activeTiles);
+        public Task active(IEnumerable<ActiveTile> activeTiles)
+            => Active?.Invoke(activeTiles) ?? Task.CompletedTask;
 
-        public void inactive(IEnumerable<ActiveTile> activeTiles)
-            => Inactive?.Invoke(activeTiles);
+        public Task inactive(IEnumerable<ActiveTile> activeTiles)
+            => Inactive?.Invoke(activeTiles) ?? Task.CompletedTask;
     }
 }

@@ -23,7 +23,7 @@ public sealed class Subscriber
         client.sendMessage(channelId, "CLOSE");
     }
 
-    internal bool handleMessage(string message)
+    internal async Task<bool> handleMessage(string message)
     {
         if (message == "ERR")
         {
@@ -37,14 +37,13 @@ public sealed class Subscriber
             if (fields.Length != 3)
                 return false;
 
-            string timestampString = fields[0];
             if (!long.TryParse(fields[0], out long timestamp) || timestamp < 0)
                 return false;
 
             string type = fields[1];
             string data = fields[2];
 
-            listener.Event(new Event(timestamp, type, data));
+            await listener.Event(new Event(timestamp, type, data));
 
             return true;
         }
@@ -57,30 +56,30 @@ public sealed class Subscriber
 
     public interface ISubscriberListener
     {
-        void Event(Event _event);
+        Task Event(Event _event);
 
         void Error();
     }
 
     public class SubscriberListener : ISubscriberListener
     {
-        public event Action<Event>? OnEvent;
-        public event Action? OnError;
+        public Func<Event, Task>? OnEvent;
+        public Action? OnError;
 
         public SubscriberListener()
         {
         }
-        public SubscriberListener(Action<Event>? _onEvent = null, Action? _onError = null)
+        public SubscriberListener(Func<Event, Task>? _onEvent = null, Action? _onError = null)
         {
-            OnEvent += _onEvent;
-            OnError += _onError;
+            OnEvent = _onEvent;
+            OnError = _onError;
         }
 
         public void Error()
             => OnError?.Invoke();
 
-        public void Event(Event _event)
-            => OnEvent?.Invoke(_event);
+        public Task Event(Event _event)
+            => OnEvent?.Invoke(_event) ?? Task.CompletedTask;
     }
 
     public sealed class Event

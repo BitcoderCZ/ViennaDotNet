@@ -34,7 +34,7 @@ public class Spawner
         this.spawnCycleIndex = maxTappableLifetimeIntervals;
     }
 
-    public void run()
+    public async Task run()
     {
         long nextTime = U.CurrentTimeMillis() + SPAWN_INTERVAL;
         for (; ; )
@@ -51,12 +51,12 @@ public class Spawner
 
             nextTime += SPAWN_INTERVAL;
 
-            doSpawnCycle();
+            await doSpawnCycle();
         }
     }
 
     [Obsolete("Use spawnTiles instead.")]
-    public void spawnTile(int tileX, int tileY)
+    public async Task spawnTile(int tileX, int tileY)
     {
         long spawnCycleTime = this.spawnCycleTime;
         int spawnCycleIndex = this.spawnCycleIndex;
@@ -76,10 +76,10 @@ public class Spawner
         tappables.RemoveAll(tappable => tappable.spawnTime + tappable.validFor < tappableCutoffTime);
         encounters.RemoveAll(encounter => encounter.spawnTime + encounter.validFor < tappableCutoffTime);
 
-        this.sendSpawnedTappables(tappables, encounters);
+        await sendSpawnedTappables(tappables, encounters);
     }
 
-    public void spawnTiles(IEnumerable<ActiveTiles.ActiveTile> activeTiles)
+    public async Task spawnTiles(IEnumerable<ActiveTiles.ActiveTile> activeTiles)
     {
         long spawnCycleTime = this.spawnCycleTime;
         int spawnCycleIndex = this.spawnCycleIndex;
@@ -101,10 +101,10 @@ public class Spawner
         tappables.RemoveAll(tappable => tappable.spawnTime + tappable.validFor < tappableCutoffTime);
         encounters.RemoveAll(encounter => encounter.spawnTime + encounter.validFor < tappableCutoffTime);
 
-        this.sendSpawnedTappables(tappables, encounters);
+        await sendSpawnedTappables(tappables, encounters);
     }
 
-    private void doSpawnCycle()
+    private async Task doSpawnCycle()
     {
         ActiveTiles.ActiveTile[] activeTiles = this.activeTiles.getActiveTiles(spawnCycleTime);
 
@@ -126,7 +126,7 @@ public class Spawner
         tappables.RemoveAll(tappable => tappable.spawnTime + tappable.validFor < tappableCutoffTime);
         encounters.RemoveAll(encounter => encounter.spawnTime + encounter.validFor < tappableCutoffTime);
 
-        this.sendSpawnedTappables(tappables, encounters);
+        await sendSpawnedTappables(tappables, encounters);
     }
 
     private void doSpawnCyclesForTile(int tileX, int tileY, long spawnCycleTime, int spawnCycleIndex, List<Tappable> tappables, List<Encounter> encounters)
@@ -147,14 +147,14 @@ public class Spawner
         encounters.AddRange(encounterGenerator.generateEncounters(tileX, tileY, currentTime));
     }
 
-    private void sendSpawnedTappables(List<Tappable> tappables, List<Encounter> encounters)
+    private async Task sendSpawnedTappables(List<Tappable> tappables, List<Encounter> encounters)
     {
-        if (!publisher.publish("tappables", "tappableSpawn", JsonConvert.SerializeObject(tappables)).Result)
+        if (!await publisher.publish("tappables", "tappableSpawn", JsonConvert.SerializeObject(tappables)))
         {
             Log.Error("Event bus server rejected tappable spawn event");
         }
 
-        if (!publisher.publish("tappables", "encounterSpawn", JsonConvert.SerializeObject(encounters)).Result)
+        if (!await publisher.publish("tappables", "encounterSpawn", JsonConvert.SerializeObject(encounters)))
         {
             Log.Error("Event bus server rejected encounter spawn event");
         }

@@ -1,4 +1,5 @@
-﻿using System.Collections.Concurrent;
+﻿using Serilog;
+using System.Collections.Concurrent;
 using System.Net.Sockets;
 using System.Text;
 using ViennaDotNet.Common.Utils;
@@ -52,8 +53,9 @@ public class EventBusClient
 
     private Socket socket;
     private readonly BlockingCollection<string> outgoingMessageQueue = [];
-    private Thread outgoingThread;
-    private Thread incomingThread;
+    private CancellationTokenSource _tokenSource = new();
+    private Task outgoingThread;
+    private Task incomingThread;
     private readonly ReaderWriterLockSlim _lock = new ReaderWriterLockSlim(LockRecursionPolicy.SupportsRecursion);
 
     private bool closed = false;
@@ -69,168 +71,179 @@ public class EventBusClient
     {
         this.socket = socket;
 
-        outgoingThread = new Thread(() =>
-        {
-            int sleepCounter = 0;
-            try
-            {
-                while (true)
-                {
-                    if (outgoingMessageQueue.Count > 0)
-                    {
-                        string message = outgoingMessageQueue.Take();
-                        byte[] bytes = Encoding.ASCII.GetBytes(message);
-                        socket.Send(bytes);
-                    }
+        outgoingThread = Task.Factory.StartNew(() => HandleSendLoop(_tokenSource.Token), _tokenSource.Token/*, TaskCreationOptions.LongRunning, TaskScheduler.Default*/).Unwrap();
 
-                    // reduce CPU usage
-                    if (sleepCounter >= 2500)
-                    {
-                        sleepCounter = 0;
-                        Thread.Sleep(1);
-                    }
-                    else
-                        Thread.Sleep(0);
-                    sleepCounter++;
+        incomingThread = Task.Factory.StartNew(() => HandleReceiveLoop(_tokenSource.Token), _tokenSource.Token/*, TaskCreationOptions.LongRunning, TaskScheduler.Default*/).Unwrap();
+    }
+
+    private async Task HandleSendLoop(CancellationToken cancellationToken)
+    {
+        int sleepCounter = 0;
+        try
+        {
+            while (true)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (outgoingMessageQueue.Count > 0)
+                {
+                    string message = outgoingMessageQueue.Take(cancellationToken);
+                    byte[] bytes = Encoding.ASCII.GetBytes(message);
+                    await socket.SendAsync(bytes, cancellationToken);
                 }
-            }
-            catch (ThreadInterruptedException)
-            {
-                // empty
-            }
-            catch (SocketException)
-            {
-                _lock.EnterWriteLock();
-                error = true;
-                _lock.ExitWriteLock();
-            }
 
-            initiateClose();
-
-            publishers.ForEach((channelId, publisher) =>
-            {
-                publisher.closed();
-            });
-            publishers.Clear();
-            requestSenders.ForEach((channelId, requestSender) =>
-            {
-                requestSender.closed();
-            });
-            requestSenders.Clear();
-        });
-
-        incomingThread = new Thread(() =>
-        {
-            int sleepCounter = 0;
-            try
-            {
-                byte[] readBuffer = new byte[1024];
-                MemoryStream byteArrayOutputStream = new MemoryStream(1024);
-                for (; ; )
+                // reduce CPU usage
+                if (sleepCounter >= 2500)
                 {
-                    int readLength = socket.Receive(readBuffer);
-                    if (readLength > 0)
+                    sleepCounter = 0;
+                    await Task.Delay(1, cancellationToken);
+                }
+                else
+                {
+                    await Task.Yield();
+                }
+
+                sleepCounter++;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // empty
+        }
+        catch (SocketException)
+        {
+            _lock.EnterWriteLock();
+            error = true;
+            _lock.ExitWriteLock();
+        }
+
+        initiateClose();
+
+        publishers.ForEach((channelId, publisher) =>
+        {
+            publisher.closed();
+        });
+        publishers.Clear();
+        requestSenders.ForEach((channelId, requestSender) =>
+        {
+            requestSender.closed();
+        });
+        requestSenders.Clear();
+    }
+
+    private async Task HandleReceiveLoop(CancellationToken cancellationToken)
+    {
+        int sleepCounter = 0;
+        try
+        {
+            byte[] readBuffer = new byte[1024];
+            MemoryStream byteArrayOutputStream = new MemoryStream(1024);
+            while (true)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                int readLength = await socket.ReceiveAsync(readBuffer, cancellationToken);
+                if (readLength > 0)
+                {
+                    int startOffset = 0;
+                    for (int offset = 0; offset < readLength; offset++)
                     {
-                        int startOffset = 0;
-                        for (int offset = 0; offset < readLength; offset++)
+                        if (readBuffer[offset] == '\n')
                         {
-                            if (readBuffer[offset] == '\n')
+                            byteArrayOutputStream.Write(readBuffer, startOffset, offset - startOffset);
+                            string message = Encoding.ASCII.GetString(byteArrayOutputStream.ToArray());
+
+                            _lock.EnterReadLock();
+                            bool suppress = closed || error;
+                            _lock.ExitReadLock();
+
+                            if (!suppress)
                             {
-                                byteArrayOutputStream.Write(readBuffer, startOffset, offset - startOffset);
-                                string message = Encoding.ASCII.GetString(byteArrayOutputStream.ToArray());
-
-                                _lock.EnterReadLock();
-                                bool suppress = closed || error;
-                                _lock.ExitReadLock();
-
-                                if (!suppress)
+                                if (!await dispatchReceivedMessage(message))
                                 {
-                                    if (!dispatchReceivedMessage(message))
-                                    {
-                                        _lock.EnterWriteLock();
-                                        error = true;
-                                        _lock.ExitWriteLock();
-                                        initiateClose();
-                                    }
+                                    _lock.EnterWriteLock();
+                                    error = true;
+                                    _lock.ExitWriteLock();
+                                    initiateClose();
                                 }
-
-                                byteArrayOutputStream = new MemoryStream(1024);
-                                startOffset = offset + 1;
                             }
+
+                            byteArrayOutputStream = new MemoryStream(1024);
+                            startOffset = offset + 1;
                         }
-
-                        byteArrayOutputStream.Write(readBuffer, startOffset, readLength - startOffset);
                     }
-                    else if (readLength == 0)
-                        break;
-                    else
-                        throw new InvalidOperationException();
 
-                    // reduce CPU usage
-                    if (sleepCounter >= 2500)
-                    {
-                        sleepCounter = 0;
-                        Thread.Sleep(1);
-                    }
-                    else
-                        Thread.Sleep(0);
-                    sleepCounter++;
+                    byteArrayOutputStream.Write(readBuffer, startOffset, readLength - startOffset);
                 }
+                else if (readLength == 0)
+                    break;
+                else
+                    throw new InvalidOperationException();
+
+                // reduce CPU usage
+                if (sleepCounter >= 2500)
+                {
+                    sleepCounter = 0;
+                    await Task.Delay(1, cancellationToken);
+                }
+                else
+                {
+                    await Task.Yield();
+                }
+
+                sleepCounter++;
             }
-            catch (SocketException)
-            {
-                _lock.EnterWriteLock();
-                error = true;
-                _lock.ExitWriteLock();
-            }
+        }
+        catch (SocketException)
+        {
+            _lock.EnterWriteLock();
+            error = true;
+            _lock.ExitWriteLock();
+        }
 
-            initiateClose();
+        initiateClose();
 
-            subscribers.ForEach((channelId, subscriber) =>
-            {
-                subscriber.error();
-            });
-            subscribers.Clear();
-
-            requestHandlers.ForEach((channelId, requestHandler) =>
-            {
-                requestHandler.error();
-            });
-            requestHandlers.Clear();
+        subscribers.ForEach((channelId, subscriber) =>
+        {
+            subscriber.error();
         });
+        subscribers.Clear();
 
-        outgoingThread.Start();
-        incomingThread.Start();
+        requestHandlers.ForEach((channelId, requestHandler) =>
+        {
+            requestHandler.error();
+        });
+        requestHandlers.Clear();
     }
 
     public void close()
     {
         initiateClose();
 
-        for (; ; )
+        try
         {
-            try
-            {
-                incomingThread.Join();
-                break;
-            }
-            catch (ThreadInterruptedException)
-            {
-                // empty
-            }
+            incomingThread.Wait();
+        }
+        catch (AggregateException ex) when (ex.InnerException is OperationCanceledException)
+        {
+            // empty
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"Exception in incoming thread: {ex}");
         }
 
-        for (; ; )
+        try
         {
-            try
-            {
-                outgoingThread.Join();
-                break;
-            }
-            catch (ThreadInterruptedException)
-            {
-                // empty
-            }
+            outgoingThread.Wait();
+        }
+        catch (AggregateException ex) when (ex.InnerException is OperationCanceledException)
+        {
+            // empty
+        }
+        catch (Exception ex)
+        {
+            Log.Error($"Exception in outgoing thread: {ex}");
         }
     }
 
@@ -259,7 +272,7 @@ public class EventBusClient
             socket.Close();
         }
 
-        outgoingThread.Interrupt();
+        _tokenSource.Cancel();
     }
 
     public Publisher addPublisher()
@@ -353,7 +366,7 @@ public class EventBusClient
         return nextChannelId++;
     }
 
-    private bool dispatchReceivedMessage(string message)
+    private async Task<bool> dispatchReceivedMessage(string message)
     {
         string[] parts = message.Split(' ', 2);
         if (parts.Length != 2)
@@ -364,19 +377,19 @@ public class EventBusClient
 
         Publisher? publisher = publishers.GetOrDefault(channelId, null);
         if (publisher != null)
-            return publisher.handleMessage(parts[1]);
+            return await publisher.handleMessage(parts[1]);
 
         Subscriber? subscriber = subscribers.GetOrDefault(channelId, null);
         if (subscriber != null)
-            return subscriber.handleMessage(parts[1]);
+            return await subscriber.handleMessage(parts[1]);
 
         RequestSender? requestSender = requestSenders.GetOrDefault(channelId, null);
         if (requestSender != null)
-            return requestSender.handleMessage(parts[1]);
+            return await requestSender.handleMessage(parts[1]);
 
         RequestHandler? requestHandler = requestHandlers.GetOrDefault(channelId, null);
         if (requestHandler != null)
-            return requestHandler.handleMessage(parts[1]);
+            return await requestHandler.handleMessage(parts[1]);
 
         return channelId < nextChannelId;
     }

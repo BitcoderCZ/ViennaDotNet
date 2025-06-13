@@ -101,6 +101,8 @@ public class TileRenderer
             }
         }
 
+        logger.Information("Loaded tags");
+
         return new TileRenderer(tags, tagsMap);
     }
 
@@ -207,6 +209,8 @@ public class TileRenderer
             logger.Information("Rendering image");
             for (int renderLayer = 0; renderLayer < (int)RenderLayer.LAYER_NONE; renderLayer++)
             {
+                cancellationToken.ThrowIfCancellationRequested();
+
                 var layer = layers[renderLayer];
 
                 for (int j = 0; j < layer.Count; j++)

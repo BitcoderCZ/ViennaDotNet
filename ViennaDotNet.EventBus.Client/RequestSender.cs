@@ -71,15 +71,15 @@ public sealed partial class RequestSender
         }
     }
 
-    internal bool handleMessage(string message)
+    internal Task<bool> handleMessage(string message)
     {
         if (message == "ERR")
         {
             close();
-            return true;
+            return Task.FromResult(true);
         }
         else if (message == "ACK")
-            return true;
+            return Task.FromResult(true);
         else
         {
             string? response;
@@ -88,19 +88,19 @@ public sealed partial class RequestSender
             if (parts[0] == "NREP")
             {
                 if (parts.Length != 1)
-                    return false;
+                    return Task.FromResult(false);
 
                 response = null;
             }
             else if (parts[0] == "REP")
             {
                 if (parts.Length != 2)
-                    return false;
+                    return Task.FromResult(false);
 
                 response = parts[1];
             }
             else
-                return false;
+                return Task.FromResult(false);
 
             try
             {
@@ -112,10 +112,10 @@ public sealed partial class RequestSender
                     if (queuedRequests.Count != 0)
                         sendNextRequest();
 
-                    return true;
+                    return Task.FromResult(true);
                 }
                 else
-                    return false;
+                    return Task.FromResult(false);
             }
             finally
             {

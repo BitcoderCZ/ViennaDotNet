@@ -1,17 +1,8 @@
 ﻿using CommandLine;
 using Npgsql;
 using Serilog;
-using SkiaSharp;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
-using ViennaDotNet.DB;
 using ViennaDotNet.EventBus.Client;
-using ViennaDotNet.ObjectStore.Client;
 using ViennaDotNet.StaticData;
 using ViennaDotNet.TileRenderer;
 
@@ -20,24 +11,18 @@ internal static class Program
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
     private sealed class Options
     {
-        [Option("db", Default = "./earth.db", Required = false, HelpText = "Database connection string")]
-        public string DatabaseConnectionString { get; set; }
-
         [Option("tileDB", Required = true, HelpText = "Connection string to a postgresql database with tile data, for example 'Host=myserver;Username=mylogin;Password=mypass;Database=mydatabase'")]
         public string TileDatabaseConnectionString { get; set; }
 
         [Option("eventbus", Default = "localhost:5532", Required = false, HelpText = "Event bus address")]
         public string EventBusConnectionString { get; set; }
 
-        [Option("objectstore", Default = "localhost:5396", Required = false, HelpText = "Object storage address")]
-        public string ObjectStoreConnectionString { get; set; }
-
         [Option("dir", Default = "./data", Required = false, HelpText = "Static data path")]
         public string StaticDataPath { get; set; }
     }
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
-    private static async Task<int> Main(string[] args)
+    private static int Main(string[] args)
     {
         var log = new LoggerConfiguration()
            .WriteTo.Console()
@@ -67,26 +52,12 @@ internal static class Program
         else
         {
             return res is NotParsed<Options> notParsed
-                ? res.Errors.Any(error => error is HelpRequestedError) 
-                    ? 0 
-                    : res.Errors.Any(error => error is VersionRequestedError) 
-                    ? 0 
+                ? res.Errors.Any(error => error is HelpRequestedError)
+                    ? 0
+                    : res.Errors.Any(error => error is VersionRequestedError)
+                    ? 0
                     : 1
                 : 1;
-        }
-
-
-        EarthDB earthDB;
-        Log.Information("Connecting to main database");
-        try
-        {
-            earthDB = EarthDB.Open(options.DatabaseConnectionString);
-        }
-        catch (EarthDB.DatabaseException ex)
-        {
-            Log.Fatal($"Could not connect to main database: {ex}");
-            Log.CloseAndFlush();
-            return 1;
         }
 
         NpgsqlDataSource tileDB;
@@ -119,21 +90,6 @@ internal static class Program
 
         Log.Information("Connected to event bus");
 
-        ObjectStoreClient objectStore;
-        Log.Information("Connecting to object storage");
-        try
-        {
-            objectStore = ObjectStoreClient.create(options.ObjectStoreConnectionString);
-        }
-        catch (ObjectStoreClientException ex)
-        {
-            Log.Fatal($"Could not connect to object storage: {ex}");
-            Log.CloseAndFlush();
-            return 1;
-        }
-
-        Log.Information("Connected to object storage");
-
         Log.Information("Loading static data");
         StaticData staticData;
         try
@@ -151,7 +107,7 @@ internal static class Program
 
         Log.Information("Loaded static data");
 
-        using (EventBusTileRenderer renderer = new EventBusTileRenderer(earthDB, tileDB, eventBusClient, objectStore, staticData))
+        using (EventBusTileRenderer renderer = new EventBusTileRenderer(tileDB, eventBusClient, staticData))
         {
             renderer.Run();
         }

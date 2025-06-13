@@ -131,7 +131,7 @@ public sealed class BuildplateInstancesManager
         return preview;
     }
 
-    private void handleEvent(Subscriber.Event @event)
+    private Task handleEvent(Subscriber.Event @event)
     {
         switch (@event.type)
         {
@@ -144,7 +144,7 @@ public sealed class BuildplateInstancesManager
                         if (startNotification.playerId == null && startNotification.type != InstanceType.ENCOUNTER)
                         {
                             Log.Warning("Bad start notification");
-                            return;
+                            return Task.CompletedTask;
                         }
 
                         lock (instances)
@@ -246,6 +246,8 @@ public sealed class BuildplateInstancesManager
 
                 break;
         }
+
+        return Task.CompletedTask;
     }
 
     private sealed record StartRequest(

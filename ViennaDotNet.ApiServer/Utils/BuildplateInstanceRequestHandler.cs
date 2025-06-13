@@ -33,7 +33,7 @@ public sealed class BuildplateInstanceRequestHandler
         this.catalog = catalog;
 
         RequestHandler requestHandler = eventBusClient.addRequestHandler("buildplates", new RequestHandler.Handler(
-            request =>
+            async request =>
             {
                 try
                 {
@@ -45,7 +45,7 @@ public sealed class BuildplateInstanceRequestHandler
                                 if (buildplateLoadRequest is null)
                                     return null;
 
-                                BuildplateLoadResponse? buildplateLoadResponse = handleLoad(buildplateLoadRequest.playerId, buildplateLoadRequest.buildplateId);
+                                BuildplateLoadResponse? buildplateLoadResponse = await handleLoad(buildplateLoadRequest.playerId, buildplateLoadRequest.buildplateId);
                                 return buildplateLoadResponse is not null ? JsonConvert.SerializeObject(buildplateLoadResponse) : null;
                             }
                         case "loadShared":
@@ -56,7 +56,7 @@ public sealed class BuildplateInstanceRequestHandler
                                     return null;
                                 }
 
-                                BuildplateLoadResponse? buildplateLoadResponse = handleLoadShared(sharedBuildplateLoadRequest.sharedBuildplateId);
+                                BuildplateLoadResponse? buildplateLoadResponse = await handleLoadShared(sharedBuildplateLoadRequest.sharedBuildplateId);
                                 return buildplateLoadResponse is not null ? JsonConvert.SerializeObject(buildplateLoadResponse) : null;
                             }
                         case "loadEncounter":
@@ -68,7 +68,7 @@ public sealed class BuildplateInstanceRequestHandler
                                     return null;
                                 }
 
-                                BuildplateLoadResponse? buildplateLoadResponse = handleLoadEncounter(encounterBuildplateLoadRequest.encounterBuildplateId);
+                                BuildplateLoadResponse? buildplateLoadResponse = await handleLoadEncounter(encounterBuildplateLoadRequest.encounterBuildplateId);
                                 return buildplateLoadResponse is not null ? JsonConvert.SerializeObject(buildplateLoadResponse) : null;
                             }
                         case "saved":
@@ -77,7 +77,7 @@ public sealed class BuildplateInstanceRequestHandler
                                 if (requestWithInstanceId is null)
                                     return null;
 
-                                return handleSaved(requestWithInstanceId.instanceId, requestWithInstanceId.request.dataBase64, request.timestamp) ? "" : null;
+                                return await handleSaved(requestWithInstanceId.instanceId, requestWithInstanceId.request.dataBase64, request.timestamp) ? "" : null;
                             }
                         case "playerConnected":
                             {
@@ -200,7 +200,7 @@ public sealed class BuildplateInstanceRequestHandler
         string serverDataBase64
     );
 
-    private BuildplateLoadResponse? handleLoad(string playerId, string buildplateId)
+    private async Task<BuildplateLoadResponse?> handleLoad(string playerId, string buildplateId)
     {
         EarthDB.Results results = new EarthDB.Query(false)
             .Get("buildplates", playerId, typeof(Buildplates))
@@ -211,8 +211,7 @@ public sealed class BuildplateInstanceRequestHandler
         if (buildplate == null)
             return null;
 
-        // TODO: when event bus code is made async await here
-        byte[]? serverData = (byte[]?)objectStoreClient.get(buildplate.serverDataObjectId).Task.Result;
+        byte[]? serverData = (await objectStoreClient.get(buildplate.serverDataObjectId).Task) as byte[];
         if (serverData == null)
         {
             Log.Error($"Data object {buildplate.serverDataObjectId} for buildplate {buildplateId} could not be loaded from object store");
@@ -224,7 +223,7 @@ public sealed class BuildplateInstanceRequestHandler
         return new BuildplateLoadResponse(serverDataBase64);
     }
 
-    private BuildplateLoadResponse? handleLoadShared(string sharedBuildplateId)
+    private async Task<BuildplateLoadResponse?> handleLoadShared(string sharedBuildplateId)
     {
         EarthDB.Results results = new EarthDB.Query(false)
             .Get("sharedBuildplates", "", typeof(SharedBuildplates))
@@ -237,8 +236,7 @@ public sealed class BuildplateInstanceRequestHandler
             return null;
         }
 
-        // TODO: when event bus code is made async await here
-        byte[]? serverData = objectStoreClient.get(sharedBuildplate.serverDataObjectId).Task.Result as byte[];
+        byte[]? serverData = (await objectStoreClient.get(sharedBuildplate.serverDataObjectId).Task) as byte[];
         if (serverData is null)
         {
             Log.Error($"Data object {sharedBuildplate.serverDataObjectId} for shared buildplate {sharedBuildplateId} could not be loaded from object store");
@@ -250,7 +248,7 @@ public sealed class BuildplateInstanceRequestHandler
         return new BuildplateLoadResponse(serverDataBase64);
     }
 
-    private BuildplateLoadResponse? handleLoadEncounter(string encounterBuildplateId)
+    private async Task<BuildplateLoadResponse?> handleLoadEncounter(string encounterBuildplateId)
     {
         EarthDB.Results results = new EarthDB.Query(false)
             .Get("encounterBuildplates", "", typeof(EncounterBuildplates))
@@ -263,7 +261,7 @@ public sealed class BuildplateInstanceRequestHandler
             return null;
         }
 
-        byte[]? serverData = objectStoreClient.get(encounterBuildplate.serverDataObjectId).Task.Result as byte[];
+        byte[]? serverData = (await objectStoreClient.get(encounterBuildplate.serverDataObjectId).Task) as byte[];
         if (serverData is null)
         {
             Log.Error($"Data object {encounterBuildplate.serverDataObjectId} for encounter buildplate {encounterBuildplateId} could not be loaded from object store");
@@ -275,7 +273,7 @@ public sealed class BuildplateInstanceRequestHandler
         return new BuildplateLoadResponse(serverDataBase64);
     }
 
-    private bool handleSaved(string instanceId, string dataBase64, long timestamp)
+    private async Task<bool> handleSaved(string instanceId, string dataBase64, long timestamp)
     {
         BuildplateInstancesManager.InstanceInfo? instanceInfo = buildplateInstancesManager.getInstanceInfo(instanceId);
         if (instanceInfo is null)
@@ -314,8 +312,7 @@ public sealed class BuildplateInstanceRequestHandler
         if (preview == null)
             Log.Warning("Could not generate preview for buildplate");
 
-        // TODO: when event bus code is made async await here
-        string? serverDataObjectId = (string?)objectStoreClient.store(serverData).Task.Result;
+        string? serverDataObjectId = (await objectStoreClient.store(serverData).Task) as string;
         if (serverDataObjectId == null)
         {
             Log.Error($"Could not store new data object for buildplate {buildplateId} in object store");
@@ -326,7 +323,7 @@ public sealed class BuildplateInstanceRequestHandler
         if (preview != null)
         {
             // TODO: when event bus code is made async await here
-            previewObjectId = (string?)objectStoreClient.store(Encoding.ASCII.GetBytes(preview)).Task.Result;
+            previewObjectId = (await objectStoreClient.store(Encoding.ASCII.GetBytes(preview)).Task) as string;
             if (previewObjectId == null)
                 Log.Warning($"Could not store new preview object for buildplate {buildplateId} in object store");
         }

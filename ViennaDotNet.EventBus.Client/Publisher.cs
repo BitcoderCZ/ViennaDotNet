@@ -73,7 +73,7 @@ public sealed class Publisher
         }
     }
 
-    internal bool handleMessage(string message)
+    internal Task<bool> handleMessage(string message)
     {
         if (message == "ACK")
         {
@@ -86,19 +86,19 @@ public sealed class Publisher
                     if (!queuedEvents.IsEmpty())
                         sendNextEvent();
 
-                    return true;
+                    return Task.FromResult(true);
                 }
                 else
-                    return false;
+                    return Task.FromResult(false);
             }
         }
         else if (message == "ERR")
         {
             close();
-            return true;
+            return Task.FromResult(true);
         }
         else
-            return false;
+            return Task.FromResult(false);
     }
 
     private void sendNextEvent()

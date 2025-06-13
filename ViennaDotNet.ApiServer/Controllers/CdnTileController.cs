@@ -10,10 +10,10 @@ namespace ViennaDotNet.ApiServer.Controllers;
 public class CdnTileController : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> GetTile(int _, int tilePos1, int tilePos2) // _ used because we dont care :|
+    public async Task<IActionResult> GetTile(int _, int tilePos1, int tilePos2, CancellationToken cancellationToken) // _ used because we dont care :|
     {
         // TODO: if doesn't work, swap and rename pos1 and pos2
-        if (!await TileUtils.TryWriteTile(tilePos1, tilePos2, Response.Body))
+        if (!await TileUtils.TryWriteTile(tilePos1, tilePos2, Response.Body, cancellationToken))
         {
             return NotFound();
         }

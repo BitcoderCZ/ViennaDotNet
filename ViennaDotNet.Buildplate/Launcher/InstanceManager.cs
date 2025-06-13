@@ -61,7 +61,7 @@ public class InstanceManager
         publisher = eventBusClient.addPublisher();
 
         requestHandler = eventBusClient.addRequestHandler("buildplates", new RequestHandler.Handler(
-            request =>
+           async request =>
             {
                 if (request.type == "start")
                 {

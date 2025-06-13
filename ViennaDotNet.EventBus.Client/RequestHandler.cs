@@ -25,7 +25,7 @@ public sealed class RequestHandler
         client.sendMessage(channelId, "CLOSE");
     }
 
-    internal bool handleMessage(string message)
+    internal async Task<bool> handleMessage(string message)
     {
         if (message == "ERR")
         {
@@ -70,17 +70,18 @@ public sealed class RequestHandler
             string type = fields[2];
             string data = fields[3];
 
-            TaskCompletionSource<string?> responseCompletableFuture = handler.requestAsync(new Request(timestamp, type, data));
-            responseCompletableFuture.Task.ContinueWith(task =>
+            string? res = await handler.request(new Request(timestamp, type, data));
+            if (!closed)
             {
-                if (!closed)
+                if (res != null)
                 {
-                    if (task.Result != null)
-                        client.sendMessage(channelId, "REP " + requestId + ":" + task.Result);
-                    else
-                        client.sendMessage(channelId, "NREP " + requestId);
+                    client.sendMessage(channelId, "REP " + requestId + ":" + res);
                 }
-            });
+                else
+                {
+                    client.sendMessage(channelId, "NREP " + requestId);
+                }
+            }
 
             return true;
         }
@@ -94,34 +95,24 @@ public sealed class RequestHandler
 
     public interface IHandler
     {
-        TaskCompletionSource<string?> requestAsync(Request request)
-        {
-            TaskCompletionSource<string?> completableFuture = new();
-            new Thread(() =>
-            {
-                completableFuture.SetResult(this.request(request));
-            }).Start();
-            return completableFuture;
-        }
-
-        string? request(Request request);
+        Task<string?> request(Request request);
 
         void error();
     }
 
     public class Handler : IHandler
     {
-        public Func<Request, string?>? Request;
+        public Func<Request, Task<string?>>? Request;
         public Action? Error;
 
-        public Handler(Func<Request, string?>? _request, Action? _error)
+        public Handler(Func<Request, Task<string?>>? _request, Action? _error)
         {
             Request = _request;
             Error = _error;
         }
 
-        public string? request(Request request)
-            => Request?.Invoke(request);
+        public Task<string?> request(Request request)
+            => Request?.Invoke(request) ?? Task.FromResult<string?>(null);
 
         public void error()
             => Error?.Invoke();

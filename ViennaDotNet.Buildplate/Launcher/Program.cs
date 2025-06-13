@@ -93,6 +93,11 @@ internal static class Program
             instanceManager.shutdown();
         };
 
+        while (true)
+        {
+            Thread.Sleep(100);
+        }
+
         return 0;
     }
 }

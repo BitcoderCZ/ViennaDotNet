@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace ViennaDotNet.TileRenderer;
+﻿namespace ViennaDotNet.TileRenderer;
 
 internal enum RenderLayer // Layer order is bottom to top btw, not in same order as Genoa Colours!!!
 {

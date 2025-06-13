@@ -29,7 +29,7 @@ internal sealed class LinearRing
         using var paint = new SKPaint
         {
             Color = color,
-            Style = SKPaintStyle.Stroke,
+            Style = SKPaintStyle.StrokeAndFill,
             StrokeWidth = strokeWidth,
             IsAntialias = false,
         };

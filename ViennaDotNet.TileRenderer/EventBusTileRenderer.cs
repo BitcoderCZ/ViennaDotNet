@@ -49,6 +49,7 @@ internal sealed class EventBusTileRenderer : IDisposable
                     {
                         data.SaveTo(stream);
 
+                        Log.Information("Sending rendered tile");
                         return Convert.ToBase64String(stream.ToArray());
                     }
                 }

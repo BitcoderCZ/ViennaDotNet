@@ -53,8 +53,10 @@ public sealed class Publisher
             {
                 queuedEvents.AddLast(eventMessage);
                 queuedEventResults.AddLast(completableFuture);
-                if (currentPendingEventResult == null)
+                if (currentPendingEventResult is null)
+                {
                     sendNextEvent();
+                }
             }
         }
 
@@ -116,7 +118,7 @@ public sealed class Publisher
         {
             _closed = true;
 
-            if (currentPendingEventResult != null)
+            if (currentPendingEventResult is not null)
             {
                 currentPendingEventResult.SetResult(false);
                 currentPendingEventResult = null;

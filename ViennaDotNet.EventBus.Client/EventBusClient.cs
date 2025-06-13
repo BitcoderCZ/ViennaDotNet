@@ -33,7 +33,7 @@ public class EventBusClient
         }
         catch (SocketException ex)
         {
-            throw new ConnectException("Could not create socket", ex);
+            throw new ConnectException($"Could not create socket: {ex}");
         }
 
         return new EventBusClient(socket);
@@ -176,7 +176,9 @@ public class EventBusClient
                     byteArrayOutputStream.Write(readBuffer, startOffset, readLength - startOffset);
                 }
                 else if (readLength == 0)
-                    break;
+                {
+                    // because we are using async, Socket.Blocking isn't used and the Receive method returns even when it is connected and no data has been received
+                }
                 else
                     throw new InvalidOperationException();
 

@@ -1,4 +1,6 @@
-﻿namespace ViennaDotNet.EventBus.Client;
+﻿using ViennaDotNet.Common.Utils;
+
+namespace ViennaDotNet.EventBus.Client;
 
 public sealed class RequestHandler
 {
@@ -70,18 +72,18 @@ public sealed class RequestHandler
             string type = fields[2];
             string data = fields[3];
 
-            string? res = await handler.request(new Request(timestamp, type, data));
-            if (!closed)
+            // TODO: remove requestAsync, beware awating it causes problems
+            TaskCompletionSource<string?> responseCompletableFuture = handler.requestAsync(new Request(timestamp, type, data));
+            responseCompletableFuture.Task.ContinueWith(task =>
             {
-                if (res != null)
+                if (!closed)
                 {
-                    client.sendMessage(channelId, "REP " + requestId + ":" + res);
+                    if (task.Result != null)
+                        client.sendMessage(channelId, "REP " + requestId + ":" + task.Result);
+                    else
+                        client.sendMessage(channelId, "NREP " + requestId);
                 }
-                else
-                {
-                    client.sendMessage(channelId, "NREP " + requestId);
-                }
-            }
+            }).Forget();
 
             return true;
         }
@@ -95,6 +97,16 @@ public sealed class RequestHandler
 
     public interface IHandler
     {
+        TaskCompletionSource<string?> requestAsync(Request request)
+        {
+            TaskCompletionSource<string?> completableFuture = new();
+            new Thread(() =>
+            {
+                completableFuture.SetResult(this.request(request).Result);
+            }).Start();
+            return completableFuture;
+        }
+
         Task<string?> request(Request request);
 
         void error();

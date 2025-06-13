@@ -6,4 +6,4 @@ using System.Threading.Tasks;
 
 namespace ViennaDotNet.TileRenderer;
 
-internal sealed record RenderTileRequest(int TileX, int TileY, int Zoom);
+public sealed record RenderTileResponse(int TileX, int TileY, int Zoom, string TileObjectId);

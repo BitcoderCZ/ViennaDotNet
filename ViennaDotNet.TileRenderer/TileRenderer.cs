@@ -110,7 +110,7 @@ public class TileRenderer
 
         canvas.Clear(LayerToColor((int)RenderLayer.LAYER_NONE));
 
-        const string sql = @"
+        const string Sql = @"
             SELECT aeroway, amenity, barrier, building, highway, landuse, leisure, military, ""natural"", railway, waterway, ST_AsBinary(way)
             FROM planet_osm_polygon
             WHERE way && ST_TileEnvelope(@zoom, @tileX, @tileY) AND boundary IS NULL
@@ -124,7 +124,7 @@ public class TileRenderer
               AND (railway IS NULL OR railway != 'subway');";
 
         logger.Information("Loading map data");
-        await using (var cmd = dataSource.CreateCommand(sql))
+        await using (var cmd = dataSource.CreateCommand(Sql))
         {
             cmd.Parameters.AddWithValue("zoom", zoom);
             cmd.Parameters.AddWithValue("tileY", tileY);

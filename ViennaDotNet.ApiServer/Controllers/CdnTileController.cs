@@ -12,19 +12,16 @@ public class CdnTileController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetTile(int _, int tilePos1, int tilePos2) // _ used because we dont care :|
     {
-        string targetTilePath = $"./data/tiles/16/{tilePos1}/{tilePos1}_{tilePos2}_16.png";
-
-        if (!System.IO.File.Exists(targetTilePath))
+        // TODO: if doesn't work, swap and rename pos1 and pos2
+        if (!await TileUtils.TryWriteTile(tilePos1, tilePos2, Response.Body))
         {
-            if (!await TileUtils.TryGetTile(tilePos1, tilePos2, @"./data/tiles/16/"))
-            {
-                return NotFound();
-            }
+            return NotFound();
         }
 
         var cd = new System.Net.Mime.ContentDisposition { FileName = tilePos1 + "_" + tilePos2 + "_16.png", Inline = true };
         Response.Headers.Append("Content-Disposition", cd.ToString());
+        Response.Headers.ContentType = "application/octet-stream";
 
-        return File(System.IO.File.OpenRead(targetTilePath), "application/octet-stream", tilePos1 + "_" + tilePos2 + "_16.png");
+        return new EmptyResult();
     }
 }

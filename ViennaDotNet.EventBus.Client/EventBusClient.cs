@@ -178,6 +178,10 @@ public class EventBusClient
                 else if (readLength == 0)
                 {
                     // because we are using async, Socket.Blocking isn't used and the Receive method returns even when it is connected and no data has been received
+                    if (!socket.Connected)
+                    {
+                        break;
+                    }
                 }
                 else
                     throw new InvalidOperationException();
@@ -378,20 +382,40 @@ public class EventBusClient
             return false;
 
         Publisher? publisher = publishers.GetOrDefault(channelId, null);
-        if (publisher != null)
-            return await publisher.handleMessage(parts[1]);
+        if (publisher is not null)
+        {
+            if (await publisher.handleMessage(parts[1]))
+            {
+                return true;
+            }
+        }
 
         Subscriber? subscriber = subscribers.GetOrDefault(channelId, null);
-        if (subscriber != null)
-            return await subscriber.handleMessage(parts[1]);
+        if (subscriber is not null)
+        {
+            if (await subscriber.handleMessage(parts[1]))
+            {
+                return true;
+            }
+        }
 
         RequestSender? requestSender = requestSenders.GetOrDefault(channelId, null);
-        if (requestSender != null)
-            return await requestSender.handleMessage(parts[1]);
+        if (requestSender is not null)
+        {
+            if (await requestSender.handleMessage(parts[1]))
+            {
+                return true;
+            }
+        }
 
         RequestHandler? requestHandler = requestHandlers.GetOrDefault(channelId, null);
-        if (requestHandler != null)
-            return await requestHandler.handleMessage(parts[1]);
+        if (requestHandler is not null)
+        {
+            if (await requestHandler.handleMessage(parts[1]))
+            {
+                return true;
+            }
+        }
 
         return channelId < nextChannelId;
     }

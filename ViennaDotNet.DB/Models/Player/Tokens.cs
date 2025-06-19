@@ -27,7 +27,7 @@ public sealed class Tokens
         Token token
     );
 
-    public TokenWithId[] getTokens() 
+    public TokenWithId[] getTokens()
         => [.. _tokens.Select(item => new TokenWithId(item.Key, item.Value))];
 
     public void addToken(string id, Token token)

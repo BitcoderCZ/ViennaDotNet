@@ -3,7 +3,6 @@ using System.Collections.ObjectModel;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 using ViennaDotNet.Common.Utils;
-using ViennaDotNet.Launcher.Programs;
 
 namespace ViennaDotNet.Launcher.Utils;
 
@@ -56,6 +55,14 @@ internal static class UIUtils
         action(logger, tokenSource.Token)
             .ContinueWith(lastTask =>
             {
+                if (lastTask.Exception is { } aggEx)
+                {
+                    foreach (var ex in aggEx.InnerExceptions)
+                    {
+                        logger.Error($"Exception: {ex}");
+                    }
+                }
+
                 btn.Text = "_OK";
             })
             .Forget(ex =>

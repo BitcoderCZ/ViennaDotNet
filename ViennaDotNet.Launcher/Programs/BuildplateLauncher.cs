@@ -4,10 +4,12 @@ using System.Runtime.InteropServices;
 
 namespace ViennaDotNet.Launcher.Programs;
 
-internal static class ApiServer
+internal static class BuildplateLauncher
 {
-    public static readonly string ExeName = "ApiServer" + (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ".exe" : "");
-    public const string DispName = "Api server";
+    public static readonly string ExeName = "BuildplateLauncher" + (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ".exe" : "");
+    public const string DispName = "Buildplate launcher";
+
+    public const string ServerJarName = "fabric-server-mc.1.20.4-loader.0.15.7-launcher.1.0.0.jar";
 
     public static bool Check(Settings settings, ILogger logger)
     {
@@ -26,10 +28,12 @@ internal static class ApiServer
         logger.Information($"Running {DispName}");
         Process.Start(new ProcessStartInfo(Path.GetFullPath(Path.Combine(Program.ProgramsDir, ExeName)),
         [
-            $"--port={settings.ApiPort}",
-            $"--db=\"{settings.EarthDatabaseConnectionString}\"",
             $"--eventbus=localhost:{settings.EventBusPort}",
-            $"--objectstore=localhost:{settings.ObjectStorePort}"
+            $"--publicAddress={settings.IPv4}",
+            $"--bridgeJar={Path.GetFullPath(Path.Combine("staticdata", "server_jars", "fountain-0.0.1-SNAPSHOT-jar-with-dependencies.jar"))}",
+            $"--serverTemplateDir={Path.GetFullPath(Path.Combine("staticdata", "server_template_dir"))}",
+            $"--fabricJarName={ServerJarName}",
+            $"--connectorPluginJar={Path.GetFullPath(Path.Combine("staticdata", "server_jars", "buildplate-connector-plugin-0.0.1-SNAPSHOT-jar-with-dependencies.jar"))}"
         ])
         {
             WorkingDirectory = Path.GetFullPath(Program.ProgramsDir),

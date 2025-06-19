@@ -32,7 +32,7 @@ public sealed class Inventory
         int? count
     );
 
-    public StackableItem[] getStackableItems() 
+    public StackableItem[] getStackableItems()
         => [.. _stackableItems.Select(item => new StackableItem(item.Key, item.Value))];
 
     public sealed record NonStackableItem(
@@ -40,7 +40,7 @@ public sealed class Inventory
         NonStackableItemInstance[] instances
     );
 
-    public NonStackableItem[] getNonStackableItems() 
+    public NonStackableItem[] getNonStackableItems()
         => [.. _nonStackableItems.Select(item => new NonStackableItem(item.Key, [.. item.Value.Values]))];
 
     public int getItemCount(string id)
@@ -53,16 +53,16 @@ public sealed class Inventory
 
         Dictionary<string, NonStackableItemInstance>? instances = _nonStackableItems!.GetOrDefault(id, null);
 
-        return instances is not null 
-            ? instances.Count 
+        return instances is not null
+            ? instances.Count
             : 0;
     }
 
     public NonStackableItemInstance[] getItemInstances(string id)
     {
         Dictionary<string, NonStackableItemInstance>? instances = _nonStackableItems!.GetOrDefault(id, null);
-        return instances is not null 
-            ? [.. instances.Values] 
+        return instances is not null
+            ? [.. instances.Values]
             : [];
     }
 

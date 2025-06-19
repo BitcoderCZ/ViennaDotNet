@@ -1,13 +1,15 @@
 ﻿using Serilog;
 using ViennaDotNet.Common.Utils;
 
-namespace ViennaDotNet.Buildplate.Launcher;
+namespace ViennaDotNet.Common;
 
 public static class JavaLocator
 {
-    public static string locateJava()
+    public static string locateJava(ILogger? logger = null)
     {
-        Log.Information("Trying to locate Java");
+        logger ??= Log.Logger;
+
+        logger.Information("Trying to locate Java");
 
         string? javaHome;
         if (Environment.OSVersion.Platform == PlatformID.Win32NT)
@@ -20,14 +22,14 @@ public static class JavaLocator
             javaHome = Environment.GetEnvironmentVariable("JAVA_HOME");
         if (!string.IsNullOrEmpty(javaHome))
         {
-            Log.Information("Trying JAVA_HOME");
+            logger.Information("Trying JAVA_HOME");
             try
             {
-                FileInfo file = new FileInfo(Path.Combine(javaHome, "bin", "java"));
+                var file = new FileInfo(Path.Combine(javaHome, "bin", "java"));
                 if (file.CanExecute())
                 {
                     string path = file.FullName;
-                    Log.Information($"Using Java from JAVA_HOME ({path})");
+                    logger.Information($"Using Java from JAVA_HOME ({path})");
                     return path;
                 }
 
@@ -35,7 +37,7 @@ public static class JavaLocator
                 if (file.CanExecute())
                 {
                     string path = file.FullName;
-                    Log.Information($"Using Java from JAVA_HOME ({path})");
+                    logger.Information($"Using Java from JAVA_HOME ({path})");
                     return path;
                 }
             }
@@ -44,12 +46,14 @@ public static class JavaLocator
                 // empty
             }
 
-            Log.Information("Java from JAVA_HOME is not suitable (does not exist or cannot be accessed)");
+            logger.Information("Java from JAVA_HOME is not suitable (does not exist or cannot be accessed)");
         }
         else
-            Log.Information("JAVA_HOME is not set");
+        {
+            logger.Information("JAVA_HOME is not set");
+        }
 
-        Log.Information("Using \"java\"");
+        logger.Information("Using \"java\"");
         return "java";
     }
 }

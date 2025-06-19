@@ -695,14 +695,14 @@ public class Instance
                 },
                 (path, ex) =>
                 {
-                    return ex is not null 
+                    return ex is not null
                         ? throw ex
                         : FileVisitResult.CONTINUE;
                 },
                 (path, ex) =>
                 {
-                    return ex is not null 
-                        ? throw ex 
+                    return ex is not null
+                        ? throw ex
                         : FileVisitResult.CONTINUE;
                 }
             ));
@@ -809,8 +809,8 @@ public class Instance
                 },
                 (path, ex) =>
                 {
-                    return ex is not null 
-                        ? throw ex 
+                    return ex is not null
+                        ? throw ex
                         : FileVisitResult.CONTINUE;
                 },
                 (path, ex) =>

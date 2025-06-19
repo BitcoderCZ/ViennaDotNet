@@ -1,20 +1,38 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Serilog;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace ViennaDotNet.Launcher.Programs;
 
 internal static class TileRenderer
 {
-    public static bool Check()
+    public static readonly string ExeName = "TileRenderer" + (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ".exe" : "");
+    public const string DispName = "Tile renderer";
+
+    public static bool Check(Settings settings, ILogger logger)
     {
-        throw new NotImplementedException();
+        string exePath = Path.GetFullPath(Path.Combine(Program.ProgramsDir, ExeName));
+        if (!File.Exists(exePath))
+        {
+            logger.Error($"{DispName} exe doesn't exits: {exePath}");
+            return false;
+        }
+
+        return true;
     }
 
-    public static void Run(Settings settings)
+    public static void Run(Settings settings, ILogger logger)
     {
-        throw new NotImplementedException();
+        logger.Information($"Running {DispName}");
+        Process.Start(new ProcessStartInfo(Path.GetFullPath(Path.Combine(Program.ProgramsDir, ExeName)),
+        [
+            $"--tileDB={settings.TileDatabaseConnectionString}",
+            $"--eventbus=localhost:{settings.EventBusPort}",
+        ])
+        {
+            WorkingDirectory = Path.GetFullPath(Program.ProgramsDir),
+            CreateNoWindow = false,
+            UseShellExecute = true
+        });
     }
 }

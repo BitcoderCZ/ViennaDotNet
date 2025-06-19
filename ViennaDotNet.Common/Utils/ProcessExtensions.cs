@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
 
 namespace ViennaDotNet.Common.Utils;
 
@@ -85,6 +84,9 @@ public static partial class ProcessExtensions
 
         return process.HasExited;
     }
+
+    public static Task WaitForExitAsync(this Process process, int timeout, CancellationToken cancellationToken)
+        => Task.WhenAny(process.WaitForExitAsync(cancellationToken), Task.Delay(timeout, cancellationToken));
 
     #region Sync
     private static bool WinTrySendCtrlC(this Process process, int timeout)
@@ -300,9 +302,6 @@ public static partial class ProcessExtensions
         return process.HasExited;
     }
     #endregion
-
-    private static Task WaitForExitAsync(this Process process, int timeout, CancellationToken cancellationToken)
-        => Task.WhenAny(process.WaitForExitAsync(cancellationToken), Task.Delay(timeout, cancellationToken));
 
     [LibraryImport("kernel32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]

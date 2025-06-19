@@ -1,11 +1,8 @@
-﻿using MathUtils.Vectors;
-using Serilog;
+﻿using Serilog;
 using System.Diagnostics;
 using System.Globalization;
-using System.Net;
 using Terminal.Gui.App;
 using Terminal.Gui.Configuration;
-using ViennaDotNet.Launcher.Programs;
 
 namespace ViennaDotNet.Launcher;
 

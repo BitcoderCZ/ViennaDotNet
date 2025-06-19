@@ -1,13 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Terminal.Gui.App;
+﻿using Terminal.Gui.App;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
-using ViennaDotNet.Launcher.Programs;
 using ViennaDotNet.Launcher.Utils;
 
 namespace ViennaDotNet.Launcher;
@@ -119,6 +112,8 @@ internal sealed class ImportBuildplateWindow : Window
     private void Import(string playerId, string file)
         => UIUtils.RunWithLogs(this, async (logger, cancellationToken) =>
         {
+            await Task.Yield();
+
             throw new NotImplementedException();
         });
 }

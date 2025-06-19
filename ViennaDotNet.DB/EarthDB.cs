@@ -167,10 +167,10 @@ public sealed class EarthDB : IDisposable
         public Query Then(Func<Results, Query> function)
             => Then(function, true);
 
-        public Query Then(Query query, bool replaceResults) 
+        public Query Then(Query query, bool replaceResults)
             => Then(results => query, replaceResults);
 
-        public Query Then(Query query) 
+        public Query Then(Query query)
             => Then(query, true);
         #endregion
 

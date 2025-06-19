@@ -16,7 +16,7 @@ public sealed class Buildplates
     public void addBuildplate(string id, Buildplate buildplate)
         => _buildplates[id] = buildplate;
 
-    public Buildplate? getBuildplate(string id) 
+    public Buildplate? getBuildplate(string id)
         => _buildplates.GetOrDefault(id, null);
 
     public sealed record BuildplateEntry(

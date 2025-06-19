@@ -112,8 +112,8 @@ public partial class Server
     private HashSet<Subscriber> getSubscribers(string queueName)
     {
         HashSet<Subscriber>? subscribers = this.subscribers.GetOrDefault(queueName, null);
-        return subscribers is not null 
-            ? subscribers 
+        return subscribers is not null
+            ? subscribers
             : [];
     }
 
@@ -266,7 +266,7 @@ public partial class Server
     private HashSet<RequestHandler> getHandlers(string queueName)
     {
         HashSet<RequestHandler>? requestHandlers = this.requestHandlers.GetOrDefault(queueName, null);
-        return requestHandlers is not null 
+        return requestHandlers is not null
             ? requestHandlers
             : [];
     }

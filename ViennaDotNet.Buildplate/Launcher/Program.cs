@@ -1,6 +1,7 @@
 ﻿using CommandLine;
 using Serilog;
 using System.Diagnostics;
+using ViennaDotNet.Common;
 using ViennaDotNet.EventBus.Client;
 
 namespace ViennaDotNet.Buildplate.Launcher;

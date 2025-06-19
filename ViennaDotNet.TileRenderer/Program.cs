@@ -4,7 +4,6 @@ using Serilog;
 using System.Diagnostics;
 using ViennaDotNet.EventBus.Client;
 using ViennaDotNet.StaticData;
-using ViennaDotNet.TileRenderer;
 
 namespace ViennaDotNet.TileRenderer;
 
@@ -71,6 +70,10 @@ internal static class Program
         catch (Exception ex)
         {
             Log.Fatal($"Could not connect to tile database: {ex}");
+            if (ex is ArgumentException)
+            {
+                Log.Information($"The provided connection string is: '{options.TileDatabaseConnectionString}', make sure that it is in the correct format");
+            }
             Log.CloseAndFlush();
             return 1;
         }

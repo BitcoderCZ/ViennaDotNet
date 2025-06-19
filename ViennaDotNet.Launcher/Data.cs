@@ -1,9 +1,4 @@
-﻿using Serilog;
-using System.IO.Compression;
-using ViennaDotNet.Common.Utils;
-using ViennaDotNet.Launcher.Programs;
-
-namespace ViennaDotNet.Launcher;
+﻿namespace ViennaDotNet.Launcher;
 
 internal static class Data
 {

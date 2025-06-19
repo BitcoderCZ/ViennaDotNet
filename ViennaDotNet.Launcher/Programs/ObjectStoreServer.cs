@@ -6,7 +6,7 @@ namespace ViennaDotNet.Launcher.Programs;
 
 internal static class ObjectStoreServer
 {
-    public static readonly string ExeName =  "ObjectStoreServer" + (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ".exe" : "");
+    public static readonly string ExeName = "ObjectStoreServer" + (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ".exe" : "");
     public const string DispName = "ObjectStore server";
 
     public static bool Check(Settings settings, ILogger logger)

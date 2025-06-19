@@ -97,7 +97,7 @@ public class ConsoleProcess
     private void ProcessOnExited(object? sender, EventArgs eventArgs)
         => OnProcessExited();
 
-    public void StopAndWait(int timeout = 10*1000)
+    public void StopAndWait(int timeout = 10 * 1000)
     {
         Process.StopGracefullyOrKill(timeout);
     }

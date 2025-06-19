@@ -203,15 +203,15 @@ public class NetworkServer
                             return null;
 
                         SubscriberChannel subscriberChannel = new SubscriberChannel(networkServer, this, channelId, parts[1]);
-                        return !subscriberChannel.isValid() 
-                            ? null 
+                        return !subscriberChannel.isValid()
+                            ? null
                             : subscriberChannel;
                     }
                 case "REQ":
                     {
                         RequestSenderChannel requestSenderChannel = new RequestSenderChannel(this, channelId, networkServer);
-                        return !requestSenderChannel.isValid() 
-                            ? null 
+                        return !requestSenderChannel.isValid()
+                            ? null
                             : requestSenderChannel;
                     }
                 case "HND":
@@ -220,8 +220,8 @@ public class NetworkServer
                             return null;
 
                         RequestHandlerChannel requestHandlerChannel = new RequestHandlerChannel(this, channelId, parts[1], networkServer);
-                        return !requestHandlerChannel.isValid() 
-                            ? null 
+                        return !requestHandlerChannel.isValid()
+                            ? null
                             : requestHandlerChannel;
                     }
                 default:
@@ -350,7 +350,7 @@ public class NetworkServer
     {
         private readonly Server.RequestSender requestSender;
         // TODO: should they be volatile?
-        private volatile TaskCompletionSource<string?   >? currentPendingResponse = null;
+        private volatile TaskCompletionSource<string?>? currentPendingResponse = null;
         private volatile bool _error = false;
 
         public RequestSenderChannel(Connection connection, int channelId, NetworkServer networkServer)

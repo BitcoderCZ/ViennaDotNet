@@ -6,7 +6,7 @@ namespace ViennaDotNet.DB.Models.Player;
 public sealed class Buildplates
 {
     [JsonInclude, JsonPropertyName("buildplates")]
-    public readonly Dictionary<string, Buildplate> _buildplates = [];
+    public Dictionary<string, Buildplate> _buildplates = [];
 
     public Buildplates()
     {

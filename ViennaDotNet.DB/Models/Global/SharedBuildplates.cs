@@ -6,7 +6,7 @@ namespace ViennaDotNet.DB.Models.Global;
 public sealed class SharedBuildplates
 {
     [JsonInclude, JsonPropertyName("sharedBuildplates")]
-    public readonly Dictionary<string, SharedBuildplate> _sharedBuildplates = [];
+    public Dictionary<string, SharedBuildplate> _sharedBuildplates = [];
 
     public void AddSharedBuildplate(string id, SharedBuildplate buildplate)
         => _sharedBuildplates[id] = buildplate;

@@ -8,7 +8,7 @@ namespace ViennaDotNet.DB.Models.Player;
 public sealed class ActivityLog
 {
     [JsonInclude, JsonPropertyName("entries")]
-    public readonly LinkedList<Entry> _entries;
+    public LinkedList<Entry> _entries;
 
     public ActivityLog()
     {

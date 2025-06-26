@@ -6,7 +6,7 @@ namespace ViennaDotNet.DB.Models.Global;
 public sealed class EncounterBuildplates
 {
     [JsonInclude, JsonPropertyName("encounterBuildplates")]
-    public readonly Dictionary<string, EncounterBuildplate> _encounterBuildplates = [];
+    public Dictionary<string, EncounterBuildplate> _encounterBuildplates = [];
 
     public EncounterBuildplates()
     {

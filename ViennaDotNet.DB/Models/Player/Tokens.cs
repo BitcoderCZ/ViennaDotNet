@@ -8,7 +8,7 @@ namespace ViennaDotNet.DB.Models.Player;
 public sealed class Tokens
 {
     [JsonInclude, JsonPropertyName("tokens")]
-    public readonly Dictionary<string, Token> _tokens;
+    public Dictionary<string, Token> _tokens;
 
     public Tokens()
     {

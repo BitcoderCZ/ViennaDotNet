@@ -1,8 +1,12 @@
-﻿using System.Collections.Immutable;
+﻿using System.Collections.Frozen;
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using ViennaDotNet.Common;
+using static ViennaDotNet.StaticData.Catalog.ItemJournalGroupsCatalogR;
+using static ViennaDotNet.StaticData.Catalog.ShopCatalogR.StoreItemInfo;
 
 namespace ViennaDotNet.StaticData;
 
@@ -13,6 +17,7 @@ public sealed class Catalog
     public readonly ItemJournalGroupsCatalogR ItemJournalGroupsCatalog;
     public readonly RecipesCatalogR RecipesCatalog;
     public readonly NFCBoostsCatalogR NfcBoostsCatalog;
+    public readonly ShopCatalogR ShopCatalog;
 
     internal Catalog(string dir)
     {
@@ -23,6 +28,7 @@ public sealed class Catalog
             ItemJournalGroupsCatalog = new ItemJournalGroupsCatalogR(Path.Combine(dir, "itemJournalGroups.json"));
             RecipesCatalog = new RecipesCatalogR(Path.Combine(dir, "recipes.json"));
             NfcBoostsCatalog = new NFCBoostsCatalogR(Path.Combine(dir, "nfc.json"));
+            ShopCatalog = new ShopCatalogR(Path.Combine(dir, "shop.json"));
         }
         catch (StaticDataException)
         {
@@ -504,6 +510,38 @@ public sealed class Catalog
         public sealed record BoostInfo
         {
 
+        }
+    }
+
+    public sealed class ShopCatalogR
+    {
+        public FrozenDictionary<Guid, StoreItemInfo> Items { get; }
+
+        internal ShopCatalogR(string file)
+        {
+            StoreItemInfo[]? items;
+            using (var stream = File.OpenRead(file))
+            {
+                items = Json.Deserialize<StoreItemInfo[]>(stream);
+            }
+
+            Debug.Assert(items is not null);
+
+            Items = items.ToFrozenDictionary(item => item.Id, item => item with { ItemCounts = item.ItemCounts?.ToFrozenDictionary() });
+        }
+
+        public sealed record StoreItemInfo(
+            Guid Id,
+            StoreItemType ItemType,
+            IReadOnlyDictionary<Guid, int>? ItemCounts
+        )
+        {
+            [JsonConverter(typeof(JsonStringEnumConverter))]
+            public enum StoreItemType
+            {
+                Buildplates,
+                Items
+            }
         }
     }
 }

@@ -35,7 +35,7 @@ internal static class BuildplateImporter
                 {
                     if (!string.IsNullOrWhiteSpace(e.Data))
                     {
-                        logger.Debug($"[importer] {e.Data}");
+                        logger.Information($"[importer] {e.Data}");
                     }
                 };
                 process.ErrorTextReceived += (sender, e) =>

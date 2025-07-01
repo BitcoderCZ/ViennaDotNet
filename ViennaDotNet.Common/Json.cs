@@ -8,9 +8,17 @@ public static class Json
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
     };
+    private static readonly JsonSerializerOptions optionsIndented = new JsonSerializerOptions()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = true,
+    };
 
     public static string Serialize<T>(T value)
         => JsonSerializer.Serialize(value, options);
+
+    public static string SerializeIndented<T>(T value)
+        => JsonSerializer.Serialize(value, optionsIndented);
 
     public static string Serialize<T>(T value, JsonSerializerOptions options)
         => JsonSerializer.Serialize(value, options);

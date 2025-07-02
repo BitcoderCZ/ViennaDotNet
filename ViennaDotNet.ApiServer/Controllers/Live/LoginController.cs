@@ -516,45 +516,21 @@ public partial class LoginController : ViennaControllerBase
 
                             security.AppendChild(timestamp);
 
-                            /*var derivedKeyToken = CreateElement(response, "wssc", "DerivedKeyToken");
-                            var idAttrib = response.CreateAttribute("ns1", "Id", null);
-                            idAttrib.Value = "EncKey";
-                            derivedKeyToken.Attributes.Append(idAttrib);
+                            XmlElement derivedKeyToken = response.CreateElement("wssc", "DerivedKeyToken", "http://schemas.xmlsoap.org/ws/2005/02/sc");
+                            derivedKeyToken.SetAttribute("xmlns:wssc", "http://schemas.xmlsoap.org/ws/2005/02/sc");
+                            derivedKeyToken.SetAttribute("xmlns:ns1", "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd");
+                            XmlAttribute idAttr = response.CreateAttribute("ns1", "Id", "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd");
+                            idAttr.Value = "EncKey";
+                            derivedKeyToken.Attributes.Append(idAttr);
                             derivedKeyToken.SetAttribute("Algorithm", "urn:liveid:SP800-108CTR-HMAC-SHA256");
                             {
-                                var nonceEle = CreateElement(response, "wssc", "Nonce");
-                                nonceEle.InnerText = nonce;
-                                derivedKeyToken.AppendChild(nonceEle);
-                            }
-
-                            security.AppendChild(derivedKeyToken);*/
-                            {
-                                // Create the root element with prefix "wssc" and namespace
-                                XmlElement derivedKeyToken = response.CreateElement("wssc", "DerivedKeyToken", "http://schemas.xmlsoap.org/ws/2005/02/sc");
-
-                                // Add xmlns:wssc namespace declaration (necessary for prefix usage)
-                                derivedKeyToken.SetAttribute("xmlns:wssc", "http://schemas.xmlsoap.org/ws/2005/02/sc");
-
-                                // Add xmlns:ns1 namespace declaration
-                                derivedKeyToken.SetAttribute("xmlns:ns1", "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd");
-
-                                // Add ns1:Id attribute (with prefix)
-                                XmlAttribute idAttr = response.CreateAttribute("ns1", "Id", "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd");
-                                idAttr.Value = "EncKey";
-                                derivedKeyToken.Attributes.Append(idAttr);
-
-                                // Add Algorithm attribute (no prefix)
-                                derivedKeyToken.SetAttribute("Algorithm", "urn:liveid:SP800-108CTR-HMAC-SHA256");
-
-                                // Create the <wssc:Nonce> element
                                 XmlElement nonceEle = response.CreateElement("wssc", "Nonce", "http://schemas.xmlsoap.org/ws/2005/02/sc");
                                 nonceEle.InnerText = nonce;
 
-                                // Append Nonce element as child of DerivedKeyToken
                                 derivedKeyToken.AppendChild(nonceEle);
-
-                                security.AppendChild(derivedKeyToken);
                             }
+
+                            security.AppendChild(derivedKeyToken);
                         }
 
                         header.AppendChild(security);
@@ -607,11 +583,6 @@ public partial class LoginController : ViennaControllerBase
                 response.AppendChild(envelope);
 
                 return Content(response.OuterXml);
-                /*
-                 * If doesnt work, remove <?xml version="1.0" encoding="UTF-8"?>
-
-                """ + from inner
-                 */
             }
         }
         else
@@ -678,7 +649,7 @@ public partial class LoginController : ViennaControllerBase
         byte[]? messageKey;
         using (var hmac = new HMACSHA256(sessionKey))
         {
-            int w1= hmac.TransformBlock([0, 0, 0, 1], 0, 4, null, 0);
+            int w1 = hmac.TransformBlock([0, 0, 0, 1], 0, 4, null, 0);
             byte[] labelBytes = Encoding.UTF8.GetBytes("WS-SecureConversationWS-SecureConversation");
             int w2 = hmac.TransformBlock(labelBytes, 0, labelBytes.Length, null, 0);
             int w3 = hmac.TransformBlock([0], 0, 1, null, 0);

@@ -1,0 +1,166 @@
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Text.RegularExpressions;
+using ViennaDotNet.ApiServer.Models;
+using ViennaDotNet.Common.Utils;
+
+namespace ViennaDotNet.ApiServer.Controllers.XboxLive;
+
+[Route("users")]
+public partial class ProfileController : ViennaControllerBase
+{
+    private readonly LiveDbContext _dbContext;
+
+    public ProfileController(LiveDbContext context)
+    {
+        _dbContext = context;
+    }
+
+    private sealed record ProfileSettingsResponse(
+        IEnumerable<ProfileUser> ProfileUsers
+    );
+
+    private sealed record ProfileUser(
+        string Id,
+        string HostId,
+        IEnumerable<ProfileSetting> Settings,
+        bool IsSponsoredUser
+    );
+
+    public sealed record BatchProfileSettingsRequest(
+        string[] Settings,
+        string[] UserIds
+    );
+
+    [HttpPost("batch/profile/settings")]
+    public async Task<IActionResult> GetBatchProfileSettings()
+    {
+        var cancellationToken = Request.HttpContext.RequestAborted;
+
+        var request = await Request.Body.AsJsonAsync<BatchProfileSettingsRequest>(cancellationToken);
+
+        if (request is null)
+        {
+            return BadRequest();
+        }
+
+        var authUnion = XboxLiveAuth();
+        if (authUnion.IsB)
+        {
+            return authUnion.B;
+        }
+
+        var token = authUnion.A;
+
+        foreach (string userId in request.UserIds)
+        {
+            if (userId != token.UserId)
+            {
+                return Unauthorized();
+            }
+        }
+
+        var account = await _dbContext.Accounts
+            .FirstOrDefaultAsync(account => account.Id == token.UserId, cancellationToken);
+
+        if (account is null)
+        {
+            return NotFound();
+        }
+
+        return JsonCamelCase(new ProfileSettingsResponse(
+            request.UserIds.Select(userId
+                => new ProfileUser(
+                    userId,
+                    userId,
+                    GetProfileFields(account, request.Settings),
+                    false
+                )
+            )
+        ));
+    }
+
+    [HttpGet("{gtParam}/profile/settings")]
+    public async Task<IActionResult> GetProfileSettings(string gtParam)
+    {
+        var cancellationToken = Request.HttpContext.RequestAborted;
+
+        var authUnion = XboxLiveAuth();
+        if (authUnion.IsB)
+        {
+            return authUnion.B;
+        }
+
+        var token = authUnion.A;
+
+        string? gt;
+        if (gtParam == "me")
+        {
+            gt = token.Username;
+        }
+        else
+        {
+            Match gtMatch = GetGtRegex().Match(gtParam);
+
+            gt = gtMatch.Success ? gtMatch.Groups[1].Value : null;
+        }
+
+        if (gt != token.Username)
+        {
+            return Unauthorized();
+        }
+
+        if (!Request.Query.TryGetValue("settings", out var settings))
+        {
+            return BadRequest();
+        }
+
+        var account = await _dbContext.Accounts
+            .FirstOrDefaultAsync(account => account.Id == token.UserId, cancellationToken);
+
+        if (account is null)
+        {
+            return NotFound();
+        }
+
+        return JsonCamelCase(new ProfileSettingsResponse([
+            new ProfileUser(
+                token.UserId,
+                token.UserId,
+                GetProfileFields(account, settings[0]?.Split(',') ?? []),
+                false
+            ),
+        ]));
+    }
+
+    private static Dictionary<string, string> GetProfile(Account account)
+        => new Dictionary<string, string>()
+        {
+            ["AppDisplayName"] = account.Username,
+            ["AppDisplayPicRaw"] = account.ProfilePictureUrl,
+            ["GameDisplayName"] = account.Username,
+            ["GameDisplayPicRaw"] = account.ProfilePictureUrl,
+            ["Gamertag"] = account.Username,
+            ["Gamerscore"] = "0",
+            ["FirstName"] = account.FirstName ?? account.Username,
+            ["LastName"] = account.LastName ?? account.Username,
+            ["SpeechAccessibility"] = "",
+        };
+
+    private static IEnumerable<ProfileSetting> GetProfileFields(Account account, IEnumerable<string> fields)
+    {
+        var profile = GetProfile(account);
+
+        return fields
+            .Where(profile.ContainsKey)
+            .Select(field => new ProfileSetting(field, profile[field]));
+    }
+
+    [GeneratedRegex(@"^gt\((.*)\)$")]
+    private static partial Regex GetGtRegex();
+
+    private sealed record ProfileSetting(
+        string Id,
+        string Value
+    );
+}

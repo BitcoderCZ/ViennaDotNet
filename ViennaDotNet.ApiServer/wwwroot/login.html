@@ -1,0 +1,325 @@
+﻿<html>
+<head>
+    <title>Login/Register</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="/js/jquery-3.6.3.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body, html {
+            margin: 0;
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+            background: #f0f2f5;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+        }
+
+        .container {
+            background: white;
+            padding: 2rem 3rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        h1#formTitle {
+            margin-bottom: 0.25rem;
+            font-size: 2.25rem;
+            font-weight: 700;
+        }
+
+        p {
+            margin-top: 0;
+            margin-bottom: 1.5rem;
+            font-size: 1rem;
+            color: #555;
+        }
+
+        .form-toggle {
+            margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            width: 100%;
+        }
+
+            .form-toggle button {
+                flex: 1;
+                padding: 0.75rem 1rem;
+                font-size: 1rem;
+                border: 2px solid #007bff;
+                background: white;
+                color: #007bff;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                font-weight: 600;
+            }
+
+                .form-toggle button.active,
+                .form-toggle button:hover {
+                    background: #007bff;
+                    color: white;
+                }
+
+        form {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+            form input[type="text"],
+            form input[type="password"] {
+                width: 100%;
+                padding: 0.75rem 1rem;
+                margin-bottom: 1rem;
+                font-size: 1rem;
+                border: 1.8px solid #ccc;
+                border-radius: 8px;
+                transition: border-color 0.3s ease;
+            }
+
+                form input[type="text"]:focus,
+                form input[type="password"]:focus {
+                    border-color: #007bff;
+                    outline: none;
+                }
+
+            form input[type="submit"] {
+                padding: 0.85rem 1rem;
+                font-size: 1.1rem;
+                font-weight: 700;
+                border-radius: 8px;
+                border: none;
+                background: #007bff;
+                color: white;
+                cursor: pointer;
+                transition: background-color 0.3s ease;
+            }
+
+                form input[type="submit"]:hover {
+                    background: #0056b3;
+                }
+
+            form label {
+                display: block;
+                margin-bottom: 0.3rem;
+                font-weight: 600;
+                font-size: 1rem;
+                color: #444;
+            }
+
+        .extra-fields {
+            overflow: hidden;
+            transition: max-height 0.4s ease, opacity 0.4s ease;
+        }
+
+        /* Initially hidden */
+        #registerFields {
+            max-height: 0;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+            /* Show register fields */
+            #registerFields.active {
+                max-height: 200px;
+                opacity: 1;
+                pointer-events: auto;
+            }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 1.5rem 2rem;
+                max-width: 100%;
+            }
+
+            h1#formTitle {
+                font-size: 1.8rem;
+            }
+
+            .form-toggle button {
+                font-size: 0.9rem;
+                padding: 0.6rem 0.8rem;
+            }
+
+            form input[type="text"],
+            form input[type="password"] {
+                font-size: 0.9rem;
+                padding: 0.65rem 0.9rem;
+            }
+
+            form input[type="submit"] {
+                font-size: 1rem;
+                padding: 0.75rem 1rem;
+            }
+
+            form label {
+                font-size: 0.9rem;
+            }
+        }
+
+        @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+            .container {
+                box-shadow: 0 8px 28px rgba(0,0,0,0.12);
+            }
+        }
+
+        form input[type="text"],
+        form input[type="password"] {
+            margin-bottom: 1rem;
+        }
+
+        .required {
+            color: red;
+        }
+
+        #errorMsg {
+            margin-top: 1rem;
+            color: #b00020;
+            background: #fdecea;
+            border: 1px solid #f5c6cb;
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.95rem;
+
+            word-break: break-word;
+            overflow-wrap: anywhere;
+            white-space: normal;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 id="formTitle">Login</h1>
+        <p>Please enter your credentials.</p>
+
+        <div class="form-toggle">
+            <button id="loginBtn" class="active">Login</button>
+            <button id="registerBtn">Register</button>
+        </div>
+
+        <form id="loginForm">
+            <label for="username">Username <span class="required">*</span></label>
+            <input id="username" type="text" placeholder="Username" required minlength="3" maxlength="16" pattern="[a-z0-9_:]+" title="Lowercase letters, numbers, underscore, and colon only" />
+
+            <label for="password">Password <span class="required">*</span></label>
+            <input id="password" type="password" placeholder="Password" required minlength="4" maxlength="32" />
+
+            <div class="extra-fields" id="registerFields">
+                <label for="firstName">First Name</label>
+                <input id="firstName" type="text" placeholder="First Name" minlength="2" maxlength="100" />
+
+                <label for="lastName">Last Name</label>
+                <input id="lastName" type="text" placeholder="Last Name" minlength="2" maxlength="100" />
+            </div>
+
+            <input type="submit" value="Submit" />
+
+            <div id="errorMsg" role="alert" aria-live="assertive" style="display:none;"></div>
+        </form>
+    </div>
+
+    <script>
+        $(document).ready(() => {
+            let isRegister = false;
+
+            $('#loginBtn').click(() => {
+                if (isRegister) {
+                    isRegister = false;
+                    $('#formTitle').text('Login');
+                    $('#registerFields').removeClass('active');
+                    $('#loginBtn').addClass('active');
+                    $('#registerBtn').removeClass('active');
+
+                    // Clear error message
+                    $('#errorMsg').hide().text('');
+                }
+            });
+
+            $('#registerBtn').click(() => {
+                if (!isRegister) {
+                    isRegister = true;
+                    $('#formTitle').text('Register');
+                    $('#registerFields').addClass('active');
+                    $('#registerBtn').addClass('active');
+                    $('#loginBtn').removeClass('active');
+
+                    // Clear error message
+                    $('#errorMsg').hide().text('');
+                }
+            });
+
+            $('#loginForm').submit(() => {
+                const userData = {
+                    username: $('#username').val(),
+                    password: $('#password').val()
+                };
+
+                if (isRegister) {
+                    userData.firstName = $('#firstName').val();
+                    userData.lastName = $('#lastName').val();
+
+                    $.post('./register', userData)
+                        .done(response => {
+                            // Clear any previous error
+                            $('#errorMsg').hide().text('');
+
+                            external.Property('DAToken', `<EncryptedData xmlns=\"http://www.w3.org/2001/04/xmlenc#\" Id=\"BinaryDAToken0\"><CipherData><CipherValue>${response.token}</CipherValue></CipherData></EncryptedData>`)
+                            external.Property('DAStartTime', response.tokenIssuedAt)
+                            external.Property('DAExpires', response.tokenExpires)
+                            external.Property('DASessionKey', response.sessionKey)
+                            external.Property('FirstName', response.firstName)
+                            external.Property('LastName', response.lastName)
+                            external.Property('SigninName', response.username)
+                            external.Property('Username', response.username)
+                            external.Property('CID', response.userId)
+                            external.Property('PUID', response.userId)
+                            external.FinalNext()
+                        })
+                        .fail((jqXHR) => {
+                            let errorText = jqXHR.responseText || "An unknown error occurred.";
+                            $('#errorMsg').text(errorText).show();
+                        });
+                } else {
+                    $.post('./login', userData)
+                    .done(response => {
+                        // Clear any previous error
+                        $('#errorMsg').hide().text('');
+
+                        external.Property('DAToken', `<EncryptedData xmlns=\"http://www.w3.org/2001/04/xmlenc#\" Id=\"BinaryDAToken0\"><CipherData><CipherValue>${response.token}</CipherValue></CipherData></EncryptedData>`)
+                        external.Property('DAStartTime', response.tokenIssuedAt)
+                        external.Property('DAExpires', response.tokenExpires)
+                        external.Property('DASessionKey', response.sessionKey)
+                        external.Property('FirstName', response.firstName)
+                        external.Property('LastName', response.lastName)
+                        external.Property('SigninName', response.username)
+                        external.Property('Username', response.username)
+                        external.Property('CID', response.userId)
+                        external.Property('PUID', response.userId)
+                        external.FinalNext()
+                    })
+                    .fail((jqXHR) => {
+                        let errorText = jqXHR.responseText || "An unknown error occurred.";
+                        $('#errorMsg').text(errorText).show();
+                    });
+                }
+
+                return false;
+            });
+        });
+    </script>
+</body>
+</html>

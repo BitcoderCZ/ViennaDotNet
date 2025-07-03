@@ -1,5 +1,4 @@
-﻿using static ViennaDotNet.ApiServer.Models.Tokens.Live;
-
+﻿using System.Text.Json.Serialization;
 namespace ViennaDotNet.ApiServer.Models;
 
 public sealed record Token<TData>(
@@ -22,6 +21,43 @@ public static class Tokens
 
         public sealed record DeviceToken()
             : ITokenData<DeviceToken>;
+    }
+
+    public static class Xbox
+    {
+        [JsonPolymorphic(TypeDiscriminatorPropertyName = "type")]
+        [JsonDerivedType(typeof(DeviceToken), "device")]
+        [JsonDerivedType(typeof(TitleToken), "title")]
+        [JsonDerivedType(typeof(UserToken), "user")]
+        public abstract class AuthToken : ITokenData<AuthToken>
+        {
+        }
+
+        public sealed class DeviceToken : AuthToken, ITokenData<DeviceToken>
+        {
+            public required string Did { get; init; }
+        }
+
+        public sealed class TitleToken : AuthToken, ITokenData<TitleToken>
+        {
+            public required string Tid { get; init; }
+        }
+
+        public sealed class UserToken : AuthToken, ITokenData<UserToken>
+        {
+            public required string Xid { get; init; }
+
+            public required string Uhs { get; init; }
+
+            public required string UserId { get; init; }
+
+            public required string Username { get; init; }
+        }
+
+        public sealed record XapiToken(
+            string UserId,
+            string Username
+        ) : ITokenData<XapiToken>;
     }
 
     public static class Shared

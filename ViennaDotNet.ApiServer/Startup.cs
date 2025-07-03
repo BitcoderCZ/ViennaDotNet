@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Serilog.Events;
-using System;
 using ViennaDotNet.ApiServer.Authentication;
 
 namespace ViennaDotNet.ApiServer;

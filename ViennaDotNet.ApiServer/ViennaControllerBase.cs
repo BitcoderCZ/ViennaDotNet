@@ -1,4 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
+using ViennaDotNet.ApiServer.Models;
 using ViennaDotNet.ApiServer.Utils;
 
 namespace ViennaDotNet.ApiServer;
@@ -6,15 +8,37 @@ namespace ViennaDotNet.ApiServer;
 [ApiController]
 public abstract class ViennaControllerBase : ControllerBase
 {
-    [NonAction]
-    public ContentResult EarthJson(object results)
-        => Json(new EarthApiResponse(results));
+    private static Config config => Program.config;
 
-    [NonAction]
-    public ContentResult EarthJson(object? results, EarthApiResponse.UpdatesResponse? updates)
-        => Json(new EarthApiResponse(results, updates));
+    // TODO: make these generic, might change output
+    protected ContentResult EarthJson(object results)
+        => JsonCamelCase(new EarthApiResponse(results));
 
-    [NonAction]
-    public ContentResult Json(object value)
+    protected ContentResult EarthJson(object? results, EarthApiResponse.UpdatesResponse? updates)
+        => JsonCamelCase(new EarthApiResponse(results, updates));
+
+    protected ContentResult JsonCamelCase(object value)
         => Content(Common.Json.Serialize(value), "application/json");
+
+    protected ContentResult JsonPascalCase(object value)
+        => Content(JsonSerializer.Serialize(value), "application/json");
+
+    protected Union<Tokens.Xbox.XapiToken, IActionResult> XboxLiveAuth()
+    {
+        var authorization = XboxAuthorizationUtils.Parse(Request.Headers["Authorization"].FirstOrDefault());
+
+        if (authorization is not { } authValue)
+        {
+            return BadRequest();
+        }
+
+        var token = JwtUtils.Verify<Tokens.Xbox.XapiToken>(authValue.TokenString, config.XboxLive.XapiTokenSecretBytes)?.Data;
+
+        if (token is null || token.UserId != authValue.UserId)
+        {
+            return Unauthorized();
+        }
+
+        return token;
+    }
 }

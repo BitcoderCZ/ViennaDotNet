@@ -1,5 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Serilog;
 using System.Buffers;
 using System.Diagnostics;
@@ -8,7 +8,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
 using System.Xml;
-using System.Xml.Linq;
 using ViennaDotNet.ApiServer.Models;
 using ViennaDotNet.ApiServer.Utils;
 using ViennaDotNet.Common.Utils;
@@ -48,49 +47,20 @@ public partial class LoginController : ViennaControllerBase
     [HttpGet("InlineConnect.srf")]
     public IActionResult GetLoginPage()
     {
-        return Content("""
-            <html>
-            <head>
-                <title>Login</title>
-                <script src="/js/jquery-3.6.3.min.js"></script>
-            </head>
-            <body>
-                <h1>Login</h1>
-                <p>Please enter the username and password that you want to use and press the button below to generate a user token.</p>
-                <form id="loginForm">
-                    <input id="username" type="text" /><br />
-                    <input id="password" type="password" /><br />
-                    <input type="submit" />
-                </form>
-                <script>
-                    $(document).ready(() => {
-                    $('#loginForm').submit(() => {
-                        $.post('./login', { username: $('#username').val(), password: $('#password').val() }).then(response => {
-                        external.Property('DAToken', `<EncryptedData xmlns=\"http://www.w3.org/2001/04/xmlenc#\" Id=\"BinaryDAToken0\"><CipherData><CipherValue>${response.token}</CipherValue></CipherData></EncryptedData>`)
-                        external.Property('DAStartTime', response.tokenIssuedAt)
-                        external.Property('DAExpires', response.tokenExpires)
-                        external.Property('DASessionKey', response.sessionKey)
-                        external.Property('FirstName', response.username)
-                        external.Property('LastName', response.username)
-                        external.Property('SigninName', response.username)
-                        external.Property('Username', response.username)
-                        external.Property('CID', response.userId)
-                        external.Property('PUID', response.userId)
-                        external.FinalNext()
-                        })
+        return File("/login.html", "text/html");
+    }
 
-                        return false
-                    })
-                    })
-                </script>
-            </body>
-            </html>
-            """, "text/html");
+    [HttpGet("reauthenticateStart")]
+    public IActionResult GetReauthenticatePage()
+    {
+        return File("/reauthenticate.html", "text/html");
     }
 
     private sealed record LoginResponse(
         string UserId,
         string Username,
+        string FirstName,
+        string LastName,
         string Token,
         string TokenIssuedAt,
         string TokenExpires,
@@ -101,8 +71,47 @@ public partial class LoginController : ViennaControllerBase
     public async Task<IActionResult> Login([FromForm] string username, [FromForm] string password, CancellationToken cancellationToken)
     {
         username = username.Trim();
+        password = password.Trim();
 
-        Log.Debug($"Login attempt: Username: {username}, Password: {password}");
+        Log.Debug($"Login attempt: Username: {username}");
+
+        var account = await _dbContext.Accounts
+            .FirstOrDefaultAsync(account => account.Username == username, cancellationToken);
+
+        if (account is null)
+        {
+            return BadRequest("Username or password is incorrect");
+        }
+
+        byte[] passwordHash = HashPassword(password, account.PasswordSalt);
+
+        if (!passwordHash.AsSpan().SequenceEqual(account.PasswordHash))
+        {
+            return BadRequest("Username or password is incorrect");
+        }
+
+        return JsonCamelCase(CreateLoginResponse(account));
+    }
+
+    [HttpPost("register")]
+    public async Task<IActionResult> Register([FromForm] string username, [FromForm] string password, [FromForm] string? firstName, [FromForm] string? lastName, CancellationToken cancellationToken)
+    {
+        username = username.Trim();
+        password = password.Trim();
+        firstName = firstName?.Trim();
+        lastName = lastName?.Trim();
+
+        if (firstName is { Length: 0 })
+        {
+            firstName = null;
+        }
+
+        if (lastName is { Length: 0 })
+        {
+            lastName = null;
+        }
+
+        Log.Debug($"Register attempt: Username: {username}, First name: {firstName}, Last name: {lastName}");
 
         if (string.IsNullOrWhiteSpace(username) || username.Length < 3 || username.Length > 16)
         {
@@ -114,58 +123,63 @@ public partial class LoginController : ViennaControllerBase
             return BadRequest("Password must be 4-32 characters long");
         }
 
-        var account = _dbContext.Accounts
-            .FirstOrDefault(account => account.Username == username);
+        if (!string.IsNullOrWhiteSpace(firstName) && (firstName.Length < 2 || firstName.Length > 100))
+        {
+            return BadRequest("First name must be 2-100 characters long");
+        }
+
+        if (!string.IsNullOrWhiteSpace(lastName) && (lastName.Length < 2 || lastName.Length > 100))
+        {
+            return BadRequest("Last name must be 2-100 characters long");
+        }
+
+        if (!GetUsernameRegex().IsMatch(username))
+        {
+            return BadRequest("Username must contain only: lowercase letters, numbers, underscore and colon");
+        }
+
+        var account = await _dbContext.Accounts
+            .FirstOrDefaultAsync(account => account.Username == username, cancellationToken);
 
         if (account is not null)
         {
-            byte[] passwordHash = HashPassword(password, account.PasswordSalt);
-
-            if (!passwordHash.AsSpan().SequenceEqual(account.PasswordHash))
-            {
-                return Unauthorized("Incorrect password");
-            }
+            return BadRequest("Account with the specified username already exists");
         }
-        else
+
+        string userId = GenerateUserId(username);
+
+        byte[] passwordSalt = new byte[16];
+        _rng.GetBytes(passwordSalt);
+
+        byte[] paswordHash = HashPassword(password, passwordSalt);
+
+        string baseServerIP = $"{(Request.IsHttps ? "https://" : "http://")}{Request.Host.Value}";
+
+        account = new Account()
         {
-            string userId = GenerateUserId(username);
+            Id = userId,
+            CreatedDate = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+            Username = username,
+            ProfilePictureUrl = $"baseServerIP/images/default_pfp.png", // TODO
+            FirstName = firstName,
+            LastName = lastName,
+            PasswordSalt = passwordSalt,
+            PasswordHash = paswordHash,
+        };
 
-            byte[] passwordSalt = new byte[16];
-            _rng.GetBytes(passwordSalt);
+        _dbContext.Accounts.Add(account);
+        await _dbContext.SaveChangesAsync(cancellationToken);
 
-            byte[] paswordHash = HashPassword(password, passwordSalt);
+        Log.Information($"Account created: {username} ({userId})");
 
-            account = new Models.Account()
-            {
-                Id = userId,
-                Username = username,
-                PasswordSalt = passwordSalt,
-                PasswordHash = paswordHash,
-            };
+        return JsonCamelCase(CreateLoginResponse(account));
+    }
 
-            _dbContext.Accounts.Add(account);
-            await _dbContext.SaveChangesAsync(cancellationToken);
-
-            Log.Information($"Account created: {username} ({userId})");
-        }
-
-        var tokenValidity = ValidityDatePair.Create(config.Login.UserTokenValidityMinutes);
-        var token = new Tokens.Live.UserToken(
-            account.Id,
-            account.Username,
-            Convert.ToBase64String(account.PasswordSalt),
-            Convert.ToBase64String(account.PasswordHash)
-        );
-        string tokenString = JwtUtils.Sign(token, config.Login.UserTokenSecretBytes, tokenValidity);
-
-        return Json(new LoginResponse(
-            account.Id,
-            account.Username,
-            tokenString,
-            tokenValidity.IssuedStr,
-            tokenValidity.ExpiresStr,
-            config.Login.UserTokenSessionKey
-        ));
+    [HttpPost("reauthenticate")]
+    public async Task<IActionResult> Reauthenticate([FromForm] string userToken, [FromForm] string password, CancellationToken cancellationToken)
+    {
+        // TODO
+        throw new NotImplementedException();
     }
 
     [HttpPost("deviceaddcredential.srf")]
@@ -177,7 +191,7 @@ public partial class LoginController : ViennaControllerBase
     [HttpPost("/RST2.srf")]
     public async Task<IActionResult> RST2()
     {
-        var cancellationToken = Request.HttpContext.RequestAborted; // can't get from param, because if I do request body is empty
+        var cancellationToken = Request.HttpContext.RequestAborted;
 
         var request = new XmlDocument();
         string rq;
@@ -390,6 +404,7 @@ public partial class LoginController : ViennaControllerBase
 
             if (userToken is null || userToken.Expired is true)
             {
+                // TODO
                 throw new NotImplementedException();
             }
             else
@@ -607,6 +622,29 @@ public partial class LoginController : ViennaControllerBase
         }
     }
 
+    private static LoginResponse CreateLoginResponse(Account account)
+    {
+        var tokenValidity = ValidityDatePair.Create(config.Login.UserTokenValidityMinutes);
+        var token = new Tokens.Live.UserToken(
+            account.Id,
+            account.Username,
+            Convert.ToBase64String(account.PasswordSalt),
+            Convert.ToBase64String(account.PasswordHash)
+        );
+        string tokenString = JwtUtils.Sign(token, config.Login.UserTokenSecretBytes, tokenValidity);
+
+        return new LoginResponse(
+            account.Id,
+            account.Username,
+            account.FirstName ?? account.Username,
+            account.LastName ?? account.Username,
+            tokenString,
+            tokenValidity.IssuedStr,
+            tokenValidity.ExpiresStr,
+            config.Login.UserTokenSessionKey
+        );
+    }
+
     private static string GenerateNonce()
     {
         byte[] buffer = ArrayPool<byte>.Shared.Rent(32);
@@ -686,6 +724,9 @@ public partial class LoginController : ViennaControllerBase
 
         return Convert.ToBase64String(cipherText);
     }
+
+    [GeneratedRegex("^[a-z0-9_:]+$")]
+    private partial Regex GetUsernameRegex();
 
     [GeneratedRegex("&da=([^&]*)")]
     private partial Regex GetDeviceDATokenStringRegex();

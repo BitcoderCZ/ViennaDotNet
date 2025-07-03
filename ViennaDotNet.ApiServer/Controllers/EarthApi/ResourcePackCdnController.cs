@@ -32,7 +32,7 @@ public class ResourcePackController : ControllerBase
 [Route("cdn/availableresourcepack/resourcepacks/dba38e59-091a-4826-b76a-a08d7de5a9e2-1301b0c257a311678123b9e7325d0d6c61db3c35")]
 public class ResourcePackCdnController : ControllerBase
 {
-    [HttpGet]
+    [HttpGet, HttpHead]
     public async Task<IActionResult> Get()
     {
         string resourcePackFilePath = @"./staticdata/resourcepacks/vanilla.zip"; //resource packs are distributed as renamed zip files containing an MCpack

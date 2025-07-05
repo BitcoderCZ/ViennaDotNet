@@ -6,8 +6,7 @@ namespace ViennaDotNet.ApiServer.Controllers.XboxLive;
 [Route("users")]
 public partial class UserpresenceController : ViennaControllerBase
 {
-    // TODO: 
-    [HttpPost("{xuid}/devices/current/titles/current")]
+    [HttpPost("{xuidParam}/devices/current/titles/current")]
     public IActionResult GetTitles(string xuidParam)
     {
         var authUnion = XboxLiveAuth();

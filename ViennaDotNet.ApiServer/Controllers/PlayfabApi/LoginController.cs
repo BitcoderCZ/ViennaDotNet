@@ -1,0 +1,181 @@
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System.Text.RegularExpressions;
+using ViennaDotNet.ApiServer.Models;
+using ViennaDotNet.ApiServer.Models.Playfab;
+using ViennaDotNet.ApiServer.Utils;
+using ViennaDotNet.Common.Utils;
+
+namespace ViennaDotNet.ApiServer.Controllers.PlayfabApi;
+
+[Route("Client")]
+public partial class LoginController : ViennaControllerBase
+{
+    private static Config config => Program.config;
+
+    private readonly LiveDbContext _dbContext;
+
+    public LoginController(LiveDbContext context)
+    {
+        _dbContext = context;
+    }
+
+    private sealed record LoginWithCustomIDRequest(
+        string TitleId,
+        object? EncryptedRequest,
+        object? PlayerSecret,
+        bool CreateAccount,
+        string CustomId
+    );
+
+    [HttpPost("LoginWithCustomID")]
+    public async Task<IActionResult> LoginWithCustomID()
+    {
+        var cancellationToken = Request.HttpContext.RequestAborted;
+
+        var request = await Request.Body.AsJsonAsync<LoginWithCustomIDRequest>(cancellationToken);
+
+        if (request is null || !GetTitleIdRegex().IsMatch(request.TitleId))
+        {
+            return BadRequest();
+        }
+
+        return JsonCamelCase(new ErrorResponse(
+            403,
+            "Forbidden",
+            "NotAuthorizedByTitle",
+            1191,
+            "Action not authorized by title",
+            null
+        ));
+    }
+
+    private sealed record LoginWithXboxRequest(
+        string TitleId,
+        object? EncryptedRequest,
+        object? PlayerSecret,
+        bool CreateAccount,
+        string XboxToken
+    );
+
+    [HttpPost("LoginWithXbox")]
+    public async Task<IActionResult> LoginWithXbox()
+    {
+        var cancellationToken = Request.HttpContext.RequestAborted;
+
+        var request = await Request.Body.AsJsonAsync<LoginWithXboxRequest>(cancellationToken);
+
+        if (request is null || !GetTitleIdRegex().IsMatch(request.TitleId))
+        {
+            return BadRequest();
+        }
+
+        var authorization = XboxAuthorizationUtils.Parse(request.XboxToken);
+
+        if (authorization is not { } authValue)
+        {
+            return BadRequest();
+        }
+
+        var xboxToken = JwtUtils.Verify<Tokens.Shared.PlayfabXboxToken>(authValue.TokenString, config.XboxLive.PlayfabTokenSecretBytes);
+
+        if (xboxToken is null || xboxToken.Data.UserId != authValue.UserId)
+        {
+            // TODO: probably supposed to use a "fake 403" as with LoginWithCustomID
+            return Forbid();
+        }
+
+        string userId = xboxToken.Data.UserId;
+
+        var account = await _dbContext.Accounts
+            .FirstOrDefaultAsync(account => account.Id == userId, cancellationToken);
+
+        if (account is null)
+        {
+            return NotFound();
+        }
+
+        var sessionTicketValidity = ValidityDatePair.Create(config.PlayfabApi.SessionTicketValidityMinutes);
+        var sessionTicket = new Tokens.Shared.PlayfabSessionTicket(userId);
+        string sessionTicketString = JwtUtils.Sign(sessionTicket, config.PlayfabApi.SessionTicketSecretBytes, sessionTicketValidity);
+
+        var entityTokenValidity = ValidityDatePair.Create(config.PlayfabApi.EntityTokenValidityMinutes);
+        var entityToken = new Tokens.Playfab.EntityToken(userId, "title_player_account");
+        string entityTokenString = JwtUtils.Sign(entityToken, config.PlayfabApi.EntityTokenSecretBytes, entityTokenValidity);
+
+        return JsonPascalCase(new OkResponse(
+            200,
+            "Ok",
+            new Dictionary<string, object>()
+            {
+                ["SessionTicket"] = $"{userId.ToUpperInvariant()}-{sessionTicketString}",
+                ["PlayFabId"] = userId,
+                ["NewlyCreated"] = false,
+                ["SettingsForUser"] = new Dictionary<string, bool>()
+                {
+                    ["NeedsAttribution"] = false,
+                    ["GatherDeviceInfo"] = true,
+                    ["GatherFocusInfo"] = true,
+                },
+                ["LastLoginTime"] = DateTimeOffset.FromUnixTimeSeconds(account.CreatedDate).UtcDateTime,
+                ["InfoResultPayload"] = new Dictionary<string, object>()
+                {
+                    ["AccountInfo"] = new Dictionary<string, object>()
+                    {
+                        ["PlayFabId"] = userId,
+                        ["Created"] = DateTimeOffset.FromUnixTimeSeconds(account.CreatedDate).UtcDateTime,
+                        ["TitleInfo"] = new Dictionary<string, object>()
+                        {
+                            ["Origination"] = "XboxLive",
+                            ["Created"] = DateTimeOffset.FromUnixTimeSeconds(account.CreatedDate).UtcDateTime,
+                            ["LastLogin"] = DateTimeOffset.FromUnixTimeSeconds(account.CreatedDate).UtcDateTime,
+                            ["FirstLogin"] = DateTimeOffset.FromUnixTimeSeconds(account.CreatedDate).UtcDateTime,
+                            ["isBanned"] = false,
+                            ["TitlePlayerAccount"] = new Dictionary<string, string>()
+                            {
+                                ["Id"] = userId,
+                                ["Type"] = "title_player_account",
+                                ["TypeString"] = "title_player_account",
+                            },
+                        },
+                        ["PrivateInfo"] = new object(),
+                        ["XboxInfo"] = new Dictionary<string, string>()
+                        {
+                            ["XboxUserId"] = userId,
+                            ["XboxUserSandbox"] = "RETAIL",
+                        },
+                    },
+                    ["UserInventory"] = Array.Empty<object>(),
+                    ["UserDataVersion"] = 0,
+                    ["UserReadOnlyDataVersion"] = 0,
+                    ["CharacterInventories"] = Array.Empty<object>(),
+                    ["PlayerProfile"] = new Dictionary<string, string>()
+                    {
+                        ["PublisherId"] = "B63A0803D3653643",
+                        ["TitleId"] = request.TitleId,
+                        ["PlayerId"] = userId,
+                    },
+                },
+                ["EntityToken"] = new Dictionary<string, object>()
+                {
+                    ["EntityToken"] = entityTokenString,
+                    ["TokenExpiration"] = entityTokenValidity.ExpiresDT,
+                    ["Entity"] = new Dictionary<string, string>()
+                    {
+                        ["Id"] = entityToken.Id,
+                        ["Type"] = entityToken.Type,
+                        ["TypeString"] = entityToken.Type,
+                    },
+                },
+                ["TreatmentAssignment"] = new Dictionary<string, object>()
+                {
+                    ["Variants"] = Array.Empty<object>(),
+                    ["Variables"] = Array.Empty<object>(),
+                },
+            }
+        ));
+    }
+
+    [GeneratedRegex("^[0-9A-F]{5}$")]
+    private static partial Regex GetTitleIdRegex();
+}

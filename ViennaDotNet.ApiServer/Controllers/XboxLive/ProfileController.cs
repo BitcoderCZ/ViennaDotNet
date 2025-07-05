@@ -141,7 +141,7 @@ public partial class ProfileController : ViennaControllerBase
             ["GameDisplayName"] = account.Username,
             ["GameDisplayPicRaw"] = account.ProfilePictureUrl,
             ["Gamertag"] = account.Username,
-            ["Gamerscore"] = "0",
+            ["Gamerscore"] = "69",
             ["FirstName"] = account.FirstName ?? account.Username,
             ["LastName"] = account.LastName ?? account.Username,
             ["SpeechAccessibility"] = "",

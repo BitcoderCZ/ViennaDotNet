@@ -60,6 +60,14 @@ public static class Tokens
         ) : ITokenData<XapiToken>;
     }
 
+    public static class Playfab
+    {
+        public sealed record EntityToken(
+            string Id,
+            string Type
+        ) : ITokenData<EntityToken>;
+    }
+
     public static class Shared
     {
         public sealed record XboxTicketToken(

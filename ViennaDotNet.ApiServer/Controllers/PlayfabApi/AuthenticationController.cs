@@ -1,0 +1,90 @@
+﻿using Microsoft.AspNetCore.Mvc;
+using ViennaDotNet.ApiServer.Models;
+using ViennaDotNet.ApiServer.Models.Playfab;
+using ViennaDotNet.ApiServer.Utils;
+using ViennaDotNet.Common.Utils;
+
+namespace ViennaDotNet.ApiServer.Controllers.PlayfabApi;
+
+[Route("Authentication")]
+public class AuthenticationController : ViennaControllerBase
+{
+    private static Config config => Program.config;
+
+    private sealed record GetEntityTokenRequest(
+        GetEntityTokenRequest.EntityR Entity
+    )
+    {
+        public sealed record EntityR(
+            string Id,
+            string Type
+        );
+    }
+
+    private sealed record GetEntityTokenResponse(
+        string EntityToken,
+        DateTime TokenExpiration,
+        GetEntityTokenResponse.EntityR Entity
+    )
+    {
+        public sealed record EntityR(
+            string Id,
+            string Type,
+            string TypeString
+        );
+    }
+
+    [HttpPost("GetEntityToken")]
+    public async Task<IActionResult> GetEntityTokenAsync()
+    {
+        var cancellationToken = Request.HttpContext.RequestAborted;
+
+        var request = await Request.Body.AsJsonAsync<GetEntityTokenRequest>(cancellationToken);
+
+        if (request is null)
+        {
+            return BadRequest();
+        }
+
+        var tokenUnion = PlayfabAuth();
+
+        if (tokenUnion.IsB)
+        {
+            return tokenUnion.B;
+        }
+
+        var token = tokenUnion.A;
+
+        switch (request.Entity.Type)
+        {
+            case "master_player_account":
+                {
+                    if (token.Type is not "title_player_account" || token.Id != request.Entity.Id)
+                    {
+                        return Forbid();
+                    }
+
+                    var entityTokenValidity = ValidityDatePair.Create(config.PlayfabApi.EntityTokenValidityMinutes);
+                    var entityToken = new Tokens.Playfab.EntityToken(request.Entity.Id, request.Entity.Type);
+                    string entityTokenSting = JwtUtils.Sign(entityToken, config.PlayfabApi.EntityTokenSecretBytes, entityTokenValidity);
+
+                    return JsonPascalCase(new OkResponse(
+                        200,
+                        "OK",
+                        new GetEntityTokenResponse(
+                            entityTokenSting,
+                            entityTokenValidity.ExpiresDT,
+                            new(
+                               entityToken.Id,
+                               entityToken.Type,
+                               entityToken.Type
+                            )
+                        )
+                    ));
+                }
+
+            default:
+                return BadRequest();
+        }
+    }
+}

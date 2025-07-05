@@ -41,8 +41,10 @@ public class AccountsController : ViennaControllerBase
     );
 
     [HttpGet("users/current/profile")]
-    public async Task<IActionResult> GetProfile(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetProfile()
     {
+        var cancellationToken = Request.HttpContext.RequestAborted;
+
         var authUnion = XboxLiveAuth();
         if (authUnion.IsB)
         {

@@ -2,7 +2,7 @@
 
 namespace ViennaDotNet.ApiServer;
 
-public sealed record class Config(Config.EnvironmentR Environment, Config.LoginR Login, Config.XboxLiveR XboxLive)
+public sealed record class Config(Config.EnvironmentR Environment, Config.LoginR Login, Config.XboxLiveR XboxLive, Config.PlayfabApiR PlayfabApi)
 {
     public static readonly Config Default = new Config
     (
@@ -24,6 +24,13 @@ public sealed record class Config(Config.EnvironmentR Environment, Config.LoginR
             AuthTokenSecret: "zcGJXsfsHik4UJeK/usZPbMnVUhlUdH8vzo4JewgpyAbfxglXP9BGQrOYUKzPsa4SWnzC4E8j8EfCOm9hBTGGw==",
             XapiTokenSecret: "iDsUT5D6FP2K2h4IEwoquwBMc7Bdj8GuZbv3+1610EjEbBdoDo+4LJIKiUF+K6keBF+pWUsQIQpIYvdt0iCmBw==",
             PlayfabTokenSecret: "Iewc7mNZ4RzXUimHvPauBquzwTZq5K2dWLnnpUHGji3TAMq6PiazPyb/2igVNK9dLjMUpzqoUvxnM/niCKuWOA=="
+        ),
+        new PlayfabApiR(
+            EntityTokenValidityMinutes: 24 * 60,
+            SessionTicketValidityMinutes: 24 * 60,
+            EntityTokenSecret: "/T7gV2UtfbN3OAsSFt1U73+DLocbc7HzBmywI4X2wFgr/yKcTo51UNJUAwiInJ08pWIqBUP9WoE/to4cBWUQlg==",
+            SessionTicketSecret: "mKpXyjZkqnzCLKqjdnpXqAYyYHL07I+Tbqs8j9HKJAe3MvRNOtjb59vp/vREJFg6WPOJ4g8AYfsRr107CQKp4Q==",
+            DummyItemPreviewURL: "http://20ca2.playfabapi.com/dummyItemPreview.png"
         )
     );
 
@@ -77,5 +84,23 @@ public sealed record class Config(Config.EnvironmentR Environment, Config.LoginR
 
         [JsonIgnore]
         public byte[] PlayfabTokenSecretBytes => _playfabTokenSecretBytes ??= Convert.FromBase64String(PlayfabTokenSecret);
+    }
+
+    public sealed record PlayfabApiR(
+        int EntityTokenValidityMinutes,
+        int SessionTicketValidityMinutes,
+        string EntityTokenSecret,
+        string SessionTicketSecret,
+        string DummyItemPreviewURL
+    )
+    {
+        private byte[]? _entityTokenSecretBytes;
+        private byte[]? _sessionTicketSecretBytes;
+
+        [JsonIgnore]
+        public byte[] EntityTokenSecretBytes => _entityTokenSecretBytes ??= Convert.FromBase64String(EntityTokenSecret);
+
+        [JsonIgnore]
+        public byte[] SessionTicketSecretBytes => _sessionTicketSecretBytes ??= Convert.FromBase64String(SessionTicketSecret);
     }
 }

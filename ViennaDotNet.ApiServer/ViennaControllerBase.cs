@@ -41,4 +41,20 @@ public abstract class ViennaControllerBase : ControllerBase
 
         return token;
     }
+
+    protected Union<Tokens.Playfab.EntityToken, IActionResult> PlayfabAuth()
+    {
+        if (!Request.Headers.TryGetValue("X-EntityToken", out var tokenString) || tokenString.Count < 1)
+        {
+            return BadRequest();
+        }
+
+        var token = JwtUtils.Verify<Tokens.Playfab.EntityToken>(tokenString[0] ?? "", config.PlayfabApi.EntityTokenSecretBytes)?.Data;
+        if (token is null)
+        {
+            return Forbid();
+        }
+
+        return token;
+    }
 }

@@ -220,7 +220,7 @@ public class ObjectController : ViennaControllerBase
 
     private sealed record SetObjectsRequest(
         SetObjectsRequest.EntityR Entity,
-        SetObjectsRequest.ObjectsR Objects
+        object? Objects
     )
     {
         public sealed record EntityR(

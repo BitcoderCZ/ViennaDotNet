@@ -7938,6 +7938,422 @@ public class CatalogController : ViennaControllerBase
                     }
                     """, "application/json");
             }
+            else if (request.Filter == "(contentType eq 'RubyOffer') and platforms/any(tt: tt eq 'title.earth')")
+            {
+                return Content("""
+                    {
+                      "code": 200,
+                      "status": "OK",
+                      "data": {
+                        "Count": 6,
+                        "Items": [
+                          {
+                            "SourceEntity": {
+                              "Id": "B63A0803D3653643",
+                              "Type": "namespace",
+                              "TypeString": "namespace"
+                            },
+                            "SourceEntityKey": {
+                              "Id": "B63A0803D3653643",
+                              "Type": "namespace",
+                              "TypeString": "namespace"
+                            },
+                            "Id": "c5de9899-bcb9-4a86-91f7-3450201da12b",
+                            "Type": "catalogItem",
+                            "AlternateIds": [],
+                            "Title": {
+                              "NEUTRAL": "store.ruby.offer.1600",
+                              "neutral": "store.ruby.offer.1600"
+                            },
+                            "Description": {
+                              "NEUTRAL": "no description",
+                              "neutral": "no description"
+                            },
+                            "Keywords": {},
+                            "ContentType": "RubyOffer",
+                            "CreatorEntityKey": {
+                              "Id": "3B1B443CE3FD8EBA",
+                              "Type": "title_player_account",
+                              "TypeString": "title_player_account"
+                            },
+                            "CreatorEntity": {
+                              "Id": "3B1B443CE3FD8EBA",
+                              "Type": "title_player_account",
+                              "TypeString": "title_player_account"
+                            },
+                            "IsStackable": false,
+                            "Platforms": [
+                              "android.googleplay",
+                              "ios.store",
+                              "uwp.store",
+                              "title.bedrockvanilla",
+                              "title.earth"
+                            ],
+                            "Tags": [
+                              "activeoffer",
+                              "c5de9899-bcb9-4a86-91f7-3450201da12b",
+                              "has_sku"
+                            ],
+                            "CreationDate": "2019-08-19T20:48:12.966Z",
+                            "LastModifiedDate": "2022-08-18T22:53:23.153Z",
+                            "Contents": [],
+                            "Images": [
+                              {
+                                "Id": "8c12e03b-9af9-4dc6-88b5-f5e87556d381",
+                                "Tag": "Thumbnail",
+                                "Type": "Thumbnail",
+                                "Url": "https://xforgeassets002.xboxlive.com/pf-title-b63a0803d3653643-ee7b/8c12e03b-9af9-4dc6-88b5-f5e87556d381/default_Thumbnail.jpg"
+                              }
+                            ],
+                            "ItemReferences": [],
+                            "DeepLinks": [],
+                            "DisplayProperties": {
+                              "bonusCoinCount": 400,
+                              "coinCount": 2000,
+                              "originalCreatorId": "2535448579972708",
+                              "sku": "ruby.1600"
+                            }
+                          },
+                          {
+                            "SourceEntity": {
+                              "Id": "B63A0803D3653643",
+                              "Type": "namespace",
+                              "TypeString": "namespace"
+                            },
+                            "SourceEntityKey": {
+                              "Id": "B63A0803D3653643",
+                              "Type": "namespace",
+                              "TypeString": "namespace"
+                            },
+                            "Id": "be87981e-52af-41bf-b96f-64f777580d67",
+                            "Type": "catalogItem",
+                            "AlternateIds": [],
+                            "Title": {
+                              "NEUTRAL": "store.ruby.offer.800",
+                              "neutral": "store.ruby.offer.800"
+                            },
+                            "Description": {
+                              "NEUTRAL": "no description",
+                              "neutral": "no description"
+                            },
+                            "Keywords": {},
+                            "ContentType": "RubyOffer",
+                            "CreatorEntityKey": {
+                              "Id": "3B1B443CE3FD8EBA",
+                              "Type": "title_player_account",
+                              "TypeString": "title_player_account"
+                            },
+                            "CreatorEntity": {
+                              "Id": "3B1B443CE3FD8EBA",
+                              "Type": "title_player_account",
+                              "TypeString": "title_player_account"
+                            },
+                            "IsStackable": false,
+                            "Platforms": [
+                              "android.googleplay",
+                              "ios.store",
+                              "uwp.store",
+                              "title.bedrockvanilla",
+                              "title.earth"
+                            ],
+                            "Tags": [
+                              "activeoffer",
+                              "be87981e-52af-41bf-b96f-64f777580d67",
+                              "has_sku"
+                            ],
+                            "CreationDate": "2019-08-19T20:47:50.866Z",
+                            "LastModifiedDate": "2022-08-18T22:53:19.43Z",
+                            "Contents": [],
+                            "Images": [
+                              {
+                                "Id": "91e19aa2-4fb1-4b1f-bfa4-169e15d5e5e9",
+                                "Tag": "Thumbnail",
+                                "Type": "Thumbnail",
+                                "Url": "https://xforgeassets001.xboxlive.com/pf-title-b63a0803d3653643-ee7b/91e19aa2-4fb1-4b1f-bfa4-169e15d5e5e9/default_Thumbnail.jpg"
+                              }
+                            ],
+                            "ItemReferences": [],
+                            "DeepLinks": [],
+                            "DisplayProperties": {
+                              "bonusCoinCount": 150,
+                              "coinCount": 950,
+                              "originalCreatorId": "2535448579972708",
+                              "sku": "ruby.800"
+                            }
+                          },
+                          {
+                            "SourceEntity": {
+                              "Id": "B63A0803D3653643",
+                              "Type": "namespace",
+                              "TypeString": "namespace"
+                            },
+                            "SourceEntityKey": {
+                              "Id": "B63A0803D3653643",
+                              "Type": "namespace",
+                              "TypeString": "namespace"
+                            },
+                            "Id": "7173136a-2bc6-4ec4-b718-3d6fe9f6735e",
+                            "Type": "catalogItem",
+                            "AlternateIds": [],
+                            "Title": {
+                              "NEUTRAL": "store.ruby.offer.200",
+                              "neutral": "store.ruby.offer.200"
+                            },
+                            "Description": {
+                              "NEUTRAL": "no description",
+                              "neutral": "no description"
+                            },
+                            "Keywords": {},
+                            "ContentType": "RubyOffer",
+                            "CreatorEntityKey": {
+                              "Id": "3B1B443CE3FD8EBA",
+                              "Type": "title_player_account",
+                              "TypeString": "title_player_account"
+                            },
+                            "CreatorEntity": {
+                              "Id": "3B1B443CE3FD8EBA",
+                              "Type": "title_player_account",
+                              "TypeString": "title_player_account"
+                            },
+                            "IsStackable": false,
+                            "Platforms": [
+                              "android.googleplay",
+                              "ios.store",
+                              "uwp.store",
+                              "title.bedrockvanilla",
+                              "title.earth"
+                            ],
+                            "Tags": [
+                              "activeoffer",
+                              "7173136a-2bc6-4ec4-b718-3d6fe9f6735e",
+                              "has_sku"
+                            ],
+                            "CreationDate": "2019-08-19T20:47:08.988Z",
+                            "LastModifiedDate": "2022-08-18T22:52:23.177Z",
+                            "Contents": [],
+                            "Images": [
+                              {
+                                "Id": "deb54fe3-e6b4-4e23-bba5-40c069e6dd83",
+                                "Tag": "Thumbnail",
+                                "Type": "Thumbnail",
+                                "Url": "https://xforgeassets001.xboxlive.com/pf-title-b63a0803d3653643-ee7b/deb54fe3-e6b4-4e23-bba5-40c069e6dd83/default_Thumbnail.jpg"
+                              }
+                            ],
+                            "ItemReferences": [],
+                            "DeepLinks": [],
+                            "DisplayProperties": {
+                              "bonusCoinCount": 20,
+                              "coinCount": 220,
+                              "originalCreatorId": "2535448579972708",
+                              "sku": "ruby.200"
+                            }
+                          },
+                          {
+                            "SourceEntity": {
+                              "Id": "B63A0803D3653643",
+                              "Type": "namespace",
+                              "TypeString": "namespace"
+                            },
+                            "SourceEntityKey": {
+                              "Id": "B63A0803D3653643",
+                              "Type": "namespace",
+                              "TypeString": "namespace"
+                            },
+                            "Id": "536dba5b-408d-4c47-a27d-f8f36707f16a",
+                            "Type": "catalogItem",
+                            "AlternateIds": [],
+                            "Title": {
+                              "NEUTRAL": "store.ruby.offer.40",
+                              "neutral": "store.ruby.offer.40"
+                            },
+                            "Description": {
+                              "NEUTRAL": "no description",
+                              "neutral": "no description"
+                            },
+                            "Keywords": {},
+                            "ContentType": "RubyOffer",
+                            "CreatorEntityKey": {
+                              "Id": "301F442C3B63DC20",
+                              "Type": "master_player_account",
+                              "TypeString": "master_player_account"
+                            },
+                            "CreatorEntity": {
+                              "Id": "301F442C3B63DC20",
+                              "Type": "master_player_account",
+                              "TypeString": "master_player_account"
+                            },
+                            "IsStackable": false,
+                            "Platforms": [
+                              "android.googleplay",
+                              "ios.store",
+                              "uwp.store",
+                              "title.bedrockvanilla",
+                              "title.earth"
+                            ],
+                            "Tags": [
+                              "activeoffer",
+                              "536dba5b-408d-4c47-a27d-f8f36707f16a",
+                              "has_sku"
+                            ],
+                            "CreationDate": "2019-09-19T00:58:54.924Z",
+                            "LastModifiedDate": "2022-08-18T22:51:50.082Z",
+                            "Contents": [],
+                            "Images": [
+                              {
+                                "Id": "128aed3c-b85b-45f9-a396-c4d6005fb197",
+                                "Tag": "Thumbnail",
+                                "Type": "Thumbnail",
+                                "Url": "https://xforgeassets001.xboxlive.com/pf-title-b63a0803d3653643-ee7b/128aed3c-b85b-45f9-a396-c4d6005fb197/default_Thumbnail.png"
+                              }
+                            ],
+                            "ItemReferences": [],
+                            "DeepLinks": [],
+                            "DisplayProperties": {
+                              "coinCount": 40,
+                              "originalCreatorId": "2535448579972708",
+                              "sku": "ruby.40"
+                            }
+                          },
+                          {
+                            "SourceEntity": {
+                              "Id": "B63A0803D3653643",
+                              "Type": "namespace",
+                              "TypeString": "namespace"
+                            },
+                            "SourceEntityKey": {
+                              "Id": "B63A0803D3653643",
+                              "Type": "namespace",
+                              "TypeString": "namespace"
+                            },
+                            "Id": "4eeda6ab-bd85-4327-9113-3d8fdc4fd61a",
+                            "Type": "catalogItem",
+                            "AlternateIds": [],
+                            "Title": {
+                              "NEUTRAL": "store.ruby.offer.400",
+                              "neutral": "store.ruby.offer.400"
+                            },
+                            "Description": {
+                              "NEUTRAL": "no description",
+                              "neutral": "no description"
+                            },
+                            "Keywords": {},
+                            "ContentType": "RubyOffer",
+                            "CreatorEntityKey": {
+                              "Id": "3B1B443CE3FD8EBA",
+                              "Type": "title_player_account",
+                              "TypeString": "title_player_account"
+                            },
+                            "CreatorEntity": {
+                              "Id": "3B1B443CE3FD8EBA",
+                              "Type": "title_player_account",
+                              "TypeString": "title_player_account"
+                            },
+                            "IsStackable": false,
+                            "Platforms": [
+                              "android.googleplay",
+                              "ios.store",
+                              "uwp.store",
+                              "title.bedrockvanilla",
+                              "title.earth"
+                            ],
+                            "Tags": [
+                              "activeoffer",
+                              "4eeda6ab-bd85-4327-9113-3d8fdc4fd61a",
+                              "has_sku"
+                            ],
+                            "CreationDate": "2019-08-19T20:47:30.308Z",
+                            "LastModifiedDate": "2022-08-18T22:51:44.205Z",
+                            "Contents": [],
+                            "Images": [
+                              {
+                                "Id": "dd643a45-af85-472c-aabe-19d50119ac5d",
+                                "Tag": "Thumbnail",
+                                "Type": "Thumbnail",
+                                "Url": "https://xforgeassets001.xboxlive.com/pf-title-b63a0803d3653643-ee7b/dd643a45-af85-472c-aabe-19d50119ac5d/default_Thumbnail.jpg"
+                              }
+                            ],
+                            "ItemReferences": [],
+                            "DeepLinks": [],
+                            "DisplayProperties": {
+                              "bonusCoinCount": 50,
+                              "coinCount": 450,
+                              "originalCreatorId": "2535448579972708",
+                              "sku": "ruby.400"
+                            }
+                          },
+                          {
+                            "SourceEntity": {
+                              "Id": "B63A0803D3653643",
+                              "Type": "namespace",
+                              "TypeString": "namespace"
+                            },
+                            "SourceEntityKey": {
+                              "Id": "B63A0803D3653643",
+                              "Type": "namespace",
+                              "TypeString": "namespace"
+                            },
+                            "Id": "259ea494-5b5f-4290-a1bb-a1bee005fa35",
+                            "Type": "catalogItem",
+                            "AlternateIds": [],
+                            "Title": {
+                              "NEUTRAL": "store.ruby.offer.100",
+                              "neutral": "store.ruby.offer.100"
+                            },
+                            "Description": {
+                              "NEUTRAL": "no description",
+                              "neutral": "no description"
+                            },
+                            "Keywords": {},
+                            "ContentType": "RubyOffer",
+                            "CreatorEntityKey": {
+                              "Id": "3B1B443CE3FD8EBA",
+                              "Type": "title_player_account",
+                              "TypeString": "title_player_account"
+                            },
+                            "CreatorEntity": {
+                              "Id": "3B1B443CE3FD8EBA",
+                              "Type": "title_player_account",
+                              "TypeString": "title_player_account"
+                            },
+                            "IsStackable": false,
+                            "Platforms": [
+                              "android.googleplay",
+                              "ios.store",
+                              "uwp.store",
+                              "title.bedrockvanilla",
+                              "title.earth"
+                            ],
+                            "Tags": [
+                              "activeoffer",
+                              "259ea494-5b5f-4290-a1bb-a1bee005fa35",
+                              "has_sku"
+                            ],
+                            "CreationDate": "2019-08-19T20:46:46.012Z",
+                            "LastModifiedDate": "2022-08-18T22:51:22.683Z",
+                            "Contents": [],
+                            "Images": [
+                              {
+                                "Id": "f5c84c8b-3613-4783-9f5c-d9f910469332",
+                                "Tag": "Thumbnail",
+                                "Type": "Thumbnail",
+                                "Url": "https://xforgeassets001.xboxlive.com/pf-title-b63a0803d3653643-ee7b/f5c84c8b-3613-4783-9f5c-d9f910469332/default_Thumbnail.jpg"
+                              }
+                            ],
+                            "ItemReferences": [],
+                            "DeepLinks": [],
+                            "DisplayProperties": {
+                              "bonusCoinCount": 5,
+                              "coinCount": 105,
+                              "originalCreatorId": "2535448579972708",
+                              "sku": "ruby.100"
+                            }
+                          }
+                        ],
+                        "ConfigurationName": "DEFAULT"
+                      }
+                    }
+                    """);
+            }
 
             string filter = request.Filter
                 .Replace("platforms/any(tp: tp eq 'android.googleplay' and tp eq 'title.earth')", "platforms/any(tp: tp eq 'android.googleplay') and platforms/any(tp: tp eq 'title.earth')");
@@ -7991,6 +8407,11 @@ public class CatalogController : ViennaControllerBase
             response
         ));*/
 
+        Response.Headers.Append("access-control-allow-credentials", "true");
+        Response.Headers.Append("access-control-allow-headers", "Content-Type, Content-Encoding, X-Authentication, X-Authorization, X-PlayFabSDK, X-ReportErrorAsSuccess, X-SecretKey, X-EntityToken, Authorization, x-ms-app, x-ms-client-request-id, x-ms-user-id, traceparent, tracestate, Request-Id");
+        Response.Headers.Append("access-control-allow-methods", "GET, POST");
+        Response.Headers.Append("access-control-allow-origin", "*");
+
         return Content(JsonSerializer.Serialize(new PlayfabOkResponse(
             200,
             "OK",
@@ -8017,6 +8438,10 @@ public class CatalogController : ViennaControllerBase
         string? ItemId
     );
 
+    private sealed record GetPublishedItemResponse(
+        Item Item
+    );
+
     [HttpPost("GetPublishedItem")]
     public async Task<IActionResult> GetPublishedItem()
     {
@@ -8027,6 +8452,615 @@ public class CatalogController : ViennaControllerBase
         if (request is null)
         {
             return BadRequest();
+        }
+
+        if (request.ItemId == "06e44b91-e7f5-46b6-9986-ca755890f3bf")
+        {
+            return Content("""
+                {
+                  "code": 200,
+                  "status": "OK",
+                  "data": {
+                    "Item": {
+                      "SourceEntity": {
+                        "Id": "B63A0803D3653643",
+                        "Type": "namespace",
+                        "TypeString": "namespace"
+                      },
+                      "SourceEntityKey": {
+                        "Id": "B63A0803D3653643",
+                        "Type": "namespace",
+                        "TypeString": "namespace"
+                      },
+                      "Id": "06e44b91-e7f5-46b6-9986-ca755890f3bf",
+                      "Type": "catalogItem",
+                      "AlternateIds": [],
+                      "Title": {
+                        "NEUTRAL": "Home L1",
+                        "en-US": "Home L1",
+                        "neutral": "Home L1"
+                      },
+                      "Description": {
+                        "NEUTRAL": "Home L1",
+                        "en-US": "Home L1",
+                        "neutral": "Home L1"
+                      },
+                      "Keywords": {},
+                      "ContentType": "GenoaQueryManifest_V0.0.3",
+                      "CreatorEntityKey": {
+                        "Id": "3C0BE9326354CBB7",
+                        "Type": "title_player_account",
+                        "TypeString": "title_player_account"
+                      },
+                      "CreatorEntity": {
+                        "Id": "3C0BE9326354CBB7",
+                        "Type": "title_player_account",
+                        "TypeString": "title_player_account"
+                      },
+                      "Platforms": [
+                        "android.googleplay",
+                        "ios.store",
+                        "uwp.store",
+                        "title.earth"
+                      ],
+                      "Tags": [
+                        "mctestdefault"
+                      ],
+                      "CreationDate": "2020-12-10T18:59:39.396Z",
+                      "LastModifiedDate": "2021-01-04T19:42:53.773Z",
+                      "StartDate": "2021-01-05T17:00:00Z",
+                      "Contents": [
+                        {
+                          "Id": "f3f2b4fc-f144-4357-9e41-198db3a47957",
+                          "Url": "https://xforgeassets002.xboxlive.com/pf-title-b63a0803d3653643-20ca2/f3f2b4fc-f144-4357-9e41-198db3a47957/master_loc_contents.json",
+                          "MaxClientVersion": "6555.6555.6555",
+                          "MinClientVersion": "1.2.0",
+                          "Tags": [],
+                          "Type": "resourcebinary"
+                        }
+                      ],
+                      "Images": [],
+                      "ItemReferences": [],
+                      "DeepLinks": [],
+                      "DisplayProperties": {
+                        "minClientVersion": "0.25.0",
+                        "maxClientVersion": "1.0.20",
+                        "tabs": [
+                          {
+                            "screenLayoutQueries": [
+                              {
+                                "column_rectangle": {},
+                                "queries": [
+                                  {
+                                    "productIds": [
+                                      "c095d219-d568-408e-ac2f-b432be3559a1"
+                                    ],
+                                    "queryContentTypes": [
+                                      "InventoryItemOffer"
+                                    ],
+                                    "topCount": 25
+                                  }
+                                ],
+                                "componentId": "58b67dbf-49dc-4e6d-2b0a-b6da2554f6e8"
+                              },
+                              {
+                                "column_square": {},
+                                "queries": [
+                                  {
+                                    "productIds": [
+                                      "a3e4b8b2-88cb-4d26-a414-ce2c6e61c389",
+                                      "83cbec6b-749c-472e-a93b-0003e3aa638b",
+                                      "85bdb91e-d2e0-4fc2-8269-d171ac0ca4ac",
+                                      "716c33f5-f34f-4a1a-8e95-446b9bfc9127",
+                                      "937fe1d9-7dff-4112-8c43-943b3e86065a",
+                                      "331d952a-081d-4ea5-9581-1cbad1c8176d",
+                                      "41cddd77-390c-4bea-881b-7bc97be8967b",
+                                      "717c4f02-56e5-4743-a074-44bcdd461db0",
+                                      "6643edae-3d4a-4932-bae2-cc47317a1041",
+                                      "30055134-bf86-44fe-915e-e096caae2de1",
+                                      "dcbc054f-51c1-4d95-96f3-aaa0a2d0d7ff",
+                                      "faa5120c-5d20-467a-b53e-0b47a7caf31b",
+                                      "af54c6cb-34ac-44e3-ada4-fffd4c580c1e",
+                                      "8e8e5af4-7865-43a7-8fa9-847cffff5cf6",
+                                      "3c14f929-4f9d-4f94-b5ce-abb22b80e5c6",
+                                      "1102b106-9da4-4e82-8fe9-828d617d323f",
+                                      "efa4cd81-fc7b-4806-9419-9141027333f8",
+                                      "4e42e674-e337-43d0-9587-b7ac947103ff",
+                                      "7fd89680-7c9b-4adc-92cf-3e26a2dd71cb",
+                                      "6078f5c8-81cf-473b-8ebb-0db0a6edadf8",
+                                      "8aaa1577-5a4d-409b-842f-73ae13a05f78",
+                                      "998b5e8f-7271-4de6-949f-eda15c7100d7",
+                                      "c4a1cce4-c4ef-4f99-a210-071e2e30f154",
+                                      "b9272a8c-603c-4188-a75b-e7838bbab567"
+                                    ],
+                                    "queryContentTypes": [
+                                      "Durable",
+                                      "Collection",
+                                      "Bundle",
+                                      "Persona",
+                                      "Genoa",
+                                      "BuildplateOffer",
+                                      "RubyOffer",
+                                      "InventoryItemOffer"
+                                    ],
+                                    "topCount": 25
+                                  }
+                                ],
+                                "componentId": "81ef2b04-b29d-45f5-2d7d-19aa74979ea8"
+                              }
+                            ],
+                            "tabIcon": "textures/ui/icons/pixel_icons/buildplate",
+                            "tabTitle": "editorialtool.earth.Buildplates",
+                            "tabId": "buildplate"
+                          },
+                          {
+                            "screenLayoutQueries": [
+                              {
+                                "column_rectangle": {},
+                                "queries": [
+                                  {
+                                    "productIds": [
+                                      "14573f0c-0e18-4b4c-8868-c4d90e3cd509"
+                                    ],
+                                    "queryContentTypes": [
+                                      "Durable",
+                                      "Collection",
+                                      "Bundle",
+                                      "Persona",
+                                      "Genoa",
+                                      "BuildplateOffer",
+                                      "RubyOffer",
+                                      "InventoryItemOffer"
+                                    ],
+                                    "topCount": 25
+                                  }
+                                ],
+                                "componentId": "7862b0de-ecc0-4107-c7e3-2f2cb8c02c41"
+                              },
+                              {
+                                "column_grid": {},
+                                "queries": [
+                                  {
+                                    "productIds": [
+                                      "c025702d-5b96-4745-bb4b-93911ee8c32a",
+                                      "9f13aa99-9243-47eb-8fe4-82909b49de8e"
+                                    ],
+                                    "queryContentTypes": [
+                                      "Durable",
+                                      "Collection",
+                                      "Bundle",
+                                      "Persona",
+                                      "Genoa",
+                                      "BuildplateOffer",
+                                      "RubyOffer",
+                                      "InventoryItemOffer"
+                                    ],
+                                    "topCount": 25
+                                  }
+                                ],
+                                "componentId": "a75ca215-681c-4000-2419-6225577239f0"
+                              },
+                              {
+                                "column_rectangle": {},
+                                "queries": [
+                                  {
+                                    "productIds": [
+                                      "6c7e7718-b800-483b-93f3-80f28a7bc597"
+                                    ],
+                                    "queryContentTypes": [
+                                      "Durable",
+                                      "Collection",
+                                      "Bundle",
+                                      "Persona",
+                                      "Genoa",
+                                      "BuildplateOffer",
+                                      "RubyOffer",
+                                      "InventoryItemOffer"
+                                    ],
+                                    "topCount": 25
+                                  }
+                                ],
+                                "componentId": "943c0b1b-f3cf-4675-0208-402b0c86874c"
+                              },
+                              {
+                                "column_grid": {},
+                                "queries": [
+                                  {
+                                    "productIds": [
+                                      "43a5011e-911a-4061-b5fb-1f9295bcbba1",
+                                      "98c03065-5271-4303-933a-0643af1d1e41"
+                                    ],
+                                    "queryContentTypes": [
+                                      "Durable",
+                                      "Collection",
+                                      "Bundle",
+                                      "Persona",
+                                      "Genoa",
+                                      "BuildplateOffer",
+                                      "RubyOffer",
+                                      "InventoryItemOffer"
+                                    ],
+                                    "topCount": 25
+                                  }
+                                ],
+                                "componentId": "874fabfe-0570-483c-22bd-580c2c28ee87"
+                              },
+                              {
+                                "column_rectangle": {},
+                                "queries": [
+                                  {
+                                    "productIds": [
+                                      "b29f5e35-5e01-43f7-821e-690735a99e88"
+                                    ],
+                                    "queryContentTypes": [
+                                      "Durable",
+                                      "Collection",
+                                      "Bundle",
+                                      "Persona",
+                                      "Genoa",
+                                      "BuildplateOffer",
+                                      "RubyOffer",
+                                      "InventoryItemOffer"
+                                    ],
+                                    "topCount": 25
+                                  }
+                                ],
+                                "componentId": "938cf1b8-6bc1-4b93-73a9-5baec9b1f1e6"
+                              },
+                              {
+                                "column_grid": {},
+                                "queries": [
+                                  {
+                                    "productIds": [
+                                      "eacc48e8-ebbd-4b6f-983f-3522865eccea",
+                                      "d96c0f65-1001-4220-bd80-405060bbf3be"
+                                    ],
+                                    "queryContentTypes": [
+                                      "Durable",
+                                      "Collection",
+                                      "Bundle",
+                                      "Persona",
+                                      "Genoa",
+                                      "BuildplateOffer",
+                                      "RubyOffer",
+                                      "InventoryItemOffer"
+                                    ],
+                                    "topCount": 25
+                                  }
+                                ],
+                                "componentId": "0fb6b780-73bc-450f-6c74-3fc1b23cb7d4"
+                              },
+                              {
+                                "column_rectangle": {},
+                                "queries": [
+                                  {
+                                    "productIds": [
+                                      "b54a3553-8d6a-4d45-aac4-2b0a904e6f47"
+                                    ],
+                                    "queryContentTypes": [
+                                      "Durable",
+                                      "Collection",
+                                      "Bundle",
+                                      "Persona",
+                                      "Genoa",
+                                      "BuildplateOffer",
+                                      "RubyOffer",
+                                      "InventoryItemOffer"
+                                    ],
+                                    "topCount": 25
+                                  }
+                                ],
+                                "componentId": "52e570a0-208b-4295-5702-da746e00b073"
+                              },
+                              {
+                                "column_grid": {},
+                                "queries": [
+                                  {
+                                    "productIds": [
+                                      "4062100a-ada2-4974-86d2-09b606596bc7",
+                                      "c5ea2fb3-b3f6-4d9f-8b22-c9c2b69eed9e"
+                                    ],
+                                    "queryContentTypes": [
+                                      "Durable",
+                                      "Collection",
+                                      "Bundle",
+                                      "Persona",
+                                      "Genoa",
+                                      "BuildplateOffer",
+                                      "RubyOffer",
+                                      "InventoryItemOffer"
+                                    ],
+                                    "topCount": 25
+                                  }
+                                ],
+                                "componentId": "58d4b9a9-536c-47f3-77b9-5606a25ca466"
+                              },
+                              {
+                                "column_rectangle": {},
+                                "queries": [
+                                  {
+                                    "productIds": [
+                                      "c3120a4c-a5c3-4dbb-bbfc-64d55b176952"
+                                    ],
+                                    "queryContentTypes": [
+                                      "Durable",
+                                      "Collection",
+                                      "Bundle",
+                                      "Persona",
+                                      "Genoa",
+                                      "BuildplateOffer",
+                                      "RubyOffer",
+                                      "InventoryItemOffer"
+                                    ],
+                                    "topCount": 25
+                                  }
+                                ],
+                                "componentId": "5708c274-b7fe-406d-fcc3-8b85a91e7685"
+                              },
+                              {
+                                "column_grid": {},
+                                "queries": [
+                                  {
+                                    "productIds": [
+                                      "4166efe4-26a0-4e20-bc84-84cc78632bbc",
+                                      "23ce5e1d-2074-4f84-9ccd-249819030054"
+                                    ],
+                                    "queryContentTypes": [
+                                      "Durable",
+                                      "Collection",
+                                      "Bundle",
+                                      "Persona",
+                                      "Genoa",
+                                      "BuildplateOffer",
+                                      "RubyOffer",
+                                      "InventoryItemOffer"
+                                    ],
+                                    "topCount": 25
+                                  }
+                                ],
+                                "componentId": "0d193497-b532-4a12-6f68-35806745e3c1"
+                              },
+                              {
+                                "column_rectangle": {},
+                                "queries": [
+                                  {
+                                    "productIds": [
+                                      "3bedcd77-a506-47a8-ba59-01a915ddb5c5"
+                                    ],
+                                    "queryContentTypes": [
+                                      "Durable",
+                                      "Collection",
+                                      "Bundle",
+                                      "Persona",
+                                      "Genoa",
+                                      "BuildplateOffer",
+                                      "RubyOffer",
+                                      "InventoryItemOffer"
+                                    ],
+                                    "topCount": 25
+                                  }
+                                ],
+                                "componentId": "9a7a90b4-4ab1-4825-812f-f6e7a54c1894"
+                              },
+                              {
+                                "column_grid": {},
+                                "queries": [
+                                  {
+                                    "productIds": [
+                                      "9d957be1-94c8-4be8-9e1d-d497471943b7",
+                                      "055229aa-c10a-40af-92b9-15086096dac4"
+                                    ],
+                                    "queryContentTypes": [
+                                      "Durable",
+                                      "Collection",
+                                      "Bundle",
+                                      "Persona",
+                                      "Genoa",
+                                      "BuildplateOffer",
+                                      "RubyOffer",
+                                      "InventoryItemOffer"
+                                    ],
+                                    "topCount": 25
+                                  }
+                                ],
+                                "componentId": "df6b83e0-258d-49ef-a5f0-eb18d0cfcb3c"
+                              },
+                              {
+                                "column_rectangle": {},
+                                "queries": [
+                                  {
+                                    "productIds": [
+                                      "8366474d-7afb-4d6d-a376-ad2b09c807f4"
+                                    ],
+                                    "queryContentTypes": [
+                                      "Durable",
+                                      "Collection",
+                                      "Bundle",
+                                      "Persona",
+                                      "Genoa",
+                                      "BuildplateOffer",
+                                      "RubyOffer",
+                                      "InventoryItemOffer"
+                                    ],
+                                    "topCount": 25
+                                  }
+                                ],
+                                "componentId": "11652079-c692-4adf-c5ef-dccb275f5c96"
+                              },
+                              {
+                                "column_grid": {},
+                                "queries": [
+                                  {
+                                    "productIds": [
+                                      "3a0fbea6-d40d-40ab-9467-91900438d9b1",
+                                      "643826f8-c109-4b42-b763-be039ea7752b"
+                                    ],
+                                    "queryContentTypes": [
+                                      "Durable",
+                                      "Collection",
+                                      "Bundle",
+                                      "Persona",
+                                      "Genoa",
+                                      "BuildplateOffer",
+                                      "RubyOffer",
+                                      "InventoryItemOffer"
+                                    ],
+                                    "topCount": 25
+                                  }
+                                ],
+                                "componentId": "5fa59b4f-cf8c-4e4c-f3f5-ee5314ebd8d4"
+                              },
+                              {
+                                "column_rectangle": {},
+                                "queries": [
+                                  {
+                                    "productIds": [
+                                      "995b4adb-e856-4c4b-a559-8af1bfeeb99b"
+                                    ],
+                                    "queryContentTypes": [
+                                      "Durable",
+                                      "Collection",
+                                      "Bundle",
+                                      "Persona",
+                                      "Genoa",
+                                      "BuildplateOffer",
+                                      "RubyOffer",
+                                      "InventoryItemOffer"
+                                    ],
+                                    "topCount": 25
+                                  }
+                                ],
+                                "componentId": "c6b6170e-2f99-47d2-0134-ab8706d508ed"
+                              },
+                              {
+                                "column_grid": {},
+                                "queries": [
+                                  {
+                                    "productIds": [
+                                      "8ba36e03-6def-4479-8aac-454dc21caa9b",
+                                      "200b31fc-137b-4a05-838e-ff532b95eba3"
+                                    ],
+                                    "queryContentTypes": [
+                                      "Durable",
+                                      "Collection",
+                                      "Bundle",
+                                      "Persona",
+                                      "Genoa",
+                                      "BuildplateOffer",
+                                      "RubyOffer",
+                                      "InventoryItemOffer"
+                                    ],
+                                    "topCount": 25
+                                  }
+                                ],
+                                "componentId": "fd2d4fd9-7241-4753-a44d-1fcfe9f31005"
+                              },
+                              {
+                                "column_rectangle": {},
+                                "queries": [
+                                  {
+                                    "productIds": [
+                                      "6209f825-d137-48f9-8081-c095aab9849f"
+                                    ],
+                                    "queryContentTypes": [
+                                      "Durable",
+                                      "Collection",
+                                      "Bundle",
+                                      "Persona",
+                                      "Genoa",
+                                      "BuildplateOffer",
+                                      "RubyOffer",
+                                      "InventoryItemOffer"
+                                    ],
+                                    "topCount": 25
+                                  }
+                                ],
+                                "componentId": "c6932a96-4f81-47cc-a93a-ed98504f8360"
+                              },
+                              {
+                                "column_grid": {},
+                                "queries": [
+                                  {
+                                    "productIds": [
+                                      "8fcf61aa-31f1-43dd-bf20-4ce67f6de2b5",
+                                      "ca70fd76-da76-41a2-9159-6dd4c034c156"
+                                    ],
+                                    "queryContentTypes": [
+                                      "Durable",
+                                      "Collection",
+                                      "Bundle",
+                                      "Persona",
+                                      "Genoa",
+                                      "BuildplateOffer",
+                                      "RubyOffer",
+                                      "InventoryItemOffer"
+                                    ],
+                                    "topCount": 25
+                                  }
+                                ],
+                                "componentId": "b3d0a464-a686-457e-fe90-f815ac54e375"
+                              },
+                              {
+                                "column_rectangle": {},
+                                "queries": [
+                                  {
+                                    "productIds": [
+                                      "a4eac031-6f19-41ac-a041-d04902dfd9ba"
+                                    ],
+                                    "queryContentTypes": [
+                                      "Durable",
+                                      "Collection",
+                                      "Bundle",
+                                      "Persona",
+                                      "Genoa",
+                                      "BuildplateOffer",
+                                      "RubyOffer",
+                                      "InventoryItemOffer"
+                                    ],
+                                    "topCount": 25
+                                  }
+                                ],
+                                "componentId": "8e7848f2-4fc3-4182-2fea-78a5703b460f"
+                              },
+                              {
+                                "column_grid": {},
+                                "queries": [
+                                  {
+                                    "productIds": [
+                                      "5de2c884-8b0d-4db2-893e-6824d603454e",
+                                      "46e14441-e111-4773-b845-8ba31bd1db60"
+                                    ],
+                                    "queryContentTypes": [
+                                      "Durable",
+                                      "Collection",
+                                      "Bundle",
+                                      "Persona",
+                                      "Genoa",
+                                      "BuildplateOffer",
+                                      "RubyOffer",
+                                      "InventoryItemOffer"
+                                    ],
+                                    "topCount": 25
+                                  }
+                                ],
+                                "componentId": "27b3732f-3fd6-402e-a128-e4d2576a24a9"
+                              }
+                            ],
+                            "tabIcon": "textures/ui/icons/pixel_icons/boost",
+                            "tabTitle": "editorialtool.earth.Boosts",
+                            "tabId": "boosts"
+                          }
+                        ],
+                        "globalNotSearchQueryTags": [
+                          "hidden_offer",
+                          "earth_achievement"
+                        ]
+                      },
+                      "ETag": "\"040060e3-0000-0300-0000-60ef93270000\""
+                    }
+                  }
+                }
+                """, "application/json");
         }
 
         if (!Guid.TryParse(request.ItemId, out var itemId))
@@ -8053,7 +9087,9 @@ public class CatalogController : ViennaControllerBase
         return Content(JsonSerializer.Serialize(new PlayfabOkResponse(
             200,
             "OK",
-            CIItemToItem(item, $"{(Request.IsHttps ? "https://" : "http://")}{Request.Host.Value}")
+            new GetPublishedItemResponse(
+                CIItemToItem(item, $"{(Request.IsHttps ? "https://" : "http://")}{Request.Host.Value}") with { ETag = "\"040060e3-0000-0300-0000-60ef93270000\"" }
+            )
         ), jsonOptions), "application/json");
     }
 
@@ -8090,11 +9126,9 @@ public class CatalogController : ViennaControllerBase
             },
             item.FriendlyId is null ? [] : [new("FriendlyId", item.FriendlyId.Value)],
             item.FriendlyId,
-            ((IEnumerable<KeyValuePair<string, string>>)[new("NEUTRAL", item.Title), new("neutral", item.Title)])
-                .Concat(item.TitleTranslations)
+            ((IEnumerable<KeyValuePair<string, string>>)[new("NEUTRAL", item.Title), .. item.TitleTranslations, new("neutral", item.Title)])
                 .ToDictionary(),
-            ((IEnumerable<KeyValuePair<string, string>>)[new("NEUTRAL", item.Description), new("neutral", item.Description)])
-                .Concat(item.DescriptionTranslations)
+            ((IEnumerable<KeyValuePair<string, string>>)[new("NEUTRAL", item.Description), .. item.DescriptionTranslations, new("neutral", item.Description)])
                 .ToDictionary(),
             item.Keywords.ToDictionary(item => item.Key, item => new Item.KeywordValues(item.Value.Values)),
             item.Data switch
@@ -8121,7 +9155,7 @@ public class CatalogController : ViennaControllerBase
             item.LastModifiedDate,
             item.StartDate,
             item.Contents,
-            item.ThumbnailImageId is null ? [] : [new(item.ThumbnailImageId, "Thumbnail", "Thumbnail", $"{serverHostname}/playfab/images/{item.ThumbnailImageId}.jpg")],
+            item.ThumbnailImageId is null ? [] : [new(item.ThumbnailImageId, "Thumbnail", "Thumbnail", "https://xforgeassets001.xboxlive.com/pf-title-b63a0803d3653643-ee7b/f5c84c8b-3613-4783-9f5c-d9f910469332/default_Thumbnail.jpg"/*$"{serverHostname}/playfab/images/{item.ThumbnailImageId}.jpg"*/)],
             item.ItemReferences.Select(reference => new Item.ItemReference(reference.Id, reference.Amount)),
             price,
             price,
@@ -8140,7 +9174,7 @@ public class CatalogController : ViennaControllerBase
                 ),
                 CItem.InventoryItemData data => Item.DisplayPropertiesR.CreateInventoryItem(
                     data.Cost,
-                    data.Rarity.ToString().ToLowerInvariant(),
+                    data.Rarity.ToString(),
                     [new("entitlement_InventoryItemOffer", data.Id, data.Version)],
                     data.Id,
                     data.Amount
@@ -8224,7 +9258,8 @@ public class CatalogController : ViennaControllerBase
         Item.PriceR? Price,
         Item.PriceR? PriceOptions,
         IEnumerable<object> DeepLinks,
-        Item.DisplayPropertiesR DisplayProperties
+        Item.DisplayPropertiesR DisplayProperties,
+        string? ETag = null
     )
     {
         public sealed record Entity(
@@ -8303,7 +9338,7 @@ public class CatalogController : ViennaControllerBase
             [property: JsonPropertyName("amount")] int? Amount = null,
 
             // ruby
-            [property: JsonPropertyName("BonusCoinCount")] int? BonusCoinCount = null,
+            [property: JsonPropertyName("bonusCoinCount")] int? BonusCoinCount = null,
             [property: JsonPropertyName("coinCount")] int? CoinCount = null,
             [property: JsonPropertyName("originalCreatorId")] string? OriginalCreatorId = null,
             [property: JsonPropertyName("sku")] string? Sku = null,

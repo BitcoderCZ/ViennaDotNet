@@ -48,6 +48,7 @@ public class InventoryController : ViennaControllerBase
             new Dictionary<string, object>()
             {
                 ["Items"] = Array.Empty<object>(),
+                ["ETag"] = "1/MQ==",
                 ["ItemMetadata"] = Array.Empty<object>(),
                 ["Subscriptions"] = Array.Empty<object>(),
             }

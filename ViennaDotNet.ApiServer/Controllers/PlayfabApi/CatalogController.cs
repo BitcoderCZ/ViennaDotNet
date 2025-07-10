@@ -765,7 +765,40 @@ public class CatalogController : ViennaControllerBase
                                   "tabIcon": "textures/ui/icons/pixel_icons/boost",
                                   "tabTitle": "editorialtool.earth.Boosts",
                                   "tabId": "boosts"
-                                }
+                                },
+                                        {
+                      "screenLayoutQueries": [
+                        {
+                          "column_grid": {},
+                          "queries": [
+                            {
+                              "productIds": [
+                                "536dba5b-408d-4c47-a27d-f8f36707f16a",
+                                "259ea494-5b5f-4290-a1bb-a1bee005fa35",
+                                "7173136a-2bc6-4ec4-b718-3d6fe9f6735e",
+                                "4eeda6ab-bd85-4327-9113-3d8fdc4fd61a",
+                                "be87981e-52af-41bf-b96f-64f777580d67"
+                              ],
+                              "queryContentTypes": [
+                                "Durable",
+                                "Collection",
+                                "Bundle",
+                                "Persona",
+                                "Genoa",
+                                "BuildplateOffer",
+                                "RubyOffer",
+                                "InventoryItemOffer"
+                              ],
+                              "topCount": 25
+                            }
+                          ],
+                          "componentId": "ad07683e-f114-41a9-25cf-bd2368a7d8e4"
+                        }
+                      ],
+                      "tabIcon": "textures/ui/icons/pixel_icons/ruby",
+                      "tabTitle": "editorialtool.earth.Rubies",
+                      "tabId": "ruby"
+                    }
                               ],
                               "globalNotSearchQueryTags": [
                                 "hidden_offer",
@@ -8361,6 +8394,7 @@ public class CatalogController : ViennaControllerBase
             var oDataQuery = itemData.AsQueryable().OData(settings =>
                 {
                     settings.EnableCaseInsensitive = true;
+                    settings.ValidationSettings.MaxNodeCount = 10000;
                 }, GetEdmModel())
                 .Filter(filter);
 
@@ -9049,7 +9083,40 @@ public class CatalogController : ViennaControllerBase
                             "tabIcon": "textures/ui/icons/pixel_icons/boost",
                             "tabTitle": "editorialtool.earth.Boosts",
                             "tabId": "boosts"
-                          }
+                          },
+                              {
+                  "screenLayoutQueries": [
+                    {
+                      "column_grid": {},
+                      "queries": [
+                        {
+                          "productIds": [
+                            "536dba5b-408d-4c47-a27d-f8f36707f16a",
+                            "259ea494-5b5f-4290-a1bb-a1bee005fa35",
+                            "7173136a-2bc6-4ec4-b718-3d6fe9f6735e",
+                            "4eeda6ab-bd85-4327-9113-3d8fdc4fd61a",
+                            "be87981e-52af-41bf-b96f-64f777580d67"
+                          ],
+                          "queryContentTypes": [
+                            "Durable",
+                            "Collection",
+                            "Bundle",
+                            "Persona",
+                            "Genoa",
+                            "BuildplateOffer",
+                            "RubyOffer",
+                            "InventoryItemOffer"
+                          ],
+                          "topCount": 25
+                        }
+                      ],
+                      "componentId": "ad07683e-f114-41a9-25cf-bd2368a7d8e4"
+                    }
+                  ],
+                  "tabIcon": "textures/ui/icons/pixel_icons/ruby",
+                  "tabTitle": "editorialtool.earth.Rubies",
+                  "tabId": "ruby"
+                }
                         ],
                         "globalNotSearchQueryTags": [
                           "hidden_offer",
@@ -9170,7 +9237,7 @@ public class CatalogController : ViennaControllerBase
                     [new("entitlement_EarthBuildPlate", data.Id, data.Version)],
                     data.Id,
                     data.Size.ToString().ToLowerInvariant(),
-                    data.UnlockLevel.ToString()
+                    data.UnlockLevel
                 ),
                 CItem.InventoryItemData data => Item.DisplayPropertiesR.CreateInventoryItem(
                     data.Cost,
@@ -9331,7 +9398,7 @@ public class CatalogController : ViennaControllerBase
             // buildplate
             [property: JsonPropertyName("buildPlateId")] Guid? BuildPlateId = null,
             [property: JsonPropertyName("buildPlateSize")] string? BuildPlateSize = null,
-            [property: JsonPropertyName("buildPlateUnlockLevel")] string? BuildPlateUnlockLevel = null,
+            [property: JsonPropertyName("buildPlateUnlockLevel"), JsonNumberHandling(JsonNumberHandling.WriteAsString)] int? BuildPlateUnlockLevel = null,
 
             // inventory item
             [property: JsonPropertyName("itemId")] Guid? ItemId = null,
@@ -9351,7 +9418,7 @@ public class CatalogController : ViennaControllerBase
             public static DisplayPropertiesR CreateQueryManifest(string minClientVersion, string maxClientVersion, IEnumerable<Tab> tabs, IEnumerable<string> globalNotSearchQueryTags)
                 => new DisplayPropertiesR(MinClientVersion: minClientVersion, MaxClientVersion: maxClientVersion, Tabs: tabs, GlobalNotSearchQueryTags: globalNotSearchQueryTags);
 
-            public static DisplayPropertiesR CreateBuildplate(string creatorName, int price, bool purchasable, string rarity, IEnumerable<PackIdentity> packIdentity, Guid buildPlateId, string buildPlateSize, string buildPlateUnlockLevel)
+            public static DisplayPropertiesR CreateBuildplate(string creatorName, int price, bool purchasable, string rarity, IEnumerable<PackIdentity> packIdentity, Guid buildPlateId, string buildPlateSize, int buildPlateUnlockLevel)
                 => new DisplayPropertiesR(CreatorName: creatorName, Price: price, Purchasable: purchasable, Rarity: rarity, PackIdentity: packIdentity, BuildPlateId: buildPlateId, BuildPlateSize: buildPlateSize, BuildPlateUnlockLevel: buildPlateUnlockLevel);
 
             public static DisplayPropertiesR CreateInventoryItem(int price, string rarity, IEnumerable<PackIdentity> packIdentity, Guid itemId, int amount)

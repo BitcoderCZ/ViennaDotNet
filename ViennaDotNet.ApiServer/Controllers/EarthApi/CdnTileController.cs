@@ -6,7 +6,7 @@ namespace ViennaDotNet.ApiServer.Controllers.EarthApi;
 
 [ApiVersion("1.1")]
 [Route("cdn/tile/16/{_}/{tilePos1}_{tilePos2}_16.png")]
-[ResponseCache(Duration = 11200)]
+//[ResponseCache(Duration = 11200)]
 public class CdnTileController : ViennaControllerBase
 {
     [HttpGet]

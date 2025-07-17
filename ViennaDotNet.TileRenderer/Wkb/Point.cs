@@ -1,4 +1,7 @@
-﻿namespace ViennaDotNet.TileRenderer.Wkb;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
+
+namespace ViennaDotNet.TileRenderer.Wkb;
 
 public struct Point
 {
@@ -42,4 +45,7 @@ public struct Point
 
     public static Point operator /(Point left, double right)
         => new Point(left.X / right, left.Y / right);
+
+    public readonly override string ToString()
+        => $"<{X.ToString("G", CultureInfo.InvariantCulture)}, {Y.ToString("G", CultureInfo.InvariantCulture)}>";
 }

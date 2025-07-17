@@ -1,29 +1,36 @@
 ﻿using CommandLine;
 using Npgsql;
 using Serilog;
+using SkiaSharp;
+using System.Data.Common;
 using System.Diagnostics;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Threading.Tasks;
 using ViennaDotNet.EventBus.Client;
 using ViennaDotNet.StaticData;
+using ViennaDotNet.TileRenderer.Wkb;
 
 namespace ViennaDotNet.TileRenderer;
 
 internal static class Program
 {
-#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
     private sealed class Options
     {
-        [Option("tileDB", Required = true, HelpText = "Connection string to a postgresql database with tile data, for example 'Host=myserver;Username=mylogin;Password=mypass;Database=mydatabase'")]
-        public string TileDatabaseConnectionString { get; set; }
+        [Option("maptiler_key", HelpText = "Api key for maptiler.com", SetName = "Data source")]
+        public string? MapTilerApiKey { get; set; }
+
+        [Option("tileDB", HelpText = "Connection string to a postgresql database with tile data, for example 'Host=myserver;Username=mylogin;Password=mypass;Database=mydatabase'", SetName = "Data source")]
+        public string? TileDatabaseConnectionString { get; set; }
 
         [Option("eventbus", Default = "localhost:5532", Required = false, HelpText = "Event bus address")]
-        public string EventBusConnectionString { get; set; }
+        public string? EventBusConnectionString { get; set; }
 
         [Option("dir", Default = "./staticdata", Required = false, HelpText = "Static data path")]
-        public string StaticDataPath { get; set; }
+        public string? StaticDataPath { get; set; }
     }
-#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
-    private static int Main(string[] args)
+    private static async Task<int> Main(string[] args)
     {
         var log = new LoggerConfiguration()
            .WriteTo.Console()
@@ -61,34 +68,87 @@ internal static class Program
                 : 1;
         }
 
-        NpgsqlDataSource tileDB;
-        Log.Information("Connecting to tile database");
-        try
+        if (string.IsNullOrEmpty(options.MapTilerApiKey) && string.IsNullOrEmpty(options.TileDatabaseConnectionString))
         {
-            tileDB = NpgsqlDataSource.Create(options.TileDatabaseConnectionString);
-        }
-        catch (Exception ex)
-        {
-            Log.Fatal($"Could not connect to tile database: {ex}");
-            if (ex is ArgumentException)
-            {
-                Log.Information($"The provided connection string is: '{options.TileDatabaseConnectionString}', make sure that it is in the correct format");
-            }
+            Log.Fatal("No data source provided, either maptiler_key or tileDB must be specified.");
             Log.CloseAndFlush();
             return 1;
         }
 
-        Log.Information("Connected to tile database");
+        ITileDataSource tileDataSource;
+        if (options.MapTilerApiKey is not null)
+        {
+            Log.Information("Verifying maptiler api key");
+
+            HttpClient httpClient = new HttpClient();
+            HttpResponseMessage response;
+            try
+            {
+                response = await httpClient.GetAsync($"https://api.maptiler.com/tiles/v3/tiles.json?key={options.MapTilerApiKey}");
+            }
+            catch (HttpRequestException ex)
+            {
+                Log.Fatal($"Could not connect to maptiler api: {ex}");
+                Log.CloseAndFlush();
+                return 1;
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                Log.Fatal($"Maptiler api key not valid, response status code: {response.StatusCode}");
+                Log.CloseAndFlush();
+                return 1;
+            }
+
+            var json = await JsonSerializer.DeserializeAsync<JsonObject>(response.Content.ReadAsStream());
+
+            int maxZoom;
+            if (json is null || !json.TryGetPropertyValue("maxzoom", out JsonNode? maxZoomNode) || maxZoomNode is not JsonValue maxZoomValue || maxZoomValue.GetValueKind() != JsonValueKind.Number)
+            {
+                Log.Warning("Invalid maptiler response");
+                maxZoom = 15;
+            }
+            else
+            {
+                maxZoom = maxZoomValue.GetValue<int>();
+            }
+
+            tileDataSource = new MaptilerTileDataSource(options.MapTilerApiKey, maxZoom, httpClient);
+
+            Log.Information("Verified maptiler api key");
+        }
+        else
+        {
+            Debug.Assert(options.TileDatabaseConnectionString is not null);
+
+            Log.Information("Connecting to tile database");
+            try
+            {
+                tileDataSource = new DatabaseTileDataSource(NpgsqlDataSource.Create(options.TileDatabaseConnectionString));
+            }
+            catch (Exception ex)
+            {
+                Log.Fatal($"Could not connect to tile database: {ex}");
+                if (ex is ArgumentException)
+                {
+                    Log.Information($"The provided connection string is: '{options.TileDatabaseConnectionString}', make sure that it is in the correct format");
+                }
+                Log.CloseAndFlush();
+                return 1;
+            }
+
+            Log.Information("Connected to tile database");
+        }
 
         Log.Information("Connecting to event bus");
         EventBusClient eventBusClient;
         try
         {
-            eventBusClient = EventBusClient.Create(options.EventBusConnectionString);
+            eventBusClient = EventBusClient.Create(options.EventBusConnectionString ?? "");
         }
         catch (EventBusClientException ex)
         {
-            tileDB.Dispose();
+            tileDataSource.Dispose();
 
             Log.Fatal($"Could not connect to event bus: {ex}");
             Log.CloseAndFlush();
@@ -101,11 +161,11 @@ internal static class Program
         StaticData.StaticData staticData;
         try
         {
-            staticData = new StaticData.StaticData(options.StaticDataPath);
+            staticData = new StaticData.StaticData(options.StaticDataPath ?? "");
         }
         catch (StaticDataException staticDataException)
         {
-            tileDB.Dispose();
+            tileDataSource.Dispose();
 
             Log.Fatal($"Failed to load static data: {staticDataException}");
             Log.CloseAndFlush();
@@ -114,7 +174,7 @@ internal static class Program
 
         Log.Information("Loaded static data");
 
-        using (EventBusTileRenderer renderer = new EventBusTileRenderer(new DatabaseTileDataSource(tileDB), eventBusClient, staticData))
+        using (EventBusTileRenderer renderer = new EventBusTileRenderer(tileDataSource, eventBusClient, staticData))
         {
             renderer.Run();
         }

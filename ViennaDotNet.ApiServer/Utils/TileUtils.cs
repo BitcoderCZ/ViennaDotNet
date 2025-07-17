@@ -21,7 +21,7 @@ internal static class TileUtils
             .GetTile(dbPos)
             .ExecuteAsync(db, cancellationToken);
 
-        string? tileObjectId = results.GetTile(dbPos);
+        string? tileObjectId = null;// results.GetTile(dbPos);
 
         if (!string.IsNullOrEmpty(tileObjectId))
         {

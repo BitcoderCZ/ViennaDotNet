@@ -18,6 +18,9 @@ internal sealed class DatabaseTileDataSource : ITileDataSource
         _dataSource = dataSource;
     }
 
+    public string GetTagMapJson(StaticData.TileRenderer tileRenderer)
+        => tileRenderer.TagMap1Json;
+
     public async Task<List<List<IWKBObject>>> GetTileAsync(RenderContext ctx, int zoom, int tileX, int tileY, CancellationToken cancellationToken = default)
     {
         const string Sql = @"
@@ -107,4 +110,7 @@ internal sealed class DatabaseTileDataSource : ITileDataSource
             return layers;
         }
     }
+
+    public void Dispose()
+        => _dataSource.Dispose();
 }

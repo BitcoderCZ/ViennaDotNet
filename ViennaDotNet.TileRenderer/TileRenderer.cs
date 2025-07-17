@@ -48,7 +48,7 @@ public class TileRenderer
         { (int)RenderLayer.LAYER_CYCLE_PATH, (double)AreaType.CYCLE_PATH / 0xFF },
         { (int)RenderLayer.LAYER_HIGHWAY_SERVICE, (double)AreaType.HIGHWAY_SERVICE / 0xFF },
         { (int)RenderLayer.LAYER_HIGHWAY_MINOR, (double)AreaType.HIGHWAY_MINOR / 0xFF },
-        { (int)RenderLayer.LAYER_HIGHWAY_MAJOR, (double)AreaType.HIGHWAY_SERVICE / 0xFF },
+        { (int)RenderLayer.LAYER_HIGHWAY_MAJOR, (double)AreaType.HIGHWAY_MAJOR / 0xFF },
         { (int)RenderLayer.LAYER_RESTRICTED_AREA, (double)AreaType.RESTRICTED_AREA / 0xFF },
         { (int)RenderLayer.LAYER_NONE, (double)AreaType.BASE_BACKGROUND / 0xFF }
     }.ToFrozenDictionary();
@@ -65,7 +65,7 @@ public class TileRenderer
     public static TileRenderer Create(string tagMapJson, ILogger logger)
     {
         List<string> tags = [];
-        Dictionary<string, Dictionary<string, RenderLayer>> tagsMap = [];
+        Dictionary<string, Dictionary<string, RenderLayer>> tagsMap = new(StringComparer.OrdinalIgnoreCase);
 
         logger.Information("Loading tags");
 
@@ -76,7 +76,7 @@ public class TileRenderer
                 string tagName = tagField.Name;
 
                 tags.Add(tagName);
-                tagsMap[tagName] = [];
+                tagsMap[tagName] = new(StringComparer.OrdinalIgnoreCase);
 
                 foreach (JsonProperty valueField in tagField.Value.EnumerateObject())
                 {

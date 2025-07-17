@@ -6,7 +6,8 @@ public sealed class TileRenderer
     {
         try
         {
-            TagMapJson = File.ReadAllText(Path.Combine(dir, "tagMap.json"));
+            TagMap1Json = File.ReadAllText(Path.Combine(dir, "tagMap1.json"));
+            TagMap2Json = File.ReadAllText(Path.Combine(dir, "tagMap2.json"));
         }
         catch (Exception exception)
         {
@@ -14,5 +15,7 @@ public sealed class TileRenderer
         }
     }
 
-    public string TagMapJson { get; }
+    public string TagMap1Json { get; }
+
+    public string TagMap2Json { get; }
 }

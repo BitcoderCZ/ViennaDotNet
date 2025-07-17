@@ -16,7 +16,7 @@ internal sealed class EventBusTileRenderer : IDisposable
     {
         _dataSource = dataSource;
         _eventBus = eventBus;
-        _renderer = TileRenderer.Create(staticData.TileRenderer.TagMapJson, Log.Logger);
+        _renderer = TileRenderer.Create(dataSource.GetTagMapJson(staticData.TileRenderer), Log.Logger);
     }
 
     public void Run()

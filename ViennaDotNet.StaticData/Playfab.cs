@@ -16,7 +16,6 @@ namespace ViennaDotNet.StaticData;
 public sealed class Playfab
 {
     public readonly FrozenDictionary<Guid, Item> Items;
-    public readonly FrozenDictionary<Guid, Item> ItemByEarthId;
 
     public readonly ImmutableArray<Tab> ShopTabs;
 
@@ -81,7 +80,7 @@ public sealed class Playfab
                 null,
                 new(2020, 12, 10, 18, 59, 39, 396, DateTimeKind.Utc),
                 new(2021, 1, 4, 19, 42, 53, 773, DateTimeKind.Utc), // TODO: get this from file modified date or make it configurable?
-                new(2021, 1, 5, 17, 0, 0, DateTimeKind.Utc), // originally null, but it must be not null to get filtered correctly
+                new(2021, 1, 5, 17, 0, 0, DateTimeKind.Utc),
                 Guid.Parse("06e44b91-e7f5-46b6-9986-ca755890f3bf"),
                 null,
                 "B63A0803D3653643",
@@ -102,14 +101,6 @@ public sealed class Playfab
             ));
 
             Items = items.ToFrozenDictionary(item => item.Id);
-            ItemByEarthId = items
-                .Where(item => item.Data is Item.BuildplateData or Item.InventoryItemData)
-                .ToFrozenDictionary(item => item.Data switch
-                {
-                    Item.BuildplateData bd => bd.Id,
-                    Item.InventoryItemData iid => iid.Id,
-                    _ => throw new UnreachableException(),
-                });
         }
         catch (Exception exception)
         {

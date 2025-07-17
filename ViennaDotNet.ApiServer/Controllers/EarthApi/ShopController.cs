@@ -163,19 +163,13 @@ public class ShopController : ViennaControllerBase
 
     private static async Task<(int Purchased, int Earned)?> ProcessPurchase(string playerId, Guid itemId, int expectedPurchasePrice, CancellationToken cancellationToken)
     {
-        if (!staticData.Catalog.ShopCatalog.Items.TryGetValue(itemId, out var itemToPurchase))
-        {
-            Log.Debug($"Player {playerId} tried to purchase unknown item '{itemId}' (api)");
-            return null;
-        }
-
-        if (!staticData.Playfab.ItemByEarthId.TryGetValue(itemId, out var playfabItem))
+        if (!staticData.Playfab.Items.TryGetValue(itemId, out var itemToPurchase))
         {
             Log.Debug($"Player {playerId} tried to purchase unknown item '{itemId}' (playfab)");
             return null;
         }
 
-        int? playfabPrice = playfabItem.Data switch
+        int? playfabPrice = itemToPurchase.Data switch
         {
             Playfab.Item.BuildplateData data => data.Cost,
             Playfab.Item.InventoryItemData data => data.Cost,
@@ -197,11 +191,13 @@ public class ShopController : ViennaControllerBase
         {
             var results = await new EarthDB.Query(true)
                 .Get("profile", playerId, typeof(Profile))
+                .Get("journal", playerId, typeof(Journal))
                 .Get("inventory", playerId, typeof(Inventory))
                 .Get("buildplates", playerId, typeof(Buildplates))
                 .Then(async results =>
                 {
                     var profile = results.Get<Profile>("profile");
+                    var journal = results.Get<Journal>("journal");
                     var inventory = results.Get<Inventory>("inventory");
                     var buildplates = results.Get<Buildplates>("buildplates");
 
@@ -213,43 +209,38 @@ public class ShopController : ViennaControllerBase
 
                     var query = new EarthDB.Query(true);
 
-                    switch (itemToPurchase.ItemType)
+                    switch (itemToPurchase.Data)
                     {
-                        case Catalog.ShopCatalogR.StoreItemInfo.StoreItemType.Buildplates:
+                        case Playfab.Item.BuildplateData data:
                             {
-                                string? buidplateId = await importer.AddBuidplateToPlayer(itemToPurchase.Id.ToString(), playerId, cancellationToken);
+                                string? buidplateId = await importer.AddBuidplateToPlayer(data.Id.ToString(), playerId, cancellationToken);
 
                                 if (string.IsNullOrEmpty(buidplateId))
                                 {
-                                    Log.Warning($"Failed to add buildplate {itemToPurchase.Id} to player {playerId}");
+                                    Log.Warning($"Failed to add buildplate {data.Id} to player {playerId}");
                                     return query;
                                 }
                             }
 
                             break;
-                        case Catalog.ShopCatalogR.StoreItemInfo.StoreItemType.Items:
+                        case Playfab.Item.InventoryItemData data:
                             {
-                                if (itemToPurchase.ItemCounts is not { Count: > 0 })
-                                {
-                                    return query;
-                                }
-
-                                foreach (var item in itemToPurchase.ItemCounts)
-                                {
-                                    inventory.AddItems(item.Key.ToString(), item.Value);
-                                }
+                                inventory.AddItems(data.Id.ToString(), data.Amount);
+                                journal.AddCollectedItem(data.Id.ToString(), U.CurrentTimeMillis(), data.Amount);
 
                                 query.Update("inventory", playerId, inventory);
+                                query.Update("journal", playerId, journal);
+                                // TODO: add to activity log?
                             }
 
                             break;
 
                         default:
-                            Log.Warning($"Shop item '{itemId}' has unknown {nameof(Catalog.ShopCatalogR.StoreItemInfo.StoreItemType)}");
+                            Log.Warning($"Shop item '{itemId}' has unknown {nameof(Playfab.Item.ItemData)}");
                             break;
                     }
 
-                    bool spent = !profile.Rubies.Spend(expectedPurchasePrice);
+                    bool spent = profile.Rubies.Spend(expectedPurchasePrice);
                     Debug.Assert(spent);
 
                     query.Update("profile", playerId, profile);

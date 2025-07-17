@@ -193,7 +193,7 @@ public static class Program
 
         Log.Information("Loaded static data");
 
-        Log.Information("Importing shop buidplates");
+        Log.Information("Importing shop buildplates");
 
         EarthDB.ObjectResults? currentShopBuildplates = null;
         try

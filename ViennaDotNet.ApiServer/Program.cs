@@ -1,4 +1,5 @@
 using CommandLine;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using Serilog.Events;
@@ -198,7 +199,7 @@ public static class Program
         EarthDB.ObjectResults? currentShopBuildplates = null;
         try
         {
-            currentShopBuildplates = await new EarthDB.ObjectQuery(false)
+            currentShopBuildplates = await new EarthDB.ObjectQuery(true)
                 .GetBuildplates(staticData.Buildplates.ShopBuildplates.Select(buildplate => buildplate.Id))
                 .ExecuteAsync(DB);
         }

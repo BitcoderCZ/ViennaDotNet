@@ -65,20 +65,20 @@ public sealed class Importer
             return null;
         }
 
-        byte[]? preview = (await _objectStoreClient.Get(template.PreviewObjectId).Task) as byte[];
-
-        if (preview is null)
-        {
-            _logger.Error($"Could not get preview for template buildplate {templateId}");
-            return null;
-        }
-
         byte[]? serverData = (await _objectStoreClient.Get(template.ServerDataObjectId).Task) as byte[];
 
         if (serverData is null)
         {
             _logger.Error($"Could not get server data for template buildplate {templateId}");
             return null;
+        }
+
+        byte[]? preview = (await _objectStoreClient.Get(template.PreviewObjectId).Task) as byte[];
+
+        if (preview is null)
+        {
+            _logger.Warning($"Could not get preview for template buildplate {templateId}");
+            preview = await GeneratePreview(new WorldData(serverData, template.Size, template.Offset, template.Night));
         }
 
         string buidplateId = U.RandomUuid().ToString();

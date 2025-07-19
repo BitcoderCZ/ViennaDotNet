@@ -14,7 +14,6 @@ using ViennaDotNet.DB;
 using ViennaDotNet.DB.Models.Player;
 using ViennaDotNet.ObjectStore.Client;
 using ViennaDotNet.StaticData;
-using Buildplates = ViennaDotNet.DB.Models.Player.Buildplates;
 
 namespace ViennaDotNet.ApiServer.Controllers.EarthApi;
 
@@ -189,68 +188,90 @@ public class ShopController : ViennaControllerBase
 
         try
         {
-            var results = await new EarthDB.Query(true)
-                .Get("profile", playerId, typeof(Profile))
-                .Get("journal", playerId, typeof(Journal))
-                .Get("inventory", playerId, typeof(Inventory))
-                .Get("buildplates", playerId, typeof(Buildplates))
-                .Then(async results =>
-                {
-                    var profile = results.Get<Profile>("profile");
-                    var journal = results.Get<Journal>("journal");
-                    var inventory = results.Get<Inventory>("inventory");
-                    var buildplates = results.Get<Buildplates>("buildplates");
-
-                    if (profile.Rubies.Total < expectedPurchasePrice)
+            Rubies? rubies = null;
+            switch (itemToPurchase.Data)
+            {
+                case Playfab.Item.BuildplateData data:
                     {
-                        Log.Debug($"Player {playerId} tried to purchase item '{itemId}' but does not have enough rubies");
-                        return EarthDB.Query.Empty;
+                        // TODO: the amount of rubies could change between the 2 db calls, if multiple people were using the same account at the same time, but that's unlikely and AddBuidplateToPlayer cannot be inside a rw query as it also writes and there can only be 1 rw connection for a file database at a time
+                        var profile = (await new EarthDB.Query(false)
+                           .Get("profile", playerId, typeof(Profile))
+                           .ExecuteAsync(earthDB, cancellationToken))
+                           .Get<Profile>("profile");
+
+                        if (profile.Rubies.Total < expectedPurchasePrice)
+                        {
+                            Log.Debug($"Player {playerId} tried to purchase item '{itemId}' but does not have enough rubies");
+                            break;
+                        }
+
+                        string? buidplateId = await importer.AddBuidplateToPlayer(data.Id.ToString(), playerId, cancellationToken);
+
+                        if (string.IsNullOrEmpty(buidplateId))
+                        {
+                            Log.Warning($"Failed to add buildplate {data.Id} to player {playerId}");
+                            break;
+                        }
+
+                        bool spent = profile.Rubies.Spend(expectedPurchasePrice);
+                        Debug.Assert(spent);
+
+                        await new EarthDB.Query(true)
+                           .Update("profile", playerId, profile)
+                           .ExecuteAsync(earthDB, cancellationToken);
+
+                        rubies = profile.Rubies;
                     }
 
-                    var query = new EarthDB.Query(true);
-
-                    switch (itemToPurchase.Data)
+                    break;
+                case Playfab.Item.InventoryItemData data:
                     {
-                        case Playfab.Item.BuildplateData data:
-                            {
-                                string? buidplateId = await importer.AddBuidplateToPlayer(data.Id.ToString(), playerId, cancellationToken);
+                        var results = await new EarthDB.Query(true)
+                           .Get("profile", playerId, typeof(Profile))
+                           .Get("journal", playerId, typeof(Journal))
+                           .Get("inventory", playerId, typeof(Inventory))
+                           .Then(results =>
+                           {
+                               var profile = results.Get<Profile>("profile");
+                               var journal = results.Get<Journal>("journal");
+                               var inventory = results.Get<Inventory>("inventory");
 
-                                if (string.IsNullOrEmpty(buidplateId))
-                                {
-                                    Log.Warning($"Failed to add buildplate {data.Id} to player {playerId}");
-                                    return query;
-                                }
-                            }
+                               if (profile.Rubies.Total < expectedPurchasePrice)
+                               {
+                                   Log.Debug($"Player {playerId} tried to purchase item '{itemId}' but does not have enough rubies");
+                                   return EarthDB.Query.Empty;
+                               }
 
-                            break;
-                        case Playfab.Item.InventoryItemData data:
-                            {
-                                inventory.AddItems(data.Id.ToString(), data.Amount);
-                                journal.AddCollectedItem(data.Id.ToString(), U.CurrentTimeMillis(), data.Amount);
+                               var query = new EarthDB.Query(true);
 
-                                query.Update("inventory", playerId, inventory);
-                                query.Update("journal", playerId, journal);
-                                // TODO: add to activity log?
-                            }
+                               inventory.AddItems(data.Id.ToString(), data.Amount);
+                               journal.AddCollectedItem(data.Id.ToString(), U.CurrentTimeMillis(), data.Amount);
 
-                            break;
+                               query.Update("inventory", playerId, inventory);
+                               query.Update("journal", playerId, journal);
+                               // TODO: add to activity log?
 
-                        default:
-                            Log.Warning($"Shop item '{itemId}' has unknown {nameof(Playfab.Item.ItemData)}");
-                            break;
+                               bool spent = profile.Rubies.Spend(expectedPurchasePrice);
+                               Debug.Assert(spent);
+
+                               query.Update("profile", playerId, profile);
+                               query.Extra("rubies", profile.Rubies);
+
+                               return query;
+                           })
+                           .ExecuteAsync(earthDB, cancellationToken);
+
+                        rubies = results.GetExtra("rubies") as Rubies;
                     }
 
-                    bool spent = profile.Rubies.Spend(expectedPurchasePrice);
-                    Debug.Assert(spent);
+                    break;
 
-                    query.Update("profile", playerId, profile);
-                    query.Extra("rubies", profile.Rubies);
+                default:
+                    Log.Warning($"Shop item '{itemId}' has unknown {nameof(Playfab.Item.ItemData)}");
+                    break;
+            }
 
-                    return query;
-                })
-                .ExecuteAsync(earthDB, cancellationToken);
 
-            var rubies = results.GetExtra("rubies") as Rubies;
             if (rubies is null)
             {
                 return null;

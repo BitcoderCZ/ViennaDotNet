@@ -5,3 +5,4 @@ admin panel - manage player inventory, stats, boosts, buildplates, ...
 Get rid of LinkedList
 use Guid instead of string
 load static data types only when needed
+use tiles when spawning tappables - don't spawn on water/forbidden areas, spawn more trees in forest?

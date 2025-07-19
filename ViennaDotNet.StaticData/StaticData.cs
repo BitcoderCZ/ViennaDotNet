@@ -2,24 +2,32 @@
 
 public sealed class StaticData
 {
-    public readonly Catalog Catalog;
-    public readonly PlayerLevels Levels;
-    public readonly TappablesConfig TappablesConfig;
-    public readonly EncountersConfig EncountersConfig;
-    public readonly TileRenderer TileRenderer;
-    public readonly Buildplates Buildplates;
-    public readonly Playfab Playfab;
+    private readonly string _directory;
+
+    private Catalog? _catalog;
+    private PlayerLevels? _levels;
+    private TappablesConfig? _tappablesConfig;
+    private EncountersConfig? _encountersConfig;
+    private TileRenderer? _tileRenderer;
+    private Buildplates? _buildplates;
+    private Playfab? _playfab;
 
     public StaticData(string dir)
     {
-        dir = Path.GetFullPath(dir);
-
-        Catalog = new Catalog(Path.Combine(dir, "catalog"));
-        Levels = new PlayerLevels(Path.Combine(dir, "levels"));
-        TappablesConfig = new TappablesConfig(Path.Combine(dir, "tappables"));
-        EncountersConfig = new EncountersConfig(Path.Combine(dir, "encounters"));
-        TileRenderer = new TileRenderer(Path.Combine(dir, "tile_renderer"));
-        Buildplates = new Buildplates(Path.Combine(dir, "buildplates"));
-        Playfab = new Playfab(Path.Combine(dir, "playfab"));
+        _directory = Path.GetFullPath(dir);
     }
+
+    public Catalog Catalog => _catalog ??= new Catalog(Path.Combine(_directory, "catalog"));
+
+    public PlayerLevels Levels => _levels ??= new PlayerLevels(Path.Combine(_directory, "levels"));
+
+    public TappablesConfig TappablesConfig => _tappablesConfig ??= new TappablesConfig(Path.Combine(_directory, "tappables"));
+
+    public EncountersConfig EncountersConfig => _encountersConfig ??= new EncountersConfig(Path.Combine(_directory, "encounters"));
+
+    public TileRenderer TileRenderer => _tileRenderer ??= new TileRenderer(Path.Combine(_directory, "tile_renderer"));
+
+    public Buildplates Buildplates => _buildplates ??= new Buildplates(Path.Combine(_directory, "buildplates"));
+
+    public Playfab Playfab => _playfab ??= new Playfab(Path.Combine(_directory, "playfab"));
 }

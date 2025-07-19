@@ -27,15 +27,8 @@ public sealed class EarthDB : IDisposable
         => new EarthDB(connectionString);
 
     private readonly string connectionString;
-    // TODO: remove when executed
+    // TODO: remove when executed, why a hashset?
     private readonly HashSet<SqliteTransaction> transactions = [];
-
-    // TODO: is this necessary?
-#if NET9_0_OR_GREATER
-    private readonly Lock _lock = new();
-#else
-    private readonly object _lock = new();
-#endif
 
     private EarthDB(string _connectionString)
     {
@@ -76,29 +69,36 @@ public sealed class EarthDB : IDisposable
         }
     }
 
-    internal SqliteConnection OpenConnection()
+    internal SqliteConnection OpenConnection(bool write)
     {
-        var connection = new SqliteConnection("Data Source=" + connectionString);
+        var csb = new SqliteConnectionStringBuilder
+        {
+            DataSource = connectionString,
+            Mode = write ? SqliteOpenMode.ReadWrite : SqliteOpenMode.ReadOnly
+        };
+        var connection = new SqliteConnection(csb.ConnectionString);
         connection.Open();
         return connection;
     }
 
     internal SqliteTransaction CreateTransaction(bool write)
     {
-        lock (_lock)
+        try
         {
-            try
+            var csb = new SqliteConnectionStringBuilder
             {
-                var connection = new SqliteConnection("Data Source=" + connectionString);
-                connection.Open();
-                var transaction = connection.BeginTransaction(/*!write*/false);// new Transaction(this, connection, write);
-                transactions.Add(transaction);
-                return transaction;
-            }
-            catch (SqliteException ex)
-            {
-                throw new DatabaseException(ex);
-            }
+                DataSource = connectionString,
+                Mode = write ? SqliteOpenMode.ReadWriteCreate : SqliteOpenMode.ReadOnly
+            };
+            var connection = new SqliteConnection(csb.ConnectionString);
+            connection.Open();
+            var transaction = connection.BeginTransaction(/*!write*//*false*/);
+            transactions.Add(transaction);
+            return transaction;
+        }
+        catch (SqliteException ex)
+        {
+            throw new DatabaseException(ex);
         }
     }
 
@@ -142,16 +142,13 @@ public sealed class EarthDB : IDisposable
 
     public void Dispose()
     {
-        lock (_lock)
+        foreach (var transaction in transactions)
         {
-            foreach (var transaction in transactions)
+            try
             {
-                try
-                {
-                    transaction.Dispose();
-                }
-                catch { }
+                transaction.Dispose();
             }
+            catch { }
         }
     }
 

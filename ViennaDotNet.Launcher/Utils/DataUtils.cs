@@ -45,7 +45,7 @@ internal static class DataUtils
 
     public static async IAsyncEnumerable<string> GetPlayersAsync(EarthDB db, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        using var connection = db.OpenConnection();
+        using var connection = db.OpenConnection(false);
 
         using (var command = new SqliteCommand($"""
             SELECT DISTINCT id FROM {EarthDB.ObjectsTable};
@@ -63,7 +63,7 @@ internal static class DataUtils
 
     public static async IAsyncEnumerable<(string Id, Profile Profile)> GetAllProfilesAsync(EarthDB db, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        using var connection = db.OpenConnection();
+        using var connection = db.OpenConnection(false);
 
         HashSet<string> returnedPlayers = [];
 

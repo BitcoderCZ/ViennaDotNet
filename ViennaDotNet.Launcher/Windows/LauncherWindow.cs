@@ -135,8 +135,9 @@ internal sealed class LauncherWindow : Window
             cancellationToken.ThrowIfCancellationRequested();
             TileRenderer.Run(settings, logger);
 
+            // TODO: have the processes indicate that they started successfully
             logger.Information("Waiting for programs to start up");
-            await Task.Delay(5000, cancellationToken); // wait a bit for them to start (and possible crash)
+            await Task.Delay(7500, cancellationToken); // wait a bit for them to start (and possible crash)
 
             bool error = false;
             foreach (string programExe in programExes)

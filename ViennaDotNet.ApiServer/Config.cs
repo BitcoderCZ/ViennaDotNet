@@ -26,8 +26,7 @@ public sealed record class Config(Config.LoginR Login, Config.XboxLiveR XboxLive
             EntityTokenValidityMinutes: 24 * 60,
             SessionTicketValidityMinutes: 24 * 60,
             EntityTokenSecret: "/T7gV2UtfbN3OAsSFt1U73+DLocbc7HzBmywI4X2wFgr/yKcTo51UNJUAwiInJ08pWIqBUP9WoE/to4cBWUQlg==",
-            SessionTicketSecret: "mKpXyjZkqnzCLKqjdnpXqAYyYHL07I+Tbqs8j9HKJAe3MvRNOtjb59vp/vREJFg6WPOJ4g8AYfsRr107CQKp4Q==",
-            DummyItemPreviewURL: "http://20ca2.playfabapi.com/dummyItemPreview.png"
+            SessionTicketSecret: "mKpXyjZkqnzCLKqjdnpXqAYyYHL07I+Tbqs8j9HKJAe3MvRNOtjb59vp/vREJFg6WPOJ4g8AYfsRr107CQKp4Q=="
         )
     );
 
@@ -85,8 +84,7 @@ public sealed record class Config(Config.LoginR Login, Config.XboxLiveR XboxLive
         int EntityTokenValidityMinutes,
         int SessionTicketValidityMinutes,
         string EntityTokenSecret,
-        string SessionTicketSecret,
-        string DummyItemPreviewURL
+        string SessionTicketSecret
     )
     {
         private byte[]? _entityTokenSecretBytes;

@@ -42,7 +42,7 @@ public class Settings
     public string? MapTilerApiKey { get; set; }
     public string? TileDatabaseConnectionString { get; set; }
 
-    public bool? GeneratePreviewOnImport { get; set; }
+    public bool? GeneratePreviewOnImport { get; set; } // TODO: is this really needed?
     public bool? SkipFileChecks { get; set; }
 
     public enum TileDataSourceEnum

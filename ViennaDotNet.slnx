@@ -1,0 +1,32 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+  </Folder>
+  <Project Path="ViennaDotNet.ApiServer/ViennaDotNet.ApiServer.csproj">
+  </Project>
+  <Project Path="ViennaDotNet.Buildplate/ViennaDotNet.Buildplate.csproj">
+  </Project>
+  <Project Path="ViennaDotNet.BuildplateImporter/ViennaDotNet.BuildplateImporter.csproj" />
+  <Project Path="ViennaDotNet.Buildplate_Importer/ViennaDotNet.Buildplate_Importer.csproj">
+  </Project>
+  <Project Path="ViennaDotNet.Common/ViennaDotNet.Common.csproj">
+  </Project>
+  <Project Path="ViennaDotNet.DB/ViennaDotNet.DB.csproj">
+  </Project>
+  <Project Path="ViennaDotNet.EventBus.Client/ViennaDotNet.EventBus.Client.csproj">
+  </Project>
+  <Project Path="ViennaDotNet.EventBus.Server/ViennaDotNet.EventBus.Server.csproj">
+  </Project>
+  <Project Path="ViennaDotNet.Launcher/ViennaDotNet.Launcher.csproj">
+  </Project>
+  <Project Path="ViennaDotNet.ObjectStore.Client/ViennaDotNet.ObjectStore.Client.csproj">
+  </Project>
+  <Project Path="ViennaDotNet.ObjectStore.Server/ViennaDotNet.ObjectStore.Server.csproj">
+  </Project>
+  <Project Path="ViennaDotNet.PreviewGenerator/ViennaDotNet.PreviewGenerator.csproj">
+  </Project>
+  <Project Path="ViennaDotNet.StaticData/ViennaDotNet.StaticData.csproj" />
+  <Project Path="ViennaDotNet.TappablesGenerator/ViennaDotNet.TappablesGenerator.csproj">
+  </Project>
+  <Project Path="ViennaDotNet.TileRenderer/ViennaDotNet.TileRenderer.csproj" />
+</Solution>

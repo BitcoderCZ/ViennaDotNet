@@ -11,6 +11,8 @@ public static class Permissions
     public const string RestartServer = "server.restart";
     [PermissionInfo("Server", "Stop the server")]
     public const string StopServer = "server.stop";
+    [PermissionInfo("Server", "Edit the server options")]
+    public const string EditServerOptions = "server.options.edit";
     [PermissionInfo("Server", "View the logs of the server")]
     public const string ViewServerLogs = "server.view.logs";
 

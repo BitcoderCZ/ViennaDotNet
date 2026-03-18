@@ -1,0 +1,253 @@
+@page "/Admin/ServerOptions"
+@using Microsoft.AspNetCore.Authorization
+@using System.ComponentModel.DataAnnotations
+@using Serilog
+@attribute [Authorize(Policy = Permissions.EditServerOptions)]
+@rendermode InteractiveServer
+@inject IJSRuntime JSRuntime
+
+<PageTitle>System Settings</PageTitle>
+
+<div class="container mt-4">
+    <h2>System Configuration</h2>
+
+    <EditForm Model="@SettingsModel" OnValidSubmit="HandleSave" FormName="SettingsForm">
+        <DataAnnotationsValidator />
+        <ValidationSummary class="text-danger" />
+
+        <ul class="nav nav-tabs" id="settingsTabs" role="tablist">
+            <li class="nav-item">
+                <button class="nav-link @(activeTab == "network" ? "active" : "")"
+                        @onclick='() => activeTab = "network"'>Network</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link @(activeTab == "map" ? "active" : "")"
+                        @onclick='() => activeTab = "map"'>Map</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link @(activeTab == "database" ? "active" : "")"
+                        @onclick='() => activeTab = "database"'>Databases</button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link @(activeTab == "data" ? "active" : "")" @onclick='() => activeTab = "data"'>Data
+                    Handling</button>
+                </li>
+            </ul>
+
+            <div class="tab-content border border-top-0 p-4 bg-light">
+                @* --- Network Tab --- *@
+                <div class="tab-pane fade show @(activeTab == "network" ? "active" : "")">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">API Port</label>
+                            <InputNumber @bind-Value="SettingsModel.ApiPort" class="form-control" />
+                            <ValidationMessage For="@(() => SettingsModel.ApiPort)" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Event Bus Port</label>
+                            <InputNumber @bind-Value="SettingsModel.EventBusPort" class="form-control" />
+                            <ValidationMessage For="@(() => SettingsModel.EventBusPort)" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Object Store Port</label>
+                            <InputNumber @bind-Value="SettingsModel.ObjectStorePort" class="form-control" />
+                            <ValidationMessage For="@(() => SettingsModel.ObjectStorePort)" />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">IPv4 Address</label>
+                            <InputText @bind-Value="SettingsModel.IPv4" class="form-control" placeholder="192.168.x.x" />
+                            <ValidationMessage For="@(() => SettingsModel.IPv4)" />
+                        </div>
+                    </div>
+                </div>
+
+                @* --- Map Tab --- *@
+                <div class="tab-pane fade show @(activeTab == "map" ? "active" : "")">
+                    <div class="mb-3 form-check form-switch">
+                        <InputCheckbox @bind-Value="SettingsModel.EnableTileRendering" class="form-check-input"
+                                       id="enableRendering" />
+                        <label class="form-check-label" for="enableRendering">Enable Tile Rendering</label>
+                    </div>
+
+                    <fieldset disabled="@(!SettingsModel.EnableTileRendering)">
+                        <div class="mb-3">
+                            <label class="form-label">Tile Data Source</label>
+                            <InputSelect @bind-Value="SettingsModel.TileDataSource" class="form-select">
+                                @foreach (var source in Enum.GetValues<Settings.TileDataSourceEnum>())
+                                {
+                                    <option value="@source">@source</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        @if (SettingsModel.TileDataSource == Settings.TileDataSourceEnum.MapTiler)
+                        {
+                            <div class="mb-3">
+                                <label class="form-label">MapTiler API Key</label>
+                                <InputText @bind-Value="SettingsModel.MapTilerApiKey" class="form-control" />
+                                <ValidationMessage For="@(() => SettingsModel.MapTilerApiKey)" />
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="mb-3">
+                                <label class="form-label">Tile Database Connection String</label>
+                                <InputText @bind-Value="SettingsModel.TileDatabaseConnectionString" class="form-control" />
+                                <ValidationMessage For="@(() => SettingsModel.TileDatabaseConnectionString)" />
+                            </div>
+                        }
+                    </fieldset>
+                </div>
+
+                @* --- Database Tab --- *@
+                <div class="tab-pane fade show @(activeTab == "database" ? "active" : "")">
+                    <div class="mb-3">
+                        <label class="form-label">Earth Database Connection String</label>
+                        <InputText @bind-Value="SettingsModel.EarthDatabaseConnectionString" class="form-control" />
+                        <ValidationMessage For="@(() => SettingsModel.EarthDatabaseConnectionString)" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Live Database Connection String</label>
+                        <InputText @bind-Value="SettingsModel.LiveDatabaseConnectionString" class="form-control" />
+                        <ValidationMessage For="@(() => SettingsModel.LiveDatabaseConnectionString)" />
+                    </div>
+                </div>
+
+                @* --- Data Tab --- *@
+                <div class="tab-pane fade show @(activeTab == "data" ? "active" : "")">
+                    <div class="mb-3 form-check">
+                        <InputCheckbox @bind-Value="SettingsModel.GeneratePreviewOnImport" class="form-check-input"
+                                       id="genPreview" />
+                        <label class="form-check-label" for="genPreview">Generate Preview On Import</label>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <InputCheckbox @bind-Value="SettingsModel.SkipFileChecks" class="form-check-input"
+                                       id="skipChecks" />
+                        <label class="form-check-label" for="skipChecks">Skip File Validation</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">Save Settings</button>
+                <button type="button" class="btn btn-secondary" @onclick="ResetToDefault">Reset to Defaults</button>
+            </div>
+        </EditForm>
+    </div>
+
+@code {
+    private string activeTab = "network";
+
+    // Using a wrapper or the class directly.
+    // For validation, we ensure the properties have the Required attribute.
+    private SettingsViewModel SettingsModel { get; set; } = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        LoadFromSettings(await Settings.LoadAsync(Settings.DefaultPath));
+    }
+
+    private void LoadFromSettings(Settings source)
+    {
+        SettingsModel.ApiPort = source.ApiPort;
+        SettingsModel.EventBusPort = source.EventBusPort;
+        SettingsModel.ObjectStorePort = source.ObjectStorePort;
+        SettingsModel.IPv4 = source.IPv4;
+        SettingsModel.EarthDatabaseConnectionString = source.EarthDatabaseConnectionString;
+        SettingsModel.LiveDatabaseConnectionString = source.LiveDatabaseConnectionString;
+        SettingsModel.EnableTileRendering = source.EnableTileRenderingLabel ?? false;
+        SettingsModel.TileDataSource = source.TileDataSource ?? Settings.TileDataSourceEnum.MapTiler;
+        SettingsModel.MapTilerApiKey = source.MapTilerApiKey;
+        SettingsModel.TileDatabaseConnectionString = source.TileDatabaseConnectionString;
+        SettingsModel.GeneratePreviewOnImport = source.GeneratePreviewOnImport ?? false;
+        SettingsModel.SkipFileChecks = source.SkipFileChecks ?? false;
+    }
+
+    private void HandleSave()
+    {
+        var settings = new Settings()
+        {
+            ApiPort = (ushort)SettingsModel.ApiPort!,
+            EventBusPort = (ushort)SettingsModel.EventBusPort!,
+            ObjectStorePort = (ushort)SettingsModel.ObjectStorePort!,
+            IPv4 = SettingsModel.IPv4,
+            EarthDatabaseConnectionString = SettingsModel.EarthDatabaseConnectionString,
+            LiveDatabaseConnectionString = SettingsModel.LiveDatabaseConnectionString,
+            EnableTileRenderingLabel = SettingsModel.EnableTileRendering,
+            TileDataSource = SettingsModel.TileDataSource,
+            MapTilerApiKey = SettingsModel.MapTilerApiKey,
+            TileDatabaseConnectionString = SettingsModel.TileDatabaseConnectionString,
+            GeneratePreviewOnImport = SettingsModel.GeneratePreviewOnImport,
+            SkipFileChecks = SettingsModel.SkipFileChecks,
+        };
+
+        Settings.Instance = settings;
+
+        Settings.Instance.Save(Settings.DefaultPath);
+        Log.Information("Settings Saved Successfully!");
+    }
+
+    private async Task ResetToDefault()
+    {
+        bool confirmed = await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure? This will overwrite all current changes with factory defaults.");
+        if (confirmed)
+        {
+            LoadFromSettings(Settings.Default);
+        }
+    }
+
+    // ViewModel to handle validation annotations
+    public class SettingsViewModel : IValidatableObject
+    {
+        [Required, Range(1, ushort.MaxValue, ErrorMessage = $"Port must be between 1 and 65535")]
+        public int? ApiPort
+        {
+            get;
+            set;
+        }
+        [Required, Range(1, ushort.MaxValue, ErrorMessage = $"Port must be between 1 and 65535")]
+        public int? EventBusPort
+        {
+            get; set;
+        }
+        [Required, Range(1, ushort.MaxValue, ErrorMessage = $"Port must be between 1 and 65535")]
+        public int? ObjectStorePort
+        {
+            get; set;
+        }
+
+        [Required(AllowEmptyStrings = false), RegularExpression(@"^((25[0-5]|(2[0-4]|1\d|[1-9]|)\d)\.?\b){4}$", ErrorMessage =
+"Invalid IPv4 address format.")]
+        public string? IPv4 { get; set; }
+
+        [Required(AllowEmptyStrings = false)]
+        public string? EarthDatabaseConnectionString { get; set; }
+
+        [Required(AllowEmptyStrings = false)]
+        public string? LiveDatabaseConnectionString { get; set; }
+
+        public bool EnableTileRendering { get; set; }
+        public Settings.TileDataSourceEnum TileDataSource { get; set; }
+
+        public string? MapTilerApiKey { get; set; }
+        public string? TileDatabaseConnectionString { get; set; }
+
+        public bool GeneratePreviewOnImport { get; set; }
+        public bool SkipFileChecks { get; set; }
+
+        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            if (TileDataSource is Settings.TileDataSourceEnum.MapTiler && string.IsNullOrWhiteSpace(MapTilerApiKey))
+            {
+                yield return new ValidationResult("MapTiler API Key is required when using MapTiler source.", new[] {
+nameof(MapTilerApiKey) });
+            }
+
+            if (TileDataSource is Settings.TileDataSourceEnum.PostgreSQL && string.IsNullOrWhiteSpace(TileDatabaseConnectionString))
+            {
+                yield return new ValidationResult("Tile database connection string is required for PostgreSQL source.", new[] {
+nameof(TileDatabaseConnectionString) });
+            }
+        }
+    }
+}

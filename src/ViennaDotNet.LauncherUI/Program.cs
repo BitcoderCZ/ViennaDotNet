@@ -14,6 +14,8 @@ public partial class Program
 {
     private static async Task Main(string[] args)
     {
+        Settings.Instance = await Settings.LoadAsync(Settings.DefaultPath);
+
         var builder = WebApplication.CreateBuilder(args);
 
         // Add services to the container.
@@ -51,6 +53,8 @@ public partial class Program
 
         builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 
+        builder.Services.AddControllers();
+
         var app = builder.Build();
 
         // Configure the HTTP request pipeline.
@@ -76,6 +80,8 @@ public partial class Program
 
         // Add additional endpoints required by the Identity /Account Razor components.
         app.MapAdditionalIdentityEndpoints();
+
+        app.MapControllers();
 
         // Apply database migrations and initialize built-in roles
         using (var scope = app.Services.CreateScope())

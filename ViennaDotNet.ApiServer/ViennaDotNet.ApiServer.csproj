@@ -1,14 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <Platforms>AnyCPU;x64;x86;ARM32;ARM64</Platforms>
     <AssemblyName>ApiServer</AssemblyName>
     <Version>1.0.0</Version>
     <TrimMode>partial</TrimMode>
-    <RuntimeIdentifiers>win-x64;win-x86</RuntimeIdentifiers>
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
 

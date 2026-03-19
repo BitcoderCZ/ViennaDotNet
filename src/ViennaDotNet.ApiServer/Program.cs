@@ -52,6 +52,9 @@ public static class Program
 
         [Option("objectstore", Default = "localhost:5396", Required = false, HelpText = "Object storage address")]
         public string ObjectStoreConnectionString { get; set; }
+
+        [Option("logger-url", Default = null, Required = false, HelpText = "Url to send logs to")]
+        public string? LoggerUrl { get; set; }
     }
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
@@ -68,24 +71,14 @@ public static class Program
 
         Environment.CurrentDirectory = AppDomain.CurrentDomain.BaseDirectory;
 
-        var log = new LoggerConfiguration()
-            .WriteTo.Console()
-            .WriteTo.File("logs/api_server/log.txt", rollingInterval: RollingInterval.Day, rollOnFileSizeLimit: true, fileSizeLimitBytes: 8338607, outputTemplate: "{Timestamp:HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
-            .MinimumLevel.Debug()
-            .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
-            .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Information)
-            .MinimumLevel.Override("ViennaDotNet.ApiServer.Authentication", LogEventLevel.Information)
-            .CreateLogger();
         /*var log = new LoggerConfiguration()
             .WriteTo.Console()
-            .WriteTo.File("logs/api_server/log.txt.txt", rollingInterval: RollingInterval.Day, rollOnFileSizeLimit: true, fileSizeLimitBytes: 8338607, outputTemplate: "{Timestamp:HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+            .WriteTo.File("logs/api_server/log.txt", rollingInterval: RollingInterval.Day, rollOnFileSizeLimit: true, fileSizeLimitBytes: 8338607, outputTemplate: "{Timestamp:HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
             .MinimumLevel.Debug()
             .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
             .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
             .MinimumLevel.Override("ViennaDotNet.ApiServer.Authentication", LogEventLevel.Warning)
             .CreateLogger();*/
-
-        Log.Logger = log;
 
         if (!Debugger.IsAttached)
         {
@@ -113,6 +106,25 @@ public static class Program
         }
         else
             return 1;
+
+        var loggerConfig = new LoggerConfiguration()
+            .WriteTo.Console()
+            .WriteTo.File("logs/api_server/log.txt", rollingInterval: RollingInterval.Day, rollOnFileSizeLimit: true, fileSizeLimitBytes: 8338607, outputTemplate: "{Timestamp:HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+            .Enrich.WithProperty("ComponentName", "ApiServer");
+
+        if (!string.IsNullOrWhiteSpace(options.LoggerUrl))
+        {
+            loggerConfig.WriteTo.Http(options.LoggerUrl, 10 * 1024 * 1024);
+        }
+
+        loggerConfig
+            .MinimumLevel.Debug()
+            .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
+            .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Information)
+            .MinimumLevel.Override("ViennaDotNet.ApiServer.Authentication", LogEventLevel.Information);
+        var log = loggerConfig.CreateLogger();
+
+        Log.Logger = log;
 
         Log.Information("Loading configuration");
         try

@@ -31,7 +31,8 @@ internal static class ApiServer
             $"--earth-db={settings.EarthDatabaseConnectionString}",
             $"--live-db={settings.LiveDatabaseConnectionString}",
             $"--eventbus=localhost:{settings.EventBusPort}",
-            $"--objectstore=localhost:{settings.ObjectStorePort}"
+            $"--objectstore=localhost:{settings.ObjectStorePort}",
+            $"--logger-url={Program.LoggerAddress}",
         ])
         {
             WorkingDirectory = Path.GetFullPath(Program.ProgramsDir),

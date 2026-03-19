@@ -44,7 +44,7 @@ internal static class FileChecker
         Debug.Assert(added);
     }
 
-    public static async Task Check(Settings settings, bool checkImporter, ILogger logger, CancellationToken cancellationToken)
+    public static async Task<bool> CheckAsync(Settings settings, bool checkImporter, ILogger logger, CancellationToken cancellationToken)
     {
         if (settings.SkipFileChecks is not true)
         {
@@ -53,7 +53,7 @@ internal static class FileChecker
         else
         {
             logger.Warning("Skipped file validation, you can turn it back on in 'Configure/Skip file validation before starting'");
-            return;
+            return true;
         }
 
         bool error = false;
@@ -66,6 +66,8 @@ internal static class FileChecker
         {
             error = true;
         }
+
+        cancellationToken.ThrowIfCancellationRequested();
 
         foreach (string dir in expectedStaticDirectories)
         {
@@ -225,9 +227,6 @@ internal static class FileChecker
             }
         }
 
-        if (error)
-        {
-            throw new Exception("File validation failed.");
-        }
+        return !error;
     }
 }

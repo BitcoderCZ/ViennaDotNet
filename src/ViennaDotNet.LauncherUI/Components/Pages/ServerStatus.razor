@@ -4,6 +4,7 @@
 @using ViennaDotNet.LauncherUI.Utils
 @inject AuthenticationStateProvider AuthStateProvider
 @inject LogsLogService LogService
+@inject ServerManager ServerManager
 
 <div class="container-fluid py-3 px-2 px-md-4">
     <div class="card shadow-sm border-0 mb-3">
@@ -20,24 +21,24 @@
     <div class="row g-2 mb-4">
         <div class="col-12 col-md-4">
             <button class="btn btn-lg btn-success w-100 py-3 d-flex flex-column align-items-center"
-                    disabled="@(IsButtonDisabled(Permissions.StartServer) || _currentStatus == Status.Online)"
-                    @onclick="() => SetStatus(Status.Starting)">
+                    disabled="@(IsButtonDisabled(Permissions.StartServer) || _currentStatus is LauncherUI.ServerStatus.Starting or LauncherUI.ServerStatus.Online or LauncherUI.ServerStatus.Stopping)"
+                    @onclick="() => StartServer()">
                 <i class="bi bi-play-fill fs-2"></i>
                 <span style="font-size: 0.9rem;">Start</span>
             </button>
         </div>
         <div class="col-6 col-md-4">
             <button class="btn btn-lg btn-warning w-100 py-3 d-flex flex-column align-items-center"
-                    disabled="@(IsButtonDisabled(Permissions.RestartServer) || _currentStatus == Status.Offline)"
-                    @onclick="() => SetStatus(Status.Starting)">
+                    disabled="@(IsButtonDisabled(Permissions.RestartServer) || _currentStatus is LauncherUI.ServerStatus.Offline or LauncherUI.ServerStatus.Stopping)"
+                    @onclick="() => RestartServer()">
                 <i class="bi bi-arrow-clockwise fs-2"></i>
                 <span style="font-size: 0.9rem;">Restart</span>
             </button>
         </div>
         <div class="col-6 col-md-4">
             <button class="btn btn-lg btn-danger w-100 py-3 d-flex flex-column align-items-center"
-                    disabled="@(IsButtonDisabled(Permissions.StopServer) || _currentStatus == Status.Offline)"
-                    @onclick="() => SetStatus(Status.Offline)">
+                    disabled="@(IsButtonDisabled(Permissions.StopServer) || _currentStatus is LauncherUI.ServerStatus.Offline or LauncherUI.ServerStatus.Stopping)"
+                    @onclick="() => StopServer()">
                 <i class="bi bi-stop-fill fs-2"></i>
                 <span style="font-size: 0.9rem;">Stop</span>
             </button>
@@ -89,13 +90,10 @@
 </div>
 
 @code {
-    private enum Status { Online, Starting, Offline }
-    private Status _currentStatus = Status.Online;
-
-    // 1. Added "Launcher" to the components
+    private ViennaDotNet.LauncherUI.ServerStatus _currentStatus => ServerManager.Status;
+    
     private string _activeTab = "Launcher";
     private readonly string[] _components = { "Launcher", "API Gateway", "Database", "Auth Service" };
-
     private ClaimsPrincipal? _user;
 
     protected override async Task OnInitializedAsync()
@@ -103,40 +101,41 @@
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         _user = authState.User;
 
-        // 2. Subscribe to live log events
-        LogService.OnLogReceived += HandleLogUpdate;
+        // Subscribe to both Log and Status updates
+        LogService.OnLogReceived += HandleUpdate;
+        ServerManager.OnStatusChanged += HandleUpdate;
     }
 
-    // 3. Helper to determine which logs to show
-    private IEnumerable<string> GetDisplayLogs()
+    private async void HandleUpdate()
     {
-        return _activeTab == "Launcher"
-            ? LogService.Logs
-            : GetMockLogs(_activeTab);
-    }
-
-    private async void HandleLogUpdate()
-    {
-        // InvokeAsync is required because Serilog might emit from a background thread
+        // Sync the UI thread
         await InvokeAsync(StateHasChanged);
     }
 
     public void Dispose()
     {
-        // 4. Unsubscribe to prevent memory leaks
-        LogService.OnLogReceived -= HandleLogUpdate;
+        LogService.OnLogReceived -= HandleUpdate;
+        ServerManager.OnStatusChanged -= HandleUpdate;
     }
 
+    // New methods to trigger the Manager
+    private async Task StartServer() => await ServerManager.Start();
+    private async Task StopServer() => await ServerManager.Stop();
+    private async Task RestartServer() => await ServerManager.Restart();
+
+    // Mapping Helpers
     private bool HasPermission(string permission) => _user?.HasPermission(permission) ?? false;
     private bool IsButtonDisabled(string permission) => !HasPermission(permission);
-    private string GetStatusClass() => _currentStatus == Status.Online ? "status-online" : _currentStatus == Status.Starting
-? "status-starting" : "status-offline";
-    private void SetStatus(Status newStatus) => _currentStatus = newStatus;
-
-    private List<string> GetMockLogs(string component) => new()
+    
+    private string GetStatusClass() => _currentStatus switch
     {
-        $"Checking {component} health...",
-        $"All systems nominal.",
-        $"Memory usage: 142MB"
+        ViennaDotNet.LauncherUI.ServerStatus.Online => "status-online",
+        ViennaDotNet.LauncherUI.ServerStatus.Starting => "status-starting",
+        _ => "status-offline"
     };
+
+    private IEnumerable<string> GetDisplayLogs() => 
+        _activeTab == "Launcher" ? LogService.Logs : GetMockLogs(_activeTab);
+
+    private List<string> GetMockLogs(string component) => new() { $"Checking {component} health...", "All systems nominal." };
 }

@@ -59,13 +59,13 @@ public static partial class ProcessExtensions
     {
         try
         {
-            if (await process.TryCloseMainWindowAsync(timeout, cancellationToken))
-            {
-                return true;
-            }
-
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && allowConsoleReAlloc)
             {
+                if (await process.TryCloseMainWindowAsync(timeout, cancellationToken))
+                {
+                    return true;
+                }
+
                 if (await process.WinTrySendCtrlCAsync(timeout, cancellationToken))
                 {
                     return true;
@@ -253,15 +253,21 @@ public static partial class ProcessExtensions
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
-            string fd0 = await File.ReadAllTextAsync($"/proc/{process.Id}/fd/0", cancellationToken);
-            if (!string.IsNullOrEmpty(fd0) && fd0.Contains("/dev/tty", StringComparison.Ordinal))
+            try
             {
-                return "INT";
+                // We want to see WHERE the symlink points, not read its contents.
+                var linkInfo = File.ResolveLinkTarget($"/proc/{process.Id}/fd/0", returnFinalTarget: true);
+                string targetPath = linkInfo?.FullName ?? string.Empty;
+
+                if (targetPath.Contains("/dev/tty") || targetPath.Contains("/dev/pts"))
+                {
+                    return "INT";
+                }
             }
+            catch { }
         }
-        else
+        else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
-            Debug.Assert(RuntimeInformation.IsOSPlatform(OSPlatform.OSX));
             var psi = new ProcessStartInfo
             {
                 FileName = "ps",
@@ -272,14 +278,16 @@ public static partial class ProcessExtensions
             };
 
             using var ps = Process.Start(psi);
-            Debug.Assert(ps is not null);
-
-            string tty = ps.StandardOutput.ReadToEnd().Trim();
-            await ps.WaitForExitAsync(1000, cancellationToken);
-
-            if (!string.IsNullOrEmpty(tty) && tty != "?")
+            if (ps != null)
             {
-                return "INT";
+                // Use the async version of ReadToEnd to avoid blocking the thread
+                string tty = await ps.StandardOutput.ReadToEndAsync(cancellationToken);
+                await ps.WaitForExitAsync(cancellationToken);
+
+                if (!string.IsNullOrWhiteSpace(tty) && !tty.Contains('?'))
+                {
+                    return "INT";
+                }
             }
         }
 

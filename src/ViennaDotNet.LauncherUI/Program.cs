@@ -19,6 +19,7 @@ public partial class Program
 
     private static async Task Main(string[] args)
     {
+        Environment.CurrentDirectory = AppContext.BaseDirectory; // todo:
 
         Settings.Instance = await Settings.LoadAsync(Settings.DefaultPath);
 
@@ -29,7 +30,7 @@ public partial class Program
 
         var log = new LoggerConfiguration()
             .WriteTo.Console()
-            .WriteTo.File("logs/api_server/log.txt", rollingInterval: RollingInterval.Day, rollOnFileSizeLimit: true, fileSizeLimitBytes: 8338607, outputTemplate: "{Timestamp:HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+            .WriteTo.File("logs/launcher/log.txt", rollingInterval: RollingInterval.Day, rollOnFileSizeLimit: true, fileSizeLimitBytes: 8338607, outputTemplate: "{Timestamp:HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
             .WriteTo.LogsLogSink(logsLogService)
             .MinimumLevel.Debug()
             .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
@@ -38,6 +39,8 @@ public partial class Program
             .CreateLogger();
 
         Log.Logger = log;
+
+        builder.Services.AddSingleton<ServerManager>();
 
         // Add services to the container.
         builder.Services.AddRazorComponents()

@@ -33,4 +33,5 @@ git clone https://github.com/Earth-Restored/ViennaDotNet.git
 ```
 http://YOURPCIPADDRESS:8080
 ```
--
+- Now go back and start patching;
+- Once that's done, congratulations! You can now open the newly installed app and play Minecraft Earth!

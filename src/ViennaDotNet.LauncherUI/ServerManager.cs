@@ -137,8 +137,11 @@ public class ServerManager
         BuildplateLauncher.Run(settings, logger);
         cancellationToken.ThrowIfCancellationRequested();
         TappablesGenerator.Run(settings, logger);
-        cancellationToken.ThrowIfCancellationRequested();
-        TileRenderer.Run(settings, logger);
+        if (settings.EnableTileRenderingLabel ?? true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            TileRenderer.Run(settings, logger);
+        }
 
         logger.Information("Waiting for programs to start up");
         await Task.Delay(7500, cancellationToken); // wait a bit for them to start (and possible crash)
@@ -146,7 +149,7 @@ public class ServerManager
         bool error = false;
         foreach (string programExe in programExes)
         {
-            if (!ProcessUtils.GetProgramProcesses(programExe).Any())
+            if (!ProcessUtils.GetProgramProcesses(programExe).Any() && (programExe != TileRenderer.ExeName || (settings.EnableTileRenderingLabel ?? true)))
             {
                 logger.Error($"It was detected that {programExe} crashed/exited, make sure all options are set correctly, look into logs/[program name]/logxxx for more info");
                 error = true;

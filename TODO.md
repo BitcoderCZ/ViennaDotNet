@@ -14,6 +14,7 @@
 - Move logs folder up to the folder with run_launcher.ps1 - cli arg to specify log file location on all programs
 - View old logs in launcher?
 - Clear logs - seperate permission
+- Show roles on profile page
 
 ## Refactoring
 

@@ -14,16 +14,19 @@
         <h2 class="mb-0">Buildplates</h2>
         
         <div class="input-group" style="max-width: 400px;">
-            <input type="text" class="form-control" placeholder="Search by name..." 
-                   @bind="_searchTerm" @bind:event="oninput" @onkeyup="HandleSearchKeyPress" />
+            <input type="text" class="form-control" placeholder="Search by name..." @bind="_searchTerm"
+                   @bind:event="oninput" @onkeyup="HandleSearchKeyPress" />
             <button class="btn btn-outline-secondary" type="button" @onclick="DoSearch">
                 <i class="bi bi-search"></i> Search
             </button>
         </div>
 
-        <a href="/Admin/ImportBuildplate" class="btn btn-primary fw-bold">
-            <i class="bi bi-plus-lg"></i> Import Buildplate(s)
-        </a>
+        @if (HasPermission(Permissions.ManageBuildplates))
+        {
+            <a href="/Admin/ImportBuildplate" class="btn btn-primary fw-bold">
+                <i class="bi bi-plus-lg"></i> Import Buildplate(s)
+            </a>
+        }
     </div>
 
     <div class="row g-4">
@@ -31,8 +34,8 @@
         {
             <div class="col-12">
                 <div class="alert alert-info">
-                    @(string.IsNullOrWhiteSpace(_searchTerm) 
-                        ? "No buildplates found. Try importing one!" 
+                    @(string.IsNullOrWhiteSpace(_searchTerm)
+                        ? "No buildplates found. Try importing one!"
                         : "No buildplates match your search.")
                 </div>
             </div>
@@ -292,7 +295,8 @@
             var earthDB = EarthDB.Open(Settings.Instance.EarthDatabaseConnectionString ?? "");
             
             await new EarthDB.ObjectQuery(true)
-                .UpdateBuildplate(bp.Id, new DB.Models.Global.TemplateBuildplate(bp.Name, bp.Size, bp.Offset, bp.BlocksPerMeter, bp.IsNight, bp.ServerDataObjectId, bp.PreviewObjectId))
+                .UpdateBuildplate(bp.Id, new DB.Models.Global.TemplateBuildplate(bp.Name, bp.Size, bp.Offset, bp.BlocksPerMeter,
+bp.IsNight, bp.ServerDataObjectId, bp.PreviewObjectId))
                 .ExecuteAsync(earthDB, default);
 
             await Task.Delay(250);

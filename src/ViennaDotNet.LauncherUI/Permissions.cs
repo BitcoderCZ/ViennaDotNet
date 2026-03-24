@@ -29,6 +29,8 @@ public static class Permissions
 
     [PermissionInfo("Players", "View all player accounts")]
     public const string ViewPlayers = "player.view";
+    [PermissionInfo("Players", "Manage player accounts - edit, delete")]
+    public const string ManagePlayers = "player.manage";
 
     [PermissionInfo("Buildplates", "View the imported buildplates")]
     public const string ViewBuildplates = "buildplate.view";

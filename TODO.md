@@ -16,8 +16,9 @@
 - Clear logs - seperate permission
 - Show roles on profile page
 - Export buildplates in both formats
-- Allow hostname in IPv4 setting
 - Launch/connect to remote components - e.g. run buildplate launcher on another PC
+- Edit player buildplate name and scale
+- View the player buildplate's template (if exists) - open page, search id?
 
 ## Refactoring
 

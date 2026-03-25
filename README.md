@@ -44,3 +44,15 @@ http://YOURPCIPADDRESS:8080
 ```
 - Now go back and start patching;
 - Once that's done, congratulations! You can now open the newly installed app and play Minecraft Earth!
+
+## Common Errors & Troubleshooting
+
+### I cannot see the "Start Server" button when logged in
+**Cause:** Only the very first account created on the launcher is granted full administrative permissions by default. Subsequent accounts lack the necessary privileges to manage the server.
+
+**Solutions:**
+* **Option A (Grant Permissions):** Log into the original (first) account and use the Manage Users/Roles page to grant server permissions to your second account.
+* **Option B (Reset Database):** If you have lost access to the first account and need to start fresh, you can reset the user database. 
+    * Navigate to: `launcher/Data/`
+    * **Delete** the `app.db` file.
+    * *Note: This will remove all existing accounts and allow you to register a new primary admin account.*

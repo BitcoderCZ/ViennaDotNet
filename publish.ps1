@@ -58,10 +58,8 @@ foreach ($buildProfile in $profiles) {
 $originalPath = Get-Location
 $launcherDir = Join-Path $PSScriptRoot "launcher"
 
-if (-not $isWindows) {
+if ((-not $isWindows) -and (-not $isLinux)) {
     $isWindows = [System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Win32NT
-}
-if (-not $isLinux) {
     $isLinux = [System.Environment]::OSVersion.Platform -eq [System.PlatformID]::Unix
 }
 

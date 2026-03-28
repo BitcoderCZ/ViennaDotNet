@@ -42,6 +42,89 @@ public sealed class Importer
         return await StoreTemplate(templateId, name, preview, worldData, cancellationToken);
     }
 
+    public async Task<bool> RegenerateTemplatePreviewAsync(string templateId, CancellationToken cancellationToken = default)
+    {
+        TemplateBuildplate? template;
+        try
+        {
+            var results = await new EarthDB.ObjectQuery(false)
+               .GetBuildplate(templateId)
+               .ExecuteAsync(_earthDB, cancellationToken);
+
+            template = results.GetBuildplate(templateId);
+        }
+        catch (EarthDB.DatabaseException ex)
+        {
+            _logger.Error($"Failed to fetch template {templateId}: {ex}");
+            return false;
+        }
+
+        if (template is null)
+        {
+            _logger.Warning($"Template {templateId} does not exist");
+            return false;
+        }
+
+        if (string.IsNullOrEmpty(template.ServerDataObjectId))
+        {
+            _logger.Error($"Template '{templateId}' has no associated world data");
+            return false;
+        }
+
+        var serverData = (await _objectStoreClient.Get(template.ServerDataObjectId).Task) as byte[];
+
+        if (serverData is null)
+        {
+            _logger.Error($"Could not get world data for template '{templateId}'");
+            return false;
+        }
+
+        WorldData? worldData;
+        using (var ms = new MemoryStream(serverData))
+        {
+            worldData = await ReadWorldFile(ms, cancellationToken);
+        }
+
+        if (worldData is null)
+        {
+            return false;
+        }
+
+        byte[] preview = await GeneratePreview(worldData);
+
+        string? newPreviewObjectId = (string?)await _objectStoreClient.Store(preview).Task;
+        if (newPreviewObjectId is null)
+        {
+            _logger.Error($"Could not store template's preview object in object store '{templateId}'");
+            return false;
+        }
+
+        var oldPreviewObjectId = template.PreviewObjectId;
+
+        template = template with { PreviewObjectId = newPreviewObjectId, };
+
+        try
+        {
+            var results = await new EarthDB.ObjectQuery(true)
+               .UpdateBuildplate(templateId, template)
+               .ExecuteAsync(_earthDB, cancellationToken);
+
+            if (!string.IsNullOrEmpty(oldPreviewObjectId))
+            {
+                await _objectStoreClient.Delete(oldPreviewObjectId).Task;
+                _logger.Debug($"Deleted old preview for template '{templateId}'");
+            }
+
+            return true;
+        }
+        catch (EarthDB.DatabaseException ex)
+        {
+            _logger.Error($"Failed to update template buidplate in database: {ex}");
+            await _objectStoreClient.Delete(newPreviewObjectId).Task;
+            return false;
+        }
+    }
+
     public async Task<bool> RemoveTemplateAsync(string templateId, bool removeFromPlayers, CancellationToken cancellationToken = default)
     {
         _logger.Information($"Starting removal of template {templateId}");
@@ -313,7 +396,7 @@ public sealed class Importer
 
                             if (!worldFileContents.TryGetValue(filePath, out byte[]? data))
                             {
-                                Log.Error($"World file is missing {filePath}");
+                                _logger.Error($"World file is missing {filePath}");
                                 return null;
                             }
 

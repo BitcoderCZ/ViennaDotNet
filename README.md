@@ -22,7 +22,13 @@ In addition to the original Vienna feature set, this port adds:
 
 ## Installation guide
 
-- First thing first, make sure you have the [.NET 10.0 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/10.0) installed on your PC;
+### Requirements
+
+- [.NET 10.0 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/10.0)
+- Java 17 or higher (JRE)
+
+### Instructions
+
 - Clone the repository by running the following command on your terminal:
 ```
 git clone https://github.com/Earth-Restored/ViennaDotNet.git

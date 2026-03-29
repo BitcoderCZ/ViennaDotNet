@@ -64,29 +64,27 @@ public sealed class ConsoleProcess
     public void ExecuteAsync(string? workingDir, params string[] args)
     {
         if (running)
+        {
             throw new InvalidOperationException("Process is still Running. Please wait for the process to complete.");
+        }
 
         if (!string.IsNullOrEmpty(workingDir))
+        {
             Process.StartInfo.WorkingDirectory = workingDir;
+        }
 
         var formattedArgs = args.Select(a =>
         {
-            if (string.IsNullOrEmpty(a)) return "\"\"";
-            
-            // If the string contains spaces, brackets, or quotes, it needs special handling
-            if (a.Contains("{") || a.Contains(" ") || a.Contains("\"") || a.Contains("'"))
+            if (string.IsNullOrEmpty(a))
             {
-                // 1. Escape single quotes for PowerShell (' becomes '')
-                string escapedForPwsh = a.Replace("'", "''");
-                
-                // 2. Escape double quotes with a backslash so the OS shell (bash/cmd) 
-                // passes them cleanly to PowerShell (\" becomes literal ")
-                string escapedForOs = escapedForPwsh.Replace("\"", "\\\"");
-
-                // 3. Wrap the whole thing in SINGLE QUOTES. 
-                // This tells PowerShell: "Treat everything inside as a literal string, do not parse it!"
-                return $"'{escapedForOs}'";
+                return "\"\"";
             }
+
+            if (a.Contains(" ") || a.Contains("{") || a.Contains("\""))
+            {
+                return $"\"{a.Replace("\"", "\\\"")}\"";
+            }
+
             return a;
         });
 
@@ -98,9 +96,7 @@ public sealed class ConsoleProcess
         }
         else
         {
-            Process.StartInfo.Arguments = string.Join(" ", args.Select(a => 
-            a.Contains(" ") || a.Contains("{") || a.Contains("\"") ? $"\"{a.Replace("\"", "\\\"")}\"" : a
-        ));
+            Process.StartInfo.Arguments = arguments;
         }
 
         Process.Start();
@@ -113,12 +109,18 @@ public sealed class ConsoleProcess
         }
     }
 
+
     public void Write(string data)
     {
-        if (!IORedirected) throw new InvalidOperationException($"Can't write, because {nameof(IORedirected)} is false");
+        if (!IORedirected)
+        {
+            throw new InvalidOperationException($"Can't write, because {nameof(IORedirected)} is false");
+        }
 
         if (data is null)
+        {
             return;
+        }
 
         Process.StandardInput.Write(data);
         Process.StandardInput.Flush();
@@ -142,22 +144,18 @@ public sealed class ConsoleProcess
 
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            Process.StartInfo.FileName = "pwsh";
-            // The outer command string is wrapped in "...", so internal " must be \"
-            Process.StartInfo.Arguments = $"-NoExit -Command \"& '{_filePath}' {formattedArgs}\"";
+            Process.StartInfo.FileName = "cmd.exe";
+
+            Process.StartInfo.Arguments = $"/k \"\"{_filePath}\" {formattedArgs}\"";
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
             Process.StartInfo.FileName = "x-terminal-emulator";
-            // Linux terminal emulators vary; passing the command as a single string 
-            // to 'pwsh' is usually the most stable.
-            Process.StartInfo.Arguments = $"-e pwsh -NoExit -Command \"& '{_filePath}' {formattedArgs}\"";
-            Log.Information(Process.StartInfo.Arguments);
+            Process.StartInfo.Arguments = $"-e bash -c \"'{_filePath}' {formattedArgs}; exec bash\"";
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
-            // AppleScript needs its own layer of quote escaping (replace " with \")
-            string command = $"& '{_filePath}' {formattedArgs}";
+            string command = $"'{_filePath}' {formattedArgs}";
             string appleScript = $"tell application \"Terminal\" to do script \"{command.Replace("\"", "\\\"")}\"";
             Process.StartInfo.FileName = "osascript";
             Process.StartInfo.Arguments = $"-e \"{appleScript}\"";

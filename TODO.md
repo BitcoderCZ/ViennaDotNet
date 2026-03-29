@@ -23,6 +23,7 @@
 - Add the level reward buildplates and add them to level ups
 - NFC mini figures
 - Some kind of auth for the logs, maybe pass a random secret to the cli args and verify it in the controller?
+- A lot of things are quite slower on windows, investigate and/or add spinners
 
 ## Refactoring
 

@@ -14,6 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.5" />
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="10.0.5" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.5" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.5" />
@@ -28,6 +29,7 @@
     <ProjectReference Include="../ViennaDotNet.BuildplateImporter/ViennaDotNet.BuildplateImporter.csproj" />
     <ProjectReference Include="../ViennaDotNet.Common/ViennaDotNet.Common.csproj" />
     <ProjectReference Include="../ViennaDotNet.DB/ViennaDotNet.DB.csproj" />
+    <ProjectReference Include="../ViennaDotNet.Launcher.Client/ViennaDotNet.Launcher.Client.csproj" />
     <ProjectReference Include="../ViennaDotNet.ObjectStore.Client/ViennaDotNet.ObjectStore.Client.csproj" />
   </ItemGroup>
 

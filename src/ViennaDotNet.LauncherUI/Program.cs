@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Sockets;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -89,7 +90,21 @@ public partial class Program
 
         builder.Services.AddControllers();
 
-        var app = builder.Build();
+      
+
+        try
+        {
+            (await CreateApp(builder)).Run();
+        }
+        catch (SocketException)
+        {
+            (await CreateApp(builder)).Run();
+        }
+    }
+
+    private static async Task<WebApplication> CreateApp(WebApplicationBuilder builder)
+    {
+          var app = builder.Build();
 
         // Configure the HTTP request pipeline.
         if (app.Environment.IsDevelopment())
@@ -153,8 +168,6 @@ public partial class Program
             var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
             await EnsureBuiltInRolesAsync(roleManager);
         }
-
-        app.Run();
     }
 
     private static async Task EnsureBuiltInRolesAsync(RoleManager<ApplicationRole> roleManager)

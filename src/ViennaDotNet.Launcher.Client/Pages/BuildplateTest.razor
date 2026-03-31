@@ -1,91 +1,11 @@
 ﻿@page "/bptest"
-@using Veldrid
-@using Veldrid.Sdl2
-@using Veldrid.StartupUtilities
+@using System.Numerics
 @rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 
 <PageTitle>Counter</PageTitle>
 
-<h1>Counter bla</h1>
+<p>
+    ABC
+</p>
 
-<p role="status">Current count: @currentCount</p>
-
-<button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
-
-<div class="canvas-container">
-    <h3>Veldrid Render Target</h3>
-    <canvas id="canvas" 
-            width="800" 
-            height="600" 
-            style="border: 2px solid black; background: #000;">
-    </canvas>
-</div>
-
-@code {
-    private int currentCount = 0;
-
-    private void IncrementCount()
-    {
-        currentCount++;
-    }
-
-    private bool _isRendering = false;
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            _isRendering = true;
-            await StartVeldridAsync();
-        }
-    }
-
-    private async Task StartVeldridAsync()
-    {
-        // 1. Setup window (Emscripten maps this natively to <canvas id="canvas">)
-        WindowCreateInfo windowCI = new WindowCreateInfo()
-        {
-            X = 100, Y = 100,
-            WindowWidth = 800, WindowHeight = 600,
-            WindowTitle = "Veldrid Blazor Setup"
-        };
-
-        Sdl2Window window = VeldridStartup.CreateWindow(ref windowCI);
-
-        // 2. Setup Graphics Device (WASM uses OpenGLES, which translates to WebGL)
-        GraphicsDeviceOptions options = new GraphicsDeviceOptions(
-            debug: false,
-            swapchainDepthFormat: PixelFormat.R16_UNorm,
-            syncToVerticalBlank: true,
-            resourceBindingModel: ResourceBindingModel.Improved,
-            preferDepthRangeZeroToOne: true,
-            preferStandardClipSpaceYDirection: true);
-
-        GraphicsDevice gd = VeldridStartup.CreateGraphicsDevice(window, options, GraphicsBackend.OpenGLES);
-        CommandList cl = gd.ResourceFactory.CreateCommandList();
-
-        // 3. The Non-Blocking Render Loop
-        while (window.Exists && _isRendering)
-        {
-            // Process Emscripten input events
-            window.PumpEvents();
-
-            cl.Begin();
-            cl.SetFramebuffer(gd.MainSwapchain.Framebuffer);
-            
-            // Clear the screen to Cornflower Blue to prove the pipeline works!
-            cl.ClearColorTarget(0, RgbaFloat.CornflowerBlue); 
-            cl.End();
-
-            gd.SubmitCommands(cl);
-            gd.SwapBuffers();
-
-            // VERY IMPORTANT: Yield to the browser's UI thread
-            await Task.Delay(1); 
-        }
-
-        // Cleanup
-        gd.Dispose();
-        cl.Dispose();
-    }
-}
+<Viewer UseDefaultScene=@true></Viewer>

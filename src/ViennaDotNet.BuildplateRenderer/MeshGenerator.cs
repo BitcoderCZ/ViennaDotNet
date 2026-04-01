@@ -1,7 +1,13 @@
+using System.Collections.Frozen;
+using System.Diagnostics;
 using System.IO.Compression;
 using System.Numerics;
 using System.Runtime.InteropServices;
+using BitcoderCZ.Maths.Vectors;
+using SharpNBT;
 using ViennaDotNet.Buildplate.Model;
+using ViennaDotNet.BuildplateRenderer.Utils;
+using ViennaDotNet.Common.Utils;
 
 namespace ViennaDotNet.BuildplateRenderer;
 
@@ -30,170 +36,119 @@ public class BuildplateMesh
 
 internal static class MeshGenerator
 {
-    [StructLayout(LayoutKind.Auto)]
-    private readonly struct BlockState
+    private static readonly FrozenSet<string> InvisibleBlocks = new HashSet<string>()
     {
-        public readonly string Name;
-        public readonly bool IsAir => Name == "minecraft:air";
-        public readonly bool IsMask => Name == "fountain:invisible_constraint";
+        "minecraft:air",
+        "fountain:solid_air",
+        "fountain:non_replaceable_air",
+        "fountain:invisible_constraint",
+        "fountain:blend_constraint",
+        "fountain:border_constraint",
+    }.ToFrozenSet(StringComparer.Ordinal);
 
-        public readonly bool IsTransparent => IsAir || IsMask || Name.Contains("glass") || Name.Contains("leaves");
-    }
-
-    public static BuildplateMesh Generate(WorldData worldData)
+    public static async Task<BuildplateMesh> GenerateAsync(WorldData worldData, CancellationToken cancellationToken = default)
     {
-        // 1. Initialize a 3D grid for the buildplate.
-        // Assuming a max height of 256 or 384 depending on the version. Let's use 256 for this example.
-        int height = 256;
-        BlockState[,,] voxelGrid = new BlockState[worldData.Size, height, worldData.Size];
-
-        // 2. Extract Data from the Zip
-        using (var ms = new MemoryStream(worldData.ServerData))
-        using (var archive = new ZipArchive(ms, ZipArchiveMode.Read))
+        using (var serverDataStream = new MemoryStream(worldData.ServerData))
+        using (var zip = await ZipArchive.CreateAsync(serverDataStream, ZipArchiveMode.Read, false, null, cancellationToken))
         {
-            foreach (var entry in archive.Entries)
+            foreach (var entry in zip.Entries)
             {
-                if (entry.FullName.StartsWith("region/") && entry.Name.EndsWith(".mca"))
+                if (!entry.IsDirectory && entry.FullName.StartsWith("region"))
                 {
-                    ProcessRegionFile(entry, voxelGrid, worldData);
+                    var entryStream = await entry.OpenAsync(cancellationToken);
+                    byte[] regionData = GC.AllocateUninitializedArray<byte>(checked((int)entry.Length));
+                    await entryStream.ReadExactlyAsync(regionData, cancellationToken);
+
+                    ProcessRegion(regionData, RegionUtils.PathToPos(entry.FullName));
                 }
             }
         }
 
-        // 3. Generate the Mesh via Face Culling
-        return BuildMesh(voxelGrid, worldData.Size, height);
+        // todo: use the official resourcepack
+        throw new NotImplementedException();
     }
 
-    private static void ProcessRegionFile(ZipArchiveEntry mcaEntry, BlockState[,,] voxelGrid, WorldData config)
+    private static void ProcessRegion(byte[] regionData, int2 regionPosition)
     {
-        using var stream = mcaEntry.Open();
-        using var reader = new BinaryReader(stream);
-
-        // Read the 4KB offset table (1024 chunks max per region, 4 bytes per chunk)
-        for (int i = 0; i < 1024; i++)
+        foreach (var localPosition in RegionUtils.GetChunkPositions(regionData))
         {
-            byte[] offsetData = reader.ReadBytes(4);
-            int offset = (offsetData[0] << 16) | (offsetData[1] << 8) | offsetData[2];
-            int sectorCount = offsetData[3];
+            var chunkNBT = RegionUtils.ReadChunkNTB(regionData, localPosition);
 
-            if (offset == 0 && sectorCount == 0) continue; // Chunk not generated
-
-            // Note: In a real implementation, you'd seek to (offset * 4096).
-            // Since ZipStreams usually don't support Seek, you might need to copy the MCA to a memory stream first.
-
-            // --> [SEEK TO OFFSET * 4096] <--
-            // int length = reader.ReadInt32(); // Big Endian
-            // byte compressionType = reader.ReadByte(); 
-            // byte[] compressedNbt = reader.ReadBytes(length - 1);
-
-            // Decompress (Zlib/GZip depending on compressionType) and pass to SharpNBT:
-            // using var nbtStream = new MemoryStream(Decompress(compressedNbt));
-            // var chunkCompound = CompoundTag.Read(nbtStream);
-
-            // Extract sections, read the Palette and block_states array, 
-            // and populate `voxelGrid[x, y, z]`
-            // (Ignoring exact bit-unpacking logic here for brevity)
+            ProcessChunk(chunkNBT, RegionUtils.LocalToChunk(localPosition, regionPosition));
         }
     }
 
-    private static BuildplateMesh BuildMesh(BlockState[,,] grid, int size, int height)
+    // https://minecraft.wiki/w/Chunk_format
+    private static void ProcessChunk(CompoundTag nbt, int2 chunkPosition)
     {
-        var vertices = new List<VoxelVertex>();
-        var indices = new List<uint>();
-        uint vertexCount = 0;
+        Debug.Assert(((IntTag)nbt["xPos"]).Value == chunkPosition.X);
+        Debug.Assert(((IntTag)nbt["zPos"]).Value == chunkPosition.Y);
 
-        // Loop every block in the buildplate
-        for (int x = 0; x < size; x++)
+        foreach (var item in (ListTag)nbt["sections"])
         {
-            for (int y = 0; y < height; y++)
+            var subChunkNBT = (CompoundTag)item;
+            if (!subChunkNBT.ContainsKey("block_states"))
             {
-                for (int z = 0; z < size; z++)
-                {
-                    BlockState currentBlock = grid[x, y, z];
+                continue;
+            }
 
-                    // If it's air or our special mask block, we DO NOT render it.
-                    if (currentBlock.IsAir || currentBlock.IsMask)
-                        continue;
+            ProcessSubChunk(subChunkNBT, new int3(chunkPosition.X, ((ByteTag)subChunkNBT["Y"]).Value, chunkPosition.Y));
+        }
+    }
 
-                    float texIndex = GetTextureIndex(currentBlock.Name);
+    private static void ProcessSubChunk(CompoundTag nbt, int3 chunkPosition)
+    {
+        var blockStates = (CompoundTag)nbt["block_states"];
 
-                    // --- CULLING LOGIC ---
-                    // We only generate a face if the adjacent block is transparent/air/mask.
+        var palette = (ListTag)blockStates["palette"];
 
-                    // +Y (Top)
-                    if (y == height - 1 || grid[x, y + 1, z].IsTransparent)
-                        AddFace(vertices, indices, ref vertexCount, x, y, z, Vector3.UnitY, texIndex);
-
-                    // -Y (Bottom)
-                    if (y == 0 || grid[x, y - 1, z].IsTransparent)
-                        AddFace(vertices, indices, ref vertexCount, x, y, z, -Vector3.UnitY, texIndex);
-
-                    // +X (Right)
-                    if (x == size - 1 || grid[x + 1, y, z].IsTransparent)
-                        AddFace(vertices, indices, ref vertexCount, x, y, z, Vector3.UnitX, texIndex);
-
-                    // -X (Left)
-                    if (x == 0 || grid[x - 1, y, z].IsTransparent)
-                        AddFace(vertices, indices, ref vertexCount, x, y, z, -Vector3.UnitX, texIndex);
-
-                    // +Z (Front)
-                    if (z == size - 1 || grid[x, y, z + 1].IsTransparent)
-                        AddFace(vertices, indices, ref vertexCount, x, y, z, Vector3.UnitZ, texIndex);
-
-                    // -Z (Back)
-                    if (z == 0 || grid[x, y, z - 1].IsTransparent)
-                        AddFace(vertices, indices, ref vertexCount, x, y, z, -Vector3.UnitZ, texIndex);
-                }
+        bool foundVisibleBlock = false;
+        foreach (var entry in palette)
+        {
+            if (!InvisibleBlocks.Contains(((StringTag)((CompoundTag)entry)["Name"]).Value))
+            {
+                foundVisibleBlock = true;
+                break;
             }
         }
 
-        return new BuildplateMesh
+        if (!foundVisibleBlock)
         {
-            Vertices = vertices.ToArray(),
-            Indices = indices.ToArray()
-        };
-    }
+            return;
+        }
 
-    private static void AddFace(List<VoxelVertex> vertices, List<uint> indices, ref uint vCount, int x, int y, int z, Vector3 normal, float texIndex)
-    {
-        Span<Vector3> corenrs = stackalloc Vector3[4];
-        GetFaceCorners(x, y, z, normal, corenrs);
+        var blocks = blockStates.ContainsKey("data")
+            ? ChunkUtils.ReadBlockData((LongArrayTag)blockStates["data"])
+            : ChunkUtils.EmptySubChunk;
 
-        // 2. Add Vertices
-        vertices.Add(new VoxelVertex(corners[0], normal, new Vector2(0, 0), texIndex));
-        vertices.Add(new VoxelVertex(corners[1], normal, new Vector2(1, 0), texIndex));
-        vertices.Add(new VoxelVertex(corners[2], normal, new Vector2(1, 1), texIndex));
-        vertices.Add(new VoxelVertex(corners[3], normal, new Vector2(0, 1), texIndex));
+        var blockPosition = int3.Zero;
 
-        indices.Add(vCount + 0); indices.Add(vCount + 1); indices.Add(vCount + 2);
-        indices.Add(vCount + 2); indices.Add(vCount + 3); indices.Add(vCount + 0);
-
-        vCount += 4;
-    }
-
-    private static float GetTextureIndex(string blockName)
-    {
-        return blockName switch
+        foreach (var blockIndex in blocks)
         {
-            "minecraft:dirt" => 0f,
-            "minecraft:stone" => 1f,
-            "minecraft:grass_block" => 2f,
-            _ => 3f // default/missing texture
-        };
-    }
+            Debug.Assert(blockPosition.X is >= 0 and < ChunkUtils.Width);
+            Debug.Assert(blockPosition.Y is >= 0 and < ChunkUtils.SubChunkHeight);
+            Debug.Assert(blockPosition.Z is >= 0 and < ChunkUtils.Width);
 
-    private static void GetFaceCorners(int x, int y, int z, Vector3 normal, Span<Vector3> corners)
-    {
-        // TODO: corners
+            var paletteEntry = (CompoundTag)palette[blockIndex];
 
-        if (normal == Vector3.UnitY) return new[] {
-            new Vector3(x, y + 1, z),
-            new Vector3(x + 1, y + 1, z),
-            new Vector3(x + 1, y + 1, z + 1),
-            new Vector3(x, y + 1, z + 1)
-        };
+            string blockName = ((StringTag)paletteEntry["Name"]).Value;
 
-        // (You would implement the other 5 directions similarly...)
-        return new Vector3[4];
+            if (!InvisibleBlocks.Contains(blockName))
+            {
+                
+            }
+
+            blockPosition.X++;
+            if (blockPosition.X >= ChunkUtils.Width)
+            {
+                blockPosition.X = 0;
+                blockPosition.Z++;
+                if (blockPosition.Z >= 16)
+                {
+                    blockPosition.Z = 0;
+                    blockPosition.Y++;
+                }
+            }
+        }
     }
 }

@@ -23,7 +23,7 @@ public sealed record WorldData(
             {
                 foreach (var entry in zip.Entries)
                 {
-                    if (entry.IsDirectory())
+                    if (entry.IsDirectory)
                     {
                         continue;
                     }

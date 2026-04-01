@@ -4,6 +4,8 @@ using ViennaDotNet.BuildplateRenderer;
 
 Console.WriteLine("Hello, World!");
 
+var resourcePack = ResourcePack.Load(new DirectoryInfo("~/Downloads/minecraft".Replace("~", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile))));
+
 WorldData? worldData;
 
 using (var fs = File.OpenRead("test.zip"))

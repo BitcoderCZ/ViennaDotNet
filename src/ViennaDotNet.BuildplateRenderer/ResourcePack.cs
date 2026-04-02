@@ -2,8 +2,16 @@ using System.Collections.Frozen;
 using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Numerics;
+using System.Text.Json;
+using BitcoderCZ.Buffers;
 using ViennaDotNet.BuildplateRenderer.Models.ResourcePacks;
 using ViennaDotNet.BuildplateRenderer.Utils;
+using BSVBufferArray = BitcoderCZ.Buffers.FixedArray1<ViennaDotNet.BuildplateRenderer.Models.ResourcePacks.VariantModel>;
+using BSVBuffer = BitcoderCZ.Buffers.ImmutableInlineArray<BitcoderCZ.Buffers.FixedArray1<ViennaDotNet.BuildplateRenderer.Models.ResourcePacks.VariantModel>, ViennaDotNet.BuildplateRenderer.Models.ResourcePacks.VariantModel>;
+using MPSBufferArray = BitcoderCZ.Buffers.FixedArray1<string>;
+using MPSBuffer = BitcoderCZ.Buffers.ImmutableInlineArray<BitcoderCZ.Buffers.FixedArray1<string>, string>;
+using System.Runtime.InteropServices;
+using BitcoderCZ.Utils;
 
 namespace ViennaDotNet.BuildplateRenderer;
 
@@ -12,10 +20,14 @@ namespace ViennaDotNet.BuildplateRenderer;
 public sealed class ResourcePack
 {
     private readonly FrozenDictionary<string, BlockModel> _blockModels;
+    private readonly FrozenDictionary<BlockState, (BSVBuffer Buffer, int TotalWeight)> _blockStatesVariant;
+    private readonly FrozenDictionary<string, ImmutableArray<MultipartCase>> _blockStatesMultipart;
 
-    public ResourcePack(FrozenDictionary<string, BlockModel> blockModels)
+    public ResourcePack(FrozenDictionary<string, BlockModel> blockModels, FrozenDictionary<BlockState, (BSVBuffer Buffer, int TotalWeight)> blockStates, FrozenDictionary<string, ImmutableArray<MultipartCase>> blockStatesMultipart)
     {
         _blockModels = blockModels;
+        _blockStatesVariant = blockStates;
+        _blockStatesMultipart = blockStatesMultipart;
     }
 
     public static ResourcePack Load(DirectoryInfo rootDir)
@@ -25,34 +37,132 @@ public sealed class ResourcePack
 
         foreach (var file in blockModelsDir.EnumerateFiles())
         {
-            string blockName = Path.GetFileNameWithoutExtension(file.Name);
+            string modelName = Path.GetFileNameWithoutExtension(file.Name);
             BlockModelJson model;
             using (var fs = File.OpenRead(file.FullName))
             {
                 model = JsonUtils.DeserializeJson<BlockModelJson>(fs) ?? new();
             }
 
-            blockModelsJson.Add(blockName, model);
+            blockModelsJson.Add($"minecraft:block/{modelName}", model);
         }
 
         var blockModels = new Dictionary<string, BlockModel>(blockModelsJson.Count);
-        foreach (var (blokName, _) in blockModelsJson)
+        foreach (var (modelName, _) in blockModelsJson)
         {
-            ResolveBlockModel(blokName);
+            ResolveBlockModel(modelName);
         }
 
-        return new ResourcePack(blockModels.ToFrozenDictionary());
+        var blockStatesDir = new DirectoryInfo(Path.Combine(rootDir.FullName, "blockstates"));
+        Dictionary<BlockState, (BSVBuffer Buffer, int TotalWeight)> blockStatesVariant = [];
+        Dictionary<string, ImmutableArray<MultipartCase>> blockStatesMultipart = [];
+        foreach (var file in blockStatesDir.EnumerateFiles())
+        {
+            string blockName = $"minecraft:{Path.GetFileNameWithoutExtension(file.Name)}";
+            BlockStateJson json;
+            using (var fs = File.OpenRead(file.FullName))
+            {
+                json = JsonUtils.DeserializeJson<BlockStateJson>(fs) ?? new();
+            }
+
+            if (json.Variants is not null)
+            {
+                foreach (var variant in json.Variants)
+                {
+                    var props = ParseVariantString(variant.Key);
+                    var state = new BlockState(blockName, props);
+
+                    int totalWeight = 0;
+                    foreach (var item in variant.Value)
+                    {
+                        totalWeight += item.Weight;
+                    }
+
+                    blockStatesVariant[state] = (ImmutableInlineArray.Create<BSVBufferArray, VariantModel>(variant.Value), totalWeight);
+                }
+            }
+            else if (json.Multipart is not null)
+            {
+                var builder = ImmutableArray.CreateBuilder<MultipartCase>(json.Multipart.Length);
+                foreach (var @case in json.Multipart)
+                {
+                    int totalWeight = 0;
+                    foreach (var item in @case.Apply)
+                    {
+                        totalWeight += item.Weight;
+                    }
+
+                    // Or<And<State>>
+                    //public ImmutableArray<ImmutableArray<KeyValuePair<string, MPSBuffer>>> Conditions { get; init; }
+                    ImmutableArray<ImmutableArray<KeyValuePair<string, MPSBuffer>>> conditions = default;
+                    if (@case.When is { } when)
+                    {
+                        if (when.And is not null)
+                        {
+                            var conditionsBuilder = ImmutableArray.CreateBuilder<KeyValuePair<string, MPSBuffer>>(when.And.Count);
+
+                            foreach (var list in when.And)
+                            {
+                                foreach (var item in list)
+                                {
+                                    conditionsBuilder.Add(new(item.Key, CreateMultiPartState(item.Value)));
+                                }
+                            }
+
+                            conditions = [conditionsBuilder.DrainToImmutable()];
+                        }
+                        else if (when.Or is not null)
+                        {
+                            var conditionsBuilder = ImmutableArray.CreateBuilder<ImmutableArray<KeyValuePair<string, MPSBuffer>>>(when.Or.Count);
+                            var innerConditionsBuilder = ImmutableArray.CreateBuilder<KeyValuePair<string, MPSBuffer>>(4);
+
+                            foreach (var list in when.Or)
+                            {
+                                foreach (var item in list)
+                                {
+                                    innerConditionsBuilder.Add(new(item.Key, CreateMultiPartState(item.Value)));
+                                }
+
+                                conditionsBuilder.Add(innerConditionsBuilder.DrainToImmutable());
+                            }
+
+                            conditions = conditionsBuilder.DrainToImmutable();
+                        }
+                        else if (when.Properties is not null)
+                        {
+                            var conditionsBuilder = ImmutableArray.CreateBuilder<KeyValuePair<string, MPSBuffer>>(when.Properties.Count);
+
+                            foreach (var item in when.Properties)
+                            {
+                                conditionsBuilder.Add(new(item.Key, CreateMultiPartState(item.Value.GetString() ?? "")));
+                            }
+
+                            conditions = [conditionsBuilder.DrainToImmutable()];
+                        }
+                    }
+
+                    builder.Add(new MultipartCase()
+                    {
+                        When = new MultipartCaseCondition()
+                        {
+                            Conditions = conditions,
+                        },
+                        Apply = @case.Apply,
+                        TotalWeight = totalWeight,
+                    });
+                }
+
+                blockStatesMultipart[blockName] = builder.DrainToImmutable();
+            }
+        }
+
+        return new ResourcePack(blockModels.ToFrozenDictionary(), blockStatesVariant.ToFrozenDictionary(), blockStatesMultipart.ToFrozenDictionary());
 
         BlockModel ResolveBlockModel(string name)
         {
-            if (name.Contains(':'))
+            if (!name.Contains(':'))
             {
-                Debug.Assert(name.StartsWith("minecraft:block/"));
-                name = name["minecraft:block/".Length..];
-            }
-            else if (name.StartsWith("block/"))
-            {
-                name = name["block/".Length..];
+                name = $"minecraft:{name}";
             }
 
             if (blockModels.TryGetValue(name, out var existingModel))
@@ -124,12 +234,9 @@ public sealed class ResourcePack
                 return null;
             }
 
-            from /= 16f;
-            to /= 16f;
-
             if (json.UV is not { } uv)
             {
-                const float MaxValue = 1f;
+                const float MaxValue = 16f;
 
                 uv = faceIndex switch
                 {
@@ -163,7 +270,157 @@ public sealed class ResourcePack
                 TintIndex = json.TintIndex,
             };
         }
+
+        static KeyValuePair<string, string>[] ParseVariantString(string variantStr)
+        {
+            if (string.IsNullOrWhiteSpace(variantStr))
+            {
+                return [];
+            }
+
+            return [.. variantStr.Split(',')
+                .Select(part => part.Split('='))
+                .Where(parts => parts.Length == 2)
+                .Select(parts => new KeyValuePair<string, string>(parts[0], parts[1]))];
+        }
+
+        static MPSBuffer CreateMultiPartState(string value)
+        {
+            var span = value.AsSpan();
+            if (!span.Contains('|'))
+            {
+                return ImmutableInlineArray.Create<MPSBufferArray, string>(value);
+            }
+
+            var result = new MPSBuffer.Builder();
+
+            foreach (var range in span.Split('|'))
+            {
+                result.Add(value[range]);
+            }
+
+            return result.DrainToImmutable(true);
+        }
     }
+
+    /// <summary>
+    /// Gets the model variants to render for a given <see cref="BlockState"/>.
+    /// </summary>
+    /// <param name="blockState">The <see cref="BlockState"/>.</param>
+    /// <param name="rng">The RNG deciding which model to choose.</param>
+    /// <param name="result">The result model variants.</param>
+    /// <returns>The number of model variants.</returns>
+    public int GetModelVariant(BlockState blockState, Random rng, Span<VariantModel> result)
+    {
+        ThrowHelper.ThrowIfLessThan(result.Length, 1);
+
+        // way more variant blocks, so try variant first
+        if (_blockStatesVariant.TryGetValue(blockState, out var variant))
+        {
+            var (variants, totalWeight) = variant;
+
+            result[0] = PickRandomVariant(variants, totalWeight, rng);
+            return 1;
+        }
+
+        if (!_blockStatesMultipart.TryGetValue(blockState.BlockId, out var multipart))
+        {
+            ThrowHelper.ThrowKeyNotFound(blockState);
+        }
+
+        int resultLength = 0;
+        foreach (var item in multipart)
+        {
+            if (item.When is null || DoesConditionMatch(item.When.Value, blockState))
+            {
+                result[resultLength++] = PickRandomVariant(item.Apply, item.TotalWeight, rng);
+            }
+        }
+
+        Debug.Assert(resultLength > 0);
+        return resultLength;
+
+        static VariantModel PickRandomVariant<TCollection>(TCollection variants, int totalWeight, Random rng)
+            where TCollection : IReadOnlyList<VariantModel>
+        {
+            if (variants.Count is 1)
+            {
+                return variants[0];
+            }
+
+            float r = rng.NextSingle() * totalWeight;
+
+            float cumulative = 0f;
+            foreach (var variant in variants)
+            {
+                cumulative += variant.Weight;
+                if (r < cumulative)
+                {
+                    return variant;
+                }
+            }
+
+            return variants[^1];
+        }
+
+        static bool DoesConditionMatch(MultipartCaseCondition condition, BlockState blockState)
+        {
+            if (condition.Conditions.IsDefaultOrEmpty)
+            {
+                return true;
+            }
+
+            foreach (var andGroup in condition.Conditions.AsSpan())
+            {
+                if (AndGroupMatches(andGroup, blockState))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        static bool AndGroupMatches(ImmutableArray<KeyValuePair<string, MPSBuffer>> andGroup, BlockState blockState)
+        {
+            foreach (var requirement in andGroup.AsSpan())
+            {
+                string targetProperty = requirement.Key;
+                MPSBuffer allowedValues = requirement.Value;
+
+                if (!StateSatisfiesRequirement(blockState, targetProperty, allowedValues))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        static bool StateSatisfiesRequirement(BlockState blockState, string key, MPSBuffer allowedValues)
+        {
+            foreach (var property in blockState.Properties.AsSpan())
+            {
+                if (property.Key == key)
+                {
+                    for (int i = 0; i < allowedValues.Count; i++)
+                    {
+                        if (allowedValues[i] == property.Value)
+                        {
+                            return true;
+                        }
+                    }
+
+                    return false;
+                }
+            }
+
+            return false;
+        }
+    }
+
+    public BlockModel GetBlockModel(string modelName)
+        => _blockModels[modelName];
 
     private static IReadOnlyDictionary<TKey, TValue> MergeDictionaries<TKey, TValue>(IReadOnlyDictionary<TKey, TValue>? @new, IReadOnlyDictionary<TKey, TValue>? @base)
         where TKey : notnull

@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Collections.Frozen;
 using System.Diagnostics;
 using System.IO.Compression;
@@ -6,6 +7,7 @@ using System.Runtime.InteropServices;
 using BitcoderCZ.Maths.Vectors;
 using SharpNBT;
 using ViennaDotNet.Buildplate.Model;
+using ViennaDotNet.BuildplateRenderer.Models.ResourcePacks;
 using ViennaDotNet.BuildplateRenderer.Utils;
 using ViennaDotNet.Common.Utils;
 
@@ -34,7 +36,7 @@ public class BuildplateMesh
     public uint[] Indices { get; set; }
 }
 
-internal static class MeshGenerator
+internal sealed class MeshGenerator
 {
     private static readonly FrozenSet<string> InvisibleBlocks = new HashSet<string>()
     {
@@ -46,7 +48,15 @@ internal static class MeshGenerator
         "fountain:border_constraint",
     }.ToFrozenSet(StringComparer.Ordinal);
 
-    public static async Task<BuildplateMesh> GenerateAsync(WorldData worldData, CancellationToken cancellationToken = default)
+    private readonly ResourcePack _resourcePack;
+    private readonly Random _rng = new();
+
+    public MeshGenerator(ResourcePack resourcePack)
+    {
+        _resourcePack = resourcePack;
+    }
+
+    public async Task<BuildplateMesh> GenerateAsync(WorldData worldData, CancellationToken cancellationToken = default)
     {
         using (var serverDataStream = new MemoryStream(worldData.ServerData))
         using (var zip = await ZipArchive.CreateAsync(serverDataStream, ZipArchiveMode.Read, false, null, cancellationToken))
@@ -68,7 +78,7 @@ internal static class MeshGenerator
         throw new NotImplementedException();
     }
 
-    private static void ProcessRegion(byte[] regionData, int2 regionPosition)
+    private void ProcessRegion(byte[] regionData, int2 regionPosition)
     {
         foreach (var localPosition in RegionUtils.GetChunkPositions(regionData))
         {
@@ -79,7 +89,7 @@ internal static class MeshGenerator
     }
 
     // https://minecraft.wiki/w/Chunk_format
-    private static void ProcessChunk(CompoundTag nbt, int2 chunkPosition)
+    private void ProcessChunk(CompoundTag nbt, int2 chunkPosition)
     {
         Debug.Assert(((IntTag)nbt["xPos"]).Value == chunkPosition.X);
         Debug.Assert(((IntTag)nbt["zPos"]).Value == chunkPosition.Y);
@@ -96,7 +106,7 @@ internal static class MeshGenerator
         }
     }
 
-    private static void ProcessSubChunk(CompoundTag nbt, int3 chunkPosition)
+    private void ProcessSubChunk(CompoundTag nbt, int3 chunkPosition)
     {
         var blockStates = (CompoundTag)nbt["block_states"];
 
@@ -123,6 +133,9 @@ internal static class MeshGenerator
 
         var blockPosition = int3.Zero;
 
+        var propertiesArray = ArrayPool<KeyValuePair<string, string>>.Shared.Rent(64);
+        var modelVariants = ArrayPool<VariantModel>.Shared.Rent(64);
+
         foreach (var blockIndex in blocks)
         {
             Debug.Assert(blockPosition.X is >= 0 and < ChunkUtils.Width);
@@ -135,7 +148,40 @@ internal static class MeshGenerator
 
             if (!InvisibleBlocks.Contains(blockName))
             {
-                
+                if (blockName is "minecraft:water" or "minecraft:lava")
+                {
+                    // TODO:
+                    continue;
+                }
+
+                int propertiesArrayLength = 0;
+                if (paletteEntry.TryGetValue("Properties", out var propertiesTag))
+                {
+                    foreach (var item in (ICollection<KeyValuePair<string, Tag>>)(CompoundTag)propertiesTag)
+                    {
+                        if (item.Key is "waterlogged")
+                        {
+                            continue;
+                        }
+
+                        if (propertiesArrayLength >= propertiesArray.Length)
+                        {
+                            ArrayPool<KeyValuePair<string, string>>.Shared.Return(propertiesArray);
+                            propertiesArray = ArrayPool<KeyValuePair<string, string>>.Shared.Rent(propertiesArray.Length * 2);
+                        }
+
+                        propertiesArray[propertiesArrayLength++] = new(item.Key, ((StringTag)item.Value).Value);
+                    }
+                }
+
+                // todo: non allocating ctor, add a short PropertiesLength field
+                var blockState = new Models.ResourcePacks.BlockState(blockName, propertiesArray.AsSpan()[..propertiesArrayLength]);
+
+                var modelVariantsLength = _resourcePack.GetModelVariant(blockState, _rng, modelVariants);
+                foreach (var modelVariant in modelVariants.AsSpan(0, modelVariantsLength))
+                {
+                    var model = _resourcePack.GetBlockModel(modelVariant.Model);
+                }
             }
 
             blockPosition.X++;
@@ -150,5 +196,8 @@ internal static class MeshGenerator
                 }
             }
         }
+
+        ArrayPool<KeyValuePair<string, string>>.Shared.Return(propertiesArray);
+        ArrayPool<VariantModel>.Shared.Return(modelVariants);
     }
 }

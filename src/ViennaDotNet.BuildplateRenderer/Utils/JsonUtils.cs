@@ -9,7 +9,11 @@ namespace ViennaDotNet.BuildplateRenderer.Utils;
 
 internal static class JsonUtils
 {
-	private static readonly JsonSerializerOptions DefaultJsonOptions = new JsonSerializerOptions() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+	private static readonly JsonSerializerOptions DefaultJsonOptions = new JsonSerializerOptions()
+	{
+		PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+		PropertyNameCaseInsensitive = true,
+	};
 
 	static JsonUtils()
 	{
@@ -19,6 +23,7 @@ internal static class JsonUtils
 		DefaultJsonOptions.Converters.Add(new JsonConverter_float3());
 		DefaultJsonOptions.Converters.Add(new JsonConverter_double3());
 		DefaultJsonOptions.Converters.Add(new JsonConverter_UVCoordinates());
+		DefaultJsonOptions.Converters.Add(new VariantModelArrayConverter());
 	}
 
 	public static T? DeserializeJson<T>(ReadOnlySpan<char> json)

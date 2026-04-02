@@ -19,4 +19,6 @@ if (worldData is null)
     return;
 }
 
-await MeshGenerator.GenerateAsync(worldData);
+var meshGenerator = new MeshGenerator(resourcePack);
+
+await meshGenerator.GenerateAsync(worldData);

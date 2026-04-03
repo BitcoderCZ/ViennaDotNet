@@ -119,7 +119,6 @@ internal sealed class MeshGenerator
         }
 
         var chunkBlockPosition = chunkPosition * ChunkUtils.SubChunkSize;
-        Console.WriteLine(chunkBlockPosition);
 
         var blocks = blockStates.ContainsKey("data")
             ? ChunkUtils.ReadBlockData((LongArrayTag)blockStates["data"])
@@ -509,7 +508,6 @@ internal sealed class MeshGenerator
 
     private bool IsBlockFullAndOpaque(BlockState blockState, Direction faceDirection)
     {
-        return false;
         var modelVariants = ArrayPool<VariantModel>.Shared.Rent(64);
 
         // todo: the rng doesn't change this... right?

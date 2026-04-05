@@ -16,6 +16,7 @@
 @using ViennaDotNet.BuildplateRenderer
 @using ViennaDotNet.DB
 @using ViennaDotNet.EventBus.Client
+@using ViennaDotNet.LauncherUI.Programs
 @using ViennaDotNet.LauncherUI.Utils
 @using ViennaDotNet.ObjectStore.Client
 @attribute [Authorize(Policy = Permissions.ViewBuildplates)]
@@ -641,7 +642,8 @@
         bp.IsRegeneratingPreview = true;
         bp.ErrorMessage = null;
 
-        if (ServerManager.Status is not ViennaDotNet.LauncherUI.ServerStatus.Online)
+        if (!await ServerManager.EnsureComponentsOnline(EventBusServer.ExeName, ObjectStoreServer.ExeName,
+BuildplateLauncher.ExeName))
         {
             bp.ErrorMessage = "The server must be running.";
             bp.IsRegeneratingPreview = false;
@@ -735,7 +737,7 @@
     {
         _deleteErrorMessage = null;
 
-        if (ServerManager.Status is not ViennaDotNet.LauncherUI.ServerStatus.Online)
+        if (!await ServerManager.EnsureComponentsOnline(ObjectStoreServer.ExeName))
         {
             _deleteErrorMessage = "The server must be running to delete buildplates.";
             return;

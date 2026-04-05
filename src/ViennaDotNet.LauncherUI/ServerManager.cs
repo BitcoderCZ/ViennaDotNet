@@ -173,6 +173,7 @@ public sealed class ServerManager
         }
         finally
         {
+            _status = ServerStatus.Offline;
             RefreshComponentStatuses();
         }
 

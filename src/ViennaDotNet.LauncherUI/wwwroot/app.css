@@ -1,4 +1,4 @@
-html,
+﻿html,
 body {
     font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
@@ -12,6 +12,15 @@ a,
     color: #fff;
     background-color: #1b6ec2;
     border-color: #1861ac;
+}
+
+.navbar-brand {
+    background-image: url('/banner.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    width: 100%;
+    aspect-ratio: 8 / 1;
 }
 
 .btn:focus,

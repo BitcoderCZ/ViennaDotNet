@@ -33,7 +33,12 @@ public static class MeshDataExtensions
     private static readonly FrozenDictionary<string, Vector4> HardcodedBlockColors = new Dictionary<string, Vector4>
         {
             { "minecraft:block/spruce_leaves", HexToVector4(0x619961) },
-            { "minecraft:block/birch_leaves", HexToVector4(0x80A755) }
+            { "minecraft:block/birch_leaves", HexToVector4(0x80A755) },
+            { "minecraft:block/lily_pad", HexToVector4(0x208030) },
+            { "minecraft:block/pumpkin_stem", HexToVector4(0xEFC00F) },
+            { "minecraft:block/attached_pumpkin_stem", HexToVector4(0xEFC00F) },
+            { "minecraft:block/melon_stem", HexToVector4(0xFFFF00) },
+            { "minecraft:block/attached_melon_stem", HexToVector4(0xFFFF00) },
         }.ToFrozenDictionary();
 
     private static Vector4 HexToVector4(int hex)

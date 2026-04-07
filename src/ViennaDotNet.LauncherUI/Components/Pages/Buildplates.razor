@@ -376,7 +376,7 @@ BuildplateLauncher.ExeName))
 
         try
         {
-            using var importer = await Importer.CreateFromSettings(Settings.Instance, Log.Logger);
+            await using var importer = await Importer.CreateFromSettings(Settings.Instance, Log.Logger);
 
             if (!await importer.RegenerateTemplatePreviewAsync(bp.Id, default))
             {
@@ -474,7 +474,7 @@ bp.IsNight, bp.ServerDataObjectId, bp.PreviewObjectId))
                 _isDeleting = true;
                 StateHasChanged();
 
-                using var importer = await Importer.CreateFromSettings(Settings.Instance, Log.Logger);
+                await using var importer = await Importer.CreateFromSettings(Settings.Instance, Log.Logger);
 
                 if (!await importer.RemoveTemplateAsync(_bpToDelete.Id, _removeTemplateFromPlayers, default))
                 {

@@ -180,7 +180,7 @@ public static class Program
         Log.Information("Connecting to object storage");
         try
         {
-            objectStore = ObjectStoreClient.Create(options.ObjectStoreConnectionString);
+            objectStore = await ObjectStoreClient.ConnectAsync(options.ObjectStoreConnectionString);
         }
         catch (ObjectStoreClientException ex)
         {

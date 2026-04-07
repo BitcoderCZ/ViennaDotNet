@@ -71,7 +71,7 @@ public class ShopController : ViennaControllerBase
                             break;
                         }
 
-                        byte[]? previewData = await objectStoreClient.Get(buildplate.PreviewObjectId).Task as byte[];
+                        byte[]? previewData = await objectStoreClient.GetAsync(buildplate.PreviewObjectId);
 
                         if (previewData is null)
                         {

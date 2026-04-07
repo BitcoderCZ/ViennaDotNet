@@ -54,7 +54,7 @@ public class BuildplatesController : ViennaControllerBase
 
         OwnedBuildplate[] ownedBuildplates = [.. buildplatesModel.GetBuildplates().Select(async buildplateEntry =>
         {
-            byte[]? previewData = await objectStoreClient.Get(buildplateEntry.Buildplate.PreviewObjectId).Task as byte[];
+            byte[]? previewData = await objectStoreClient.GetAsync(buildplateEntry.Buildplate.PreviewObjectId);
             if (previewData is null)
             {
                 Log.Error($"Preview object {buildplateEntry.Buildplate.PreviewObjectId} for buildplate {buildplateEntry.Id} could not be loaded from object store");
@@ -143,14 +143,14 @@ public class BuildplatesController : ViennaControllerBase
             return NotFound();
         }
 
-        byte[]? serverData = (await objectStoreClient.Get(buildplate.ServerDataObjectId).Task) as byte[];
+        byte[]? serverData = await objectStoreClient.GetAsync(buildplate.ServerDataObjectId);
         if (serverData is null)
         {
             Log.Error($"Data object {buildplate.ServerDataObjectId} for buildplate {buildplateId} could not be loaded from object store");
             return StatusCode(StatusCodes.Status500InternalServerError);
         }
 
-        string? sharedBuildplateServerDataObjectId = (await objectStoreClient.Store(serverData).Task) as string;
+        string? sharedBuildplateServerDataObjectId = await objectStoreClient.StoreAsync(serverData);
         if (sharedBuildplateServerDataObjectId is null)
         {
             Log.Error("Could not store data object for shared buildplate in object store");
@@ -206,7 +206,7 @@ public class BuildplatesController : ViennaControllerBase
         }
         catch (EarthDB.DatabaseException exception)
         {
-            objectStoreClient.Delete(sharedBuildplateServerDataObjectId);
+            await objectStoreClient.DeleteAsync(sharedBuildplateServerDataObjectId);
             throw new ServerErrorException(exception);
         }
 
@@ -241,7 +241,7 @@ public class BuildplatesController : ViennaControllerBase
             return NotFound();
         }
 
-        byte[]? serverData = await objectStoreClient.Get(sharedBuildplate.ServerDataObjectId).Task as byte[];
+        byte[]? serverData = await objectStoreClient.GetAsync(sharedBuildplate.ServerDataObjectId);
         if (serverData is null)
         {
             Log.Error($"Data object {sharedBuildplate.ServerDataObjectId} for shared buildplate {sharedBuildplateId} could not be loaded from object store");

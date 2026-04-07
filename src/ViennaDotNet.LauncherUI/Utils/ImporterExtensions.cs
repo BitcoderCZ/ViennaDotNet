@@ -14,7 +14,7 @@ public static class ImporterExtensions
         {
             var earthDB = EarthDB.Open(settings.EarthDatabaseConnectionString ?? "");
             var eventBus = EventBusClient.Create($"localhost:{settings.EventBusPort}");
-            var objectStore = ObjectStoreClient.Create($"localhost:{settings.ObjectStorePort}");
+            var objectStore = await ObjectStoreClient.ConnectAsync($"localhost:{settings.ObjectStorePort}");
             
             return new Importer(earthDB, eventBus, objectStore, logger);
         }

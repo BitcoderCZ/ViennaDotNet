@@ -40,7 +40,7 @@ internal static class TileUtils
 
         byte[] tilePng = Convert.FromBase64String(tilePng64);
 
-        tileObjectId = (await objectStore.Store(tilePng).Task) as string;
+        tileObjectId = await objectStore.StoreAsync(tilePng);
 
         if (string.IsNullOrEmpty(tileObjectId))
         {
@@ -61,7 +61,7 @@ internal static class TileUtils
 
     private static async Task<bool> TryWriteTileFromObject(string tileObjectId, Stream dest, CancellationToken cancellationToken)
     {
-        byte[]? tilePng = (await objectStore.Get(tileObjectId).Task) as byte[];
+        byte[]? tilePng = await objectStore.GetAsync(tileObjectId);
 
         if (tilePng is null)
         {

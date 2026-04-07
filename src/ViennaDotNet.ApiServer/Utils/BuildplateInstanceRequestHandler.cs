@@ -215,7 +215,7 @@ public sealed class BuildplateInstanceRequestHandler
             return null;
         }
 
-        byte[]? serverData = (await _objectStoreClient.Get(buildplate.ServerDataObjectId).Task) as byte[];
+        byte[]? serverData = await _objectStoreClient.GetAsync(buildplate.ServerDataObjectId);
         if (serverData is null)
         {
             Log.Error($"Data object {buildplate.ServerDataObjectId} for buildplate {buildplateId} could not be loaded from object store");
@@ -240,7 +240,7 @@ public sealed class BuildplateInstanceRequestHandler
             return null;
         }
 
-        byte[]? serverData = (await _objectStoreClient.Get(sharedBuildplate.ServerDataObjectId).Task) as byte[];
+        byte[]? serverData = await _objectStoreClient.GetAsync(sharedBuildplate.ServerDataObjectId);
         if (serverData is null)
         {
             Log.Error($"Data object {sharedBuildplate.ServerDataObjectId} for shared buildplate {sharedBuildplateId} could not be loaded from object store");
@@ -265,7 +265,7 @@ public sealed class BuildplateInstanceRequestHandler
             return null;
         }
 
-        byte[]? serverData = (await _objectStoreClient.Get(encounterBuildplate.ServerDataObjectId).Task) as byte[];
+        byte[]? serverData = await _objectStoreClient.GetAsync(encounterBuildplate.ServerDataObjectId);
         if (serverData is null)
         {
             Log.Error($"Data object {encounterBuildplate.ServerDataObjectId} for encounter buildplate {encounterBuildplateId} could not be loaded from object store");
@@ -316,7 +316,7 @@ public sealed class BuildplateInstanceRequestHandler
         if (preview is null)
             Log.Warning("Could not generate preview for buildplate");
 
-        string? serverDataObjectId = (await _objectStoreClient.Store(serverData).Task) as string;
+        string? serverDataObjectId = await _objectStoreClient.StoreAsync(serverData);
         if (serverDataObjectId is null)
         {
             Log.Error($"Could not store new data object for buildplate {buildplateId} in object store");
@@ -326,7 +326,7 @@ public sealed class BuildplateInstanceRequestHandler
         string? previewObjectId;
         if (preview is not null)
         {
-            previewObjectId = (await _objectStoreClient.Store(Encoding.ASCII.GetBytes(preview)).Task) as string;
+            previewObjectId = await _objectStoreClient.StoreAsync(Encoding.ASCII.GetBytes(preview));
             if (previewObjectId is null)
             {
                 Log.Warning($"Could not store new preview object for buildplate {buildplateId} in object store");
@@ -380,11 +380,13 @@ public sealed class BuildplateInstanceRequestHandler
             if (exists)
             {
                 string oldServerDataObjectId = (string)results1.GetExtra("oldServerDataObjectId");
-                _objectStoreClient.Delete(oldServerDataObjectId);
+                await _objectStoreClient.DeleteAsync(oldServerDataObjectId);
 
                 string oldPreviewObjectId = (string)results1.GetExtra("oldPreviewObjectId");
                 if (!string.IsNullOrEmpty(oldPreviewObjectId))
-                    _objectStoreClient.Delete(oldPreviewObjectId);
+                {
+                    await _objectStoreClient.DeleteAsync(oldPreviewObjectId);
+                }
 
                 Log.Information($"Stored new snapshot for buildplate {buildplateId}");
 
@@ -392,10 +394,10 @@ public sealed class BuildplateInstanceRequestHandler
             }
             else
             {
-                _objectStoreClient.Delete(serverDataObjectId);
+                await _objectStoreClient.DeleteAsync(serverDataObjectId);
                 if (previewObjectId is not null)
                 {
-                    _objectStoreClient.Delete(previewObjectId);
+                    await _objectStoreClient.DeleteAsync(previewObjectId);
                 }
 
                 return false;
@@ -403,10 +405,10 @@ public sealed class BuildplateInstanceRequestHandler
         }
         catch (EarthDB.DatabaseException)
         {
-            _objectStoreClient.Delete(serverDataObjectId);
+            await _objectStoreClient.DeleteAsync(serverDataObjectId);
             if (previewObjectId is not null)
             {
-                _objectStoreClient.Delete(previewObjectId);
+                await _objectStoreClient.DeleteAsync(previewObjectId);
             }
 
             throw;

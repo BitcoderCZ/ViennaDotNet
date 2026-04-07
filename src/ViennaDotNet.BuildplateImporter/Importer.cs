@@ -14,7 +14,7 @@ using ViennaDotNet.ObjectStore.Client;
 
 namespace ViennaDotNet.BuildplateImporter;
 
-public sealed class Importer : IDisposable
+public sealed class Importer : IAsyncDisposable
 {
     public readonly EarthDB EarthDB;
     public readonly EventBusClient? EventBusClient;
@@ -72,7 +72,7 @@ public sealed class Importer : IDisposable
             return false;
         }
 
-        var serverData = (await ObjectStoreClient.Get(template.ServerDataObjectId).Task) as byte[];
+        var serverData = await ObjectStoreClient.GetAsync(template.ServerDataObjectId);
 
         if (serverData is null)
         {
@@ -93,7 +93,7 @@ public sealed class Importer : IDisposable
 
         byte[] preview = await GeneratePreview(worldData);
 
-        string? newPreviewObjectId = (string?)await ObjectStoreClient.Store(preview).Task;
+        string? newPreviewObjectId = await ObjectStoreClient.StoreAsync(preview);
         if (newPreviewObjectId is null)
         {
             Logger.Error($"Could not store template's preview object in object store '{templateId}'");
@@ -112,7 +112,7 @@ public sealed class Importer : IDisposable
 
             if (!string.IsNullOrEmpty(oldPreviewObjectId))
             {
-                await ObjectStoreClient.Delete(oldPreviewObjectId).Task;
+                await ObjectStoreClient.DeleteAsync(oldPreviewObjectId);
                 Logger.Debug($"Deleted old preview for template '{templateId}'");
             }
 
@@ -121,7 +121,7 @@ public sealed class Importer : IDisposable
         catch (EarthDB.DatabaseException ex)
         {
             Logger.Error($"Failed to update template buidplate in database: {ex}");
-            await ObjectStoreClient.Delete(newPreviewObjectId).Task;
+            await ObjectStoreClient.DeleteAsync(newPreviewObjectId);
             return false;
         }
     }
@@ -206,12 +206,12 @@ public sealed class Importer : IDisposable
 
         if (!string.IsNullOrEmpty(template.ServerDataObjectId))
         {
-            await ObjectStoreClient.Delete(template.ServerDataObjectId).Task;
+            await ObjectStoreClient.DeleteAsync(template.ServerDataObjectId);
         }
 
         if (!string.IsNullOrEmpty(template.PreviewObjectId))
         {
-            await ObjectStoreClient.Delete(template.PreviewObjectId).Task;
+            await ObjectStoreClient.DeleteAsync(template.PreviewObjectId);
         }
 
         Logger.Information($"Successfully purged template {templateId} and all associated player buildplates.");
@@ -241,7 +241,7 @@ public sealed class Importer : IDisposable
             return null;
         }
 
-        byte[]? serverData = (await ObjectStoreClient.Get(template.ServerDataObjectId).Task) as byte[];
+        byte[]? serverData = await ObjectStoreClient.GetAsync(template.ServerDataObjectId);
 
         if (serverData is null)
         {
@@ -249,7 +249,7 @@ public sealed class Importer : IDisposable
             return null;
         }
 
-        byte[]? preview = (await ObjectStoreClient.Get(template.PreviewObjectId).Task) as byte[];
+        byte[]? preview = await ObjectStoreClient.GetAsync(template.PreviewObjectId);
 
         if (preview is null)
         {
@@ -299,7 +299,7 @@ public sealed class Importer : IDisposable
             return false;
         }
 
-        var serverData = (await ObjectStoreClient.Get(buildplate.ServerDataObjectId).Task) as byte[];
+        var serverData = await ObjectStoreClient.GetAsync(buildplate.ServerDataObjectId);
 
         if (serverData is null)
         {
@@ -320,7 +320,7 @@ public sealed class Importer : IDisposable
 
         byte[] preview = await GeneratePreview(worldData);
 
-        string? newPreviewObjectId = (string?)await ObjectStoreClient.Store(preview).Task;
+        string? newPreviewObjectId = await ObjectStoreClient.StoreAsync(preview);
         if (newPreviewObjectId is null)
         {
             Logger.Error($"Could not store player buildplate's preview object in object store '{buildplateId}'");
@@ -341,7 +341,7 @@ public sealed class Importer : IDisposable
 
             if (!string.IsNullOrEmpty(oldPreviewObjectId))
             {
-                await ObjectStoreClient.Delete(oldPreviewObjectId).Task;
+                await ObjectStoreClient.DeleteAsync(oldPreviewObjectId);
                 Logger.Debug($"Deleted old preview for player buildplate '{buildplateId}'");
             }
 
@@ -350,7 +350,7 @@ public sealed class Importer : IDisposable
         catch (EarthDB.DatabaseException ex)
         {
             Logger.Error($"Failed to update player buildplates in database: {ex}");
-            await ObjectStoreClient.Delete(newPreviewObjectId).Task;
+            await ObjectStoreClient.DeleteAsync(newPreviewObjectId);
             return false;
         }
     }
@@ -390,13 +390,13 @@ public sealed class Importer : IDisposable
             if (!string.IsNullOrEmpty(serverDataObjectId))
             {
                 Logger.Information($"Deleting server data object {serverDataObjectId}");
-                await ObjectStoreClient.Delete(serverDataObjectId).Task;
+                await ObjectStoreClient.DeleteAsync(serverDataObjectId);
             }
 
             if (!string.IsNullOrEmpty(previewObjectId))
             {
                 Logger.Information($"Deleting preview object {previewObjectId}");
-                await ObjectStoreClient.Delete(previewObjectId).Task;
+                await ObjectStoreClient.DeleteAsync(previewObjectId);
             }
 
             return true;
@@ -413,15 +413,11 @@ public sealed class Importer : IDisposable
         }
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
-        Log.Debug("Dispose init");
         EarthDB.Dispose();
-        Log.Debug("Dispose DB");
         EventBusClient?.Dispose();
-        Log.Debug("Dispose event");
-        ObjectStoreClient.Dispose();
-        Log.Debug("Dispose object");
+        await ObjectStoreClient.DisposeAsync();
     }
 
     public async Task<WorldData?> ReadWorldFile(Stream stream, CancellationToken cancellationToken)
@@ -682,7 +678,7 @@ public sealed class Importer : IDisposable
             Logger.Information("Template buildplate not found");
 
             Logger.Information("Storing template world");
-            string? serverDataObjectId = (string?)await ObjectStoreClient.Store(worldData.ServerData).Task;
+            string? serverDataObjectId = await ObjectStoreClient.StoreAsync(worldData.ServerData);
             if (serverDataObjectId is null)
             {
                 Logger.Error("Could not store template data object in object store");
@@ -690,7 +686,7 @@ public sealed class Importer : IDisposable
             }
 
             Logger.Information("Storing template preview");
-            string? previewObjectId = (string?)await ObjectStoreClient.Store(preview).Task;
+            string? previewObjectId = await ObjectStoreClient.StoreAsync(preview);
             if (previewObjectId is null)
             {
                 Logger.Error("Could not store template preview object in object store");
@@ -716,8 +712,8 @@ public sealed class Importer : IDisposable
             catch (EarthDB.DatabaseException ex)
             {
                 Logger.Error($"Failed to store template buidplate in database: {ex}");
-                await ObjectStoreClient.Delete(serverDataObjectId).Task;
-                await ObjectStoreClient.Delete(previewObjectId).Task;
+                await ObjectStoreClient.DeleteAsync(serverDataObjectId);
+                await ObjectStoreClient.DeleteAsync(previewObjectId);
                 return false;
             }
         }
@@ -728,7 +724,7 @@ public sealed class Importer : IDisposable
     private async Task<bool> StoreBuildplate(string templateId, string playerId, string buildplateId, TemplateBuildplate template, byte[] serverData, byte[] preview, CancellationToken cancellationToken)
     {
         Logger.Information("Storing world");
-        string? serverDataObjectId = (string?)await ObjectStoreClient.Store(serverData).Task;
+        string? serverDataObjectId = await ObjectStoreClient.StoreAsync(serverData);
         if (serverDataObjectId is null)
         {
             Logger.Error("Could not store data object in object store");
@@ -736,11 +732,11 @@ public sealed class Importer : IDisposable
         }
 
         Logger.Information("Storing preview");
-        string? previewObjectId = (string?)await ObjectStoreClient.Store(preview).Task;
+        string? previewObjectId = await ObjectStoreClient.StoreAsync(preview);
         if (previewObjectId is null)
         {
             Logger.Error("Could not store preview object in object store");
-            await ObjectStoreClient.Delete(serverDataObjectId).Task;
+            await ObjectStoreClient.DeleteAsync(serverDataObjectId);
             return false;
         }
 
@@ -768,8 +764,8 @@ public sealed class Importer : IDisposable
         catch (EarthDB.DatabaseException ex)
         {
             Logger.Error($"Failed to store buildplate in database: {ex}");
-            await ObjectStoreClient.Delete(serverDataObjectId).Task;
-            await ObjectStoreClient.Delete(previewObjectId).Task;
+            await ObjectStoreClient.DeleteAsync(serverDataObjectId);
+            await ObjectStoreClient.DeleteAsync(previewObjectId);
             return false;
         }
     }

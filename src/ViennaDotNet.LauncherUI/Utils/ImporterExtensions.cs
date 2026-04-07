@@ -19,7 +19,7 @@ public static class ImporterExtensions
         {
             var earthDB = EarthDB.Open(settings.EarthDatabaseConnectionString ?? "");
             var eventBus = createEventBus ? EventBusClient.Create($"localhost:{settings.EventBusPort}") : null;
-            var objectStore = ObjectStoreClient.Create($"localhost:{settings.ObjectStorePort}");
+            var objectStore = await ObjectStoreClient.ConnectAsync($"localhost:{settings.ObjectStorePort}");
 
             return new Importer(earthDB, eventBus, objectStore, logger);
         }
@@ -52,7 +52,7 @@ public static class ImporterExtensions
 
             if (getFromCache && !string.IsNullOrEmpty(template.LauncherPreviewObjectId))
             {
-                var previewData = (await importer.ObjectStoreClient.Get(template.LauncherPreviewObjectId).Task) as byte[];
+                var previewData = await importer.ObjectStoreClient.GetAsync(template.LauncherPreviewObjectId);
 
                 if (previewData is null)
                 {
@@ -63,7 +63,7 @@ public static class ImporterExtensions
                 return previewData;
             }
 
-            var worldDataRaw = (await importer.ObjectStoreClient.Get(template.ServerDataObjectId).Task) as byte[];
+            var worldDataRaw = await importer.ObjectStoreClient.GetAsync(template.ServerDataObjectId);
 
             if (worldDataRaw is null)
             {
@@ -139,7 +139,7 @@ public static class ImporterExtensions
 
             if (getFromCache && !string.IsNullOrEmpty(buildplate.LauncherPreviewObjectId))
             {
-                var previewData = (await importer.ObjectStoreClient.Get(buildplate.LauncherPreviewObjectId).Task) as byte[];
+                var previewData = await importer.ObjectStoreClient.GetAsync(buildplate.LauncherPreviewObjectId);
 
                 if (previewData is null)
                 {
@@ -150,7 +150,7 @@ public static class ImporterExtensions
                 return previewData;
             }
 
-            var worldDataRaw = (await importer.ObjectStoreClient.Get(buildplate.ServerDataObjectId).Task) as byte[];
+            var worldDataRaw = await importer.ObjectStoreClient.GetAsync(buildplate.ServerDataObjectId);
 
             if (worldDataRaw is null)
             {

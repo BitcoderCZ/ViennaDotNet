@@ -456,7 +456,7 @@ BuildplateLauncher.ExeName))
 
         try
         {
-            using var importer = await Importer.CreateFromSettings(Settings.Instance, Log.Logger);
+            await using var importer = await Importer.CreateFromSettings(Settings.Instance, Log.Logger);
 
             var buildplateId = await importer.AddBuidplateToPlayer(template.Id, PlayerId, default);
             if (buildplateId is null)
@@ -544,7 +544,7 @@ BuildplateLauncher.ExeName))
 
     private async Task<bool> RemoveBuildplate(string id)
     {
-        using var importer = await Importer.CreateFromSettings(Settings.Instance, Log.Logger);
+        await using var importer = await Importer.CreateFromSettings(Settings.Instance, Log.Logger);
 
         return await importer.RemoveBuildplateFromPlayer(id, PlayerId, default);
     }
@@ -633,7 +633,7 @@ BuildplateLauncher.ExeName))
 
         try
         {
-            using var importer = await Importer.CreateFromSettings(Settings.Instance, Log.Logger);
+            await using var importer = await Importer.CreateFromSettings(Settings.Instance, Log.Logger);
 
             if (!await importer.RegeneratePlayerBuildplatePreviewAsync(PlayerId, bp.Id, default))
             {

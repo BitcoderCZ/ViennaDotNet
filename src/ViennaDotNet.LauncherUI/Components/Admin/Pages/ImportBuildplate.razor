@@ -229,7 +229,8 @@
         isUploading = true;
         StateHasChanged();
 
-        if (!await ServerManager.EnsureComponentsOnline(EventBusServer.ExeName, ObjectStoreServer.ExeName, BuildplateLauncher.ExeName))
+        if (!await ServerManager.EnsureComponentsOnline(EventBusServer.ExeName, ObjectStoreServer.ExeName,
+BuildplateLauncher.ExeName))
         {
             ShowDialog(false, "The server must be running to import buildplates.");
             isUploading = false;
@@ -238,7 +239,7 @@
 
         try
         {
-            using var importer = await Importer.CreateFromSettings(Settings.Instance, Log.Logger);
+            await using var importer = await Importer.CreateFromSettings(Settings.Instance, Log.Logger);
             int successCount = 0;
 
             foreach (var fileState in filesToUpload)

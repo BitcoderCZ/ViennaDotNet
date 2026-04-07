@@ -249,10 +249,9 @@
     private ClaimsPrincipal? _user;
     private List<Buildplate> _buildplates = new();
 
-    private int? _totalBuildplateCount;
+    private ResourcePackManager _resourcePackManager = null!;
 
-    private static ResourcePackManager? _resourcePackManager;
-    private static readonly SemaphoreSlim _resourcePackLock = new(1, 1);
+    private int? _totalBuildplateCount;
     
     // Search and Pagination State
     private string _searchTerm = string.Empty;
@@ -273,43 +272,9 @@
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         _user = authState.User;
 
-        await EnsureResourcePackLoadedAsync();
+        _resourcePackManager = await ResourcePackManagerSingleton.GetResourcePackManagerAsync();
+
         await LoadBuildplates();
-    }
-
-    private async Task EnsureResourcePackLoadedAsync()
-    {
-        if (_resourcePackManager is not null)
-        {
-            return;
-        }
-    
-        await _resourcePackLock.WaitAsync();
-
-        try
-        {
-            if (_resourcePackManager is null)
-            {
-                var dir = new DirectoryInfo(Path.Combine(Settings.Instance.StaticDataPath ?? "", "resourcepacks", "java"));
-                if (dir.Exists)
-                {
-                    _resourcePackManager = await ResourcePackManager.LoadAllAsync(dir);
-                    if (_resourcePackManager.LoadedPackCount < 2)
-                    {
-                        Log.Warning($"Only loaded {_resourcePackManager.LoadedPackCount} resourcepacks, make sure staticdata/resourcepacks/java contains minecraft/ and fountain/");
-                        _resourcePackManager = null;
-                    }
-                }
-                else
-                {
-                    Log.Warning("Resource pack directory not found. Previews will likely fail.");
-                }
-            }
-        }
-        finally
-        {
-            _resourcePackLock.Release();
-        }
     }
 
     private async Task LoadBuildplates()

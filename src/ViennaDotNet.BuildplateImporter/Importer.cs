@@ -15,16 +15,16 @@ namespace ViennaDotNet.BuildplateImporter;
 
 public sealed class Importer : IDisposable
 {
-    private readonly EarthDB _earthDB;
-    private readonly EventBusClient? _eventBusClient;
-    private readonly ObjectStoreClient _objectStoreClient;
+    public readonly EarthDB EarthDB;
+    public readonly EventBusClient? EventBusClient;
+    public readonly ObjectStoreClient ObjectStoreClient;
     private readonly ILogger _logger;
 
     public Importer(EarthDB earthDB, EventBusClient? eventBusClient, ObjectStoreClient objectStoreClient, ILogger logger)
     {
-        _earthDB = earthDB;
-        _eventBusClient = eventBusClient;
-        _objectStoreClient = objectStoreClient;
+        EarthDB = earthDB;
+        EventBusClient = eventBusClient;
+        ObjectStoreClient = objectStoreClient;
         _logger = logger;
     }
 
@@ -49,7 +49,7 @@ public sealed class Importer : IDisposable
         {
             var results = await new EarthDB.ObjectQuery(false)
                .GetBuildplate(templateId)
-               .ExecuteAsync(_earthDB, cancellationToken);
+               .ExecuteAsync(EarthDB, cancellationToken);
 
             template = results.GetBuildplate(templateId);
         }
@@ -71,7 +71,7 @@ public sealed class Importer : IDisposable
             return false;
         }
 
-        var serverData = (await _objectStoreClient.Get(template.ServerDataObjectId).Task) as byte[];
+        var serverData = (await ObjectStoreClient.Get(template.ServerDataObjectId).Task) as byte[];
 
         if (serverData is null)
         {
@@ -92,7 +92,7 @@ public sealed class Importer : IDisposable
 
         byte[] preview = await GeneratePreview(worldData);
 
-        string? newPreviewObjectId = (string?)await _objectStoreClient.Store(preview).Task;
+        string? newPreviewObjectId = (string?)await ObjectStoreClient.Store(preview).Task;
         if (newPreviewObjectId is null)
         {
             _logger.Error($"Could not store template's preview object in object store '{templateId}'");
@@ -107,11 +107,11 @@ public sealed class Importer : IDisposable
         {
             var results = await new EarthDB.ObjectQuery(true)
                .UpdateBuildplate(templateId, template)
-               .ExecuteAsync(_earthDB, cancellationToken);
+               .ExecuteAsync(EarthDB, cancellationToken);
 
             if (!string.IsNullOrEmpty(oldPreviewObjectId))
             {
-                await _objectStoreClient.Delete(oldPreviewObjectId).Task;
+                await ObjectStoreClient.Delete(oldPreviewObjectId).Task;
                 _logger.Debug($"Deleted old preview for template '{templateId}'");
             }
 
@@ -120,7 +120,7 @@ public sealed class Importer : IDisposable
         catch (EarthDB.DatabaseException ex)
         {
             _logger.Error($"Failed to update template buidplate in database: {ex}");
-            await _objectStoreClient.Delete(newPreviewObjectId).Task;
+            await ObjectStoreClient.Delete(newPreviewObjectId).Task;
             return false;
         }
     }
@@ -134,7 +134,7 @@ public sealed class Importer : IDisposable
         {
             var results = await new EarthDB.ObjectQuery(false)
                .GetBuildplate(templateId)
-               .ExecuteAsync(_earthDB, cancellationToken);
+               .ExecuteAsync(EarthDB, cancellationToken);
 
             template = results.GetBuildplate(templateId);
         }
@@ -156,7 +156,7 @@ public sealed class Importer : IDisposable
 
             try
             {
-                using var connection = _earthDB.OpenConnection(false);
+                using var connection = EarthDB.OpenConnection(false);
                 using var command = connection.CreateCommand();
 
                 command.CommandText = """
@@ -195,7 +195,7 @@ public sealed class Importer : IDisposable
         {
             await new EarthDB.ObjectQuery(true)
                 .UpdateBuildplate(templateId, null)
-                .ExecuteAsync(_earthDB, cancellationToken);
+                .ExecuteAsync(EarthDB, cancellationToken);
         }
         catch (EarthDB.DatabaseException ex)
         {
@@ -205,12 +205,12 @@ public sealed class Importer : IDisposable
 
         if (!string.IsNullOrEmpty(template.ServerDataObjectId))
         {
-            await _objectStoreClient.Delete(template.ServerDataObjectId).Task;
+            await ObjectStoreClient.Delete(template.ServerDataObjectId).Task;
         }
 
         if (!string.IsNullOrEmpty(template.PreviewObjectId))
         {
-            await _objectStoreClient.Delete(template.PreviewObjectId).Task;
+            await ObjectStoreClient.Delete(template.PreviewObjectId).Task;
         }
 
         _logger.Information($"Successfully purged template {templateId} and all associated player buildplates.");
@@ -224,7 +224,7 @@ public sealed class Importer : IDisposable
         {
             var results = await new EarthDB.ObjectQuery(false)
                .GetBuildplate(templateId)
-               .ExecuteAsync(_earthDB, cancellationToken);
+               .ExecuteAsync(EarthDB, cancellationToken);
 
             template = results.GetBuildplate(templateId);
         }
@@ -240,7 +240,7 @@ public sealed class Importer : IDisposable
             return null;
         }
 
-        byte[]? serverData = (await _objectStoreClient.Get(template.ServerDataObjectId).Task) as byte[];
+        byte[]? serverData = (await ObjectStoreClient.Get(template.ServerDataObjectId).Task) as byte[];
 
         if (serverData is null)
         {
@@ -248,7 +248,7 @@ public sealed class Importer : IDisposable
             return null;
         }
 
-        byte[]? preview = (await _objectStoreClient.Get(template.PreviewObjectId).Task) as byte[];
+        byte[]? preview = (await ObjectStoreClient.Get(template.PreviewObjectId).Task) as byte[];
 
         if (preview is null)
         {
@@ -274,7 +274,7 @@ public sealed class Importer : IDisposable
         {
             playerBuildplates = (await new EarthDB.Query(true)
                 .Get("buildplates", playerId, typeof(Buildplates))
-                .ExecuteAsync(_earthDB, cancellationToken))
+                .ExecuteAsync(EarthDB, cancellationToken))
                 .Get<Buildplates>("buildplates");
                 
         }
@@ -298,7 +298,7 @@ public sealed class Importer : IDisposable
             return false;
         }
 
-        var serverData = (await _objectStoreClient.Get(buildplate.ServerDataObjectId).Task) as byte[];
+        var serverData = (await ObjectStoreClient.Get(buildplate.ServerDataObjectId).Task) as byte[];
 
         if (serverData is null)
         {
@@ -319,7 +319,7 @@ public sealed class Importer : IDisposable
 
         byte[] preview = await GeneratePreview(worldData);
 
-        string? newPreviewObjectId = (string?)await _objectStoreClient.Store(preview).Task;
+        string? newPreviewObjectId = (string?)await ObjectStoreClient.Store(preview).Task;
         if (newPreviewObjectId is null)
         {
             _logger.Error($"Could not store player buildplate's preview object in object store '{buildplateId}'");
@@ -336,11 +336,11 @@ public sealed class Importer : IDisposable
         {
             await new EarthDB.Query(true)
                 .Update("buildplates", playerId, playerBuildplates)
-                .ExecuteAsync(_earthDB);
+                .ExecuteAsync(EarthDB);
 
             if (!string.IsNullOrEmpty(oldPreviewObjectId))
             {
-                await _objectStoreClient.Delete(oldPreviewObjectId).Task;
+                await ObjectStoreClient.Delete(oldPreviewObjectId).Task;
                 _logger.Debug($"Deleted old preview for player buildplate '{buildplateId}'");
             }
 
@@ -349,7 +349,7 @@ public sealed class Importer : IDisposable
         catch (EarthDB.DatabaseException ex)
         {
             _logger.Error($"Failed to update player buildplates in database: {ex}");
-            await _objectStoreClient.Delete(newPreviewObjectId).Task;
+            await ObjectStoreClient.Delete(newPreviewObjectId).Task;
             return false;
         }
     }
@@ -384,18 +384,18 @@ public sealed class Importer : IDisposable
                     return new EarthDB.Query(true)
                         .Update("buildplates", playerId, buildplates);
                 })
-                .ExecuteAsync(_earthDB, cancellationToken);
+                .ExecuteAsync(EarthDB, cancellationToken);
 
             if (!string.IsNullOrEmpty(serverDataObjectId))
             {
                 _logger.Information($"Deleting server data object {serverDataObjectId}");
-                await _objectStoreClient.Delete(serverDataObjectId).Task;
+                await ObjectStoreClient.Delete(serverDataObjectId).Task;
             }
 
             if (!string.IsNullOrEmpty(previewObjectId))
             {
                 _logger.Information($"Deleting preview object {previewObjectId}");
-                await _objectStoreClient.Delete(previewObjectId).Task;
+                await ObjectStoreClient.Delete(previewObjectId).Task;
             }
 
             return true;
@@ -414,9 +414,9 @@ public sealed class Importer : IDisposable
 
     public void Dispose()
     {
-        _earthDB.Dispose();
-        _eventBusClient?.Dispose();
-        _objectStoreClient.Dispose();
+        EarthDB.Dispose();
+        EventBusClient?.Dispose();
+        ObjectStoreClient.Dispose();
     }
 
     private async Task<WorldData?> ReadWorldFile(Stream stream, CancellationToken cancellationToken)
@@ -585,10 +585,10 @@ public sealed class Importer : IDisposable
     private async Task<byte[]> GeneratePreview(WorldData worldData)
     {
         string? preview;
-        if (_eventBusClient is not null)
+        if (EventBusClient is not null)
         {
             _logger.Information("Generating preview");
-            RequestSender requestSender = _eventBusClient.AddRequestSender();
+            RequestSender requestSender = EventBusClient.AddRequestSender();
             preview = await requestSender.Request("buildplates", "preview", JsonSerializer.Serialize(new PreviewRequest(Convert.ToBase64String(worldData.ServerData), worldData.Night))).Task;
             requestSender.Close();
 
@@ -613,7 +613,7 @@ public sealed class Importer : IDisposable
         {
             var results = await new EarthDB.ObjectQuery(false)
                .GetBuildplate(templateId)
-               .ExecuteAsync(_earthDB, cancellationToken);
+               .ExecuteAsync(EarthDB, cancellationToken);
 
             template = results.GetBuildplate(templateId);
         }
@@ -677,7 +677,7 @@ public sealed class Importer : IDisposable
             _logger.Information("Template buildplate not found");
 
             _logger.Information("Storing template world");
-            string? serverDataObjectId = (string?)await _objectStoreClient.Store(worldData.ServerData).Task;
+            string? serverDataObjectId = (string?)await ObjectStoreClient.Store(worldData.ServerData).Task;
             if (serverDataObjectId is null)
             {
                 _logger.Error("Could not store template data object in object store");
@@ -685,7 +685,7 @@ public sealed class Importer : IDisposable
             }
 
             _logger.Information("Storing template preview");
-            string? previewObjectId = (string?)await _objectStoreClient.Store(preview).Task;
+            string? previewObjectId = (string?)await ObjectStoreClient.Store(preview).Task;
             if (previewObjectId is null)
             {
                 _logger.Error("Could not store template preview object in object store");
@@ -706,13 +706,13 @@ public sealed class Importer : IDisposable
             {
                 var results = await new EarthDB.ObjectQuery(true)
                    .UpdateBuildplate(templateId, template)
-                   .ExecuteAsync(_earthDB, cancellationToken);
+                   .ExecuteAsync(EarthDB, cancellationToken);
             }
             catch (EarthDB.DatabaseException ex)
             {
                 _logger.Error($"Failed to store template buidplate in database: {ex}");
-                await _objectStoreClient.Delete(serverDataObjectId).Task;
-                await _objectStoreClient.Delete(previewObjectId).Task;
+                await ObjectStoreClient.Delete(serverDataObjectId).Task;
+                await ObjectStoreClient.Delete(previewObjectId).Task;
                 return false;
             }
         }
@@ -723,7 +723,7 @@ public sealed class Importer : IDisposable
     private async Task<bool> StoreBuildplate(string templateId, string playerId, string buildplateId, TemplateBuildplate template, byte[] serverData, byte[] preview, CancellationToken cancellationToken)
     {
         _logger.Information("Storing world");
-        string? serverDataObjectId = (string?)await _objectStoreClient.Store(serverData).Task;
+        string? serverDataObjectId = (string?)await ObjectStoreClient.Store(serverData).Task;
         if (serverDataObjectId is null)
         {
             _logger.Error("Could not store data object in object store");
@@ -731,11 +731,11 @@ public sealed class Importer : IDisposable
         }
 
         _logger.Information("Storing preview");
-        string? previewObjectId = (string?)await _objectStoreClient.Store(preview).Task;
+        string? previewObjectId = (string?)await ObjectStoreClient.Store(preview).Task;
         if (previewObjectId is null)
         {
             _logger.Error("Could not store preview object in object store");
-            await _objectStoreClient.Delete(serverDataObjectId).Task;
+            await ObjectStoreClient.Delete(serverDataObjectId).Task;
             return false;
         }
 
@@ -756,15 +756,15 @@ public sealed class Importer : IDisposable
                     return new EarthDB.Query(true)
                         .Update("buildplates", playerId, buildplates);
                 })
-                .ExecuteAsync(_earthDB, cancellationToken);
+                .ExecuteAsync(EarthDB, cancellationToken);
 
             return true;
         }
         catch (EarthDB.DatabaseException ex)
         {
             _logger.Error($"Failed to store buildplate in database: {ex}");
-            await _objectStoreClient.Delete(serverDataObjectId).Task;
-            await _objectStoreClient.Delete(previewObjectId).Task;
+            await ObjectStoreClient.Delete(serverDataObjectId).Task;
+            await ObjectStoreClient.Delete(previewObjectId).Task;
             return false;
         }
     }

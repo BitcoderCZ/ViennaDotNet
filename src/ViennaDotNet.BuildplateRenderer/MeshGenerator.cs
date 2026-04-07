@@ -322,9 +322,7 @@ public sealed class BuildplateMeshGenerator
         matrix *= Matrix4x4.CreateTranslation(-origin);
 
         // Rotate
-        matrix *= Matrix4x4.CreateRotationX(radX)
-                * Matrix4x4.CreateRotationY(radY)
-                * Matrix4x4.CreateRotationZ(radZ);
+        matrix *= CreateMinecraftRotation(r.X, r.Y, r.Z);
 
         // Apply Rescaling (Minecraft scales faces across the block to prevent Z-fighting/clipping)
         if (r.ReScale)
@@ -350,15 +348,20 @@ public sealed class BuildplateMeshGenerator
 
         var center = new Vector3(0.5f, 0.5f, 0.5f);
 
-        float radX = variant.RotationX * (MathF.PI / 180f);
-        float radY = variant.RotationY * (MathF.PI / 180f);
-        float radZ = variant.RotationZ * (MathF.PI / 180f);
-
         return Matrix4x4.CreateTranslation(-center)
-             * Matrix4x4.CreateRotationX(radX)
-             * Matrix4x4.CreateRotationY(radY)
-             * Matrix4x4.CreateRotationZ(radZ)
+             * CreateMinecraftRotation(variant.RotationX, variant.RotationY, variant.RotationZ)
              * Matrix4x4.CreateTranslation(center);
+    }
+
+    private static Matrix4x4 CreateMinecraftRotation(float degreesX, float degreesY, float degreesZ)
+    {
+        float radX = degreesX * (MathF.PI / 180f);
+        float radY = -degreesY * (MathF.PI / 180f); 
+        float radZ = degreesZ * (MathF.PI / 180f);
+
+        return Matrix4x4.CreateRotationY(radY) 
+            * Matrix4x4.CreateRotationX(radX) 
+            * Matrix4x4.CreateRotationZ(radZ);
     }
 
     private static void GetFaceVertices(Direction dir, Vector3 from, Vector3 to, Span<Vector3> corners, out Vector3 normal)

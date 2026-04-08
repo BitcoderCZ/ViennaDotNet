@@ -21,7 +21,7 @@ public sealed class NetworkServer
         _serverSocket = new TcpListener(IPAddress.Loopback, port);
     }
 
-    public async Task StartAsync()
+    public async Task RunAsync()
     {
         _serverSocket.Start();
         Log.Information($"Created server on port {((IPEndPoint)_serverSocket.LocalEndpoint).Port}");

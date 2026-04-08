@@ -60,7 +60,9 @@ public static class Generator
                                             string? name = BedrockBlocks.GetName(blockId) ?? throw new InvalidOperationException();
                                             int data = 0;
                                             while (blockId - data - 1 >= 0 && name == BedrockBlocks.GetName(blockId - data - 1))
+                                            {
                                                 data++;
+                                            }
 
                                             return new PreviewModel.SubChunk.PaletteEntry(name, data);
                                         })],

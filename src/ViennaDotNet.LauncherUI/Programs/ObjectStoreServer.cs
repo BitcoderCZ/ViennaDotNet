@@ -33,8 +33,8 @@ internal static class ObjectStoreServer
         ])
         {
             WorkingDirectory = Path.GetFullPath(Program.ProgramsDir),
-            CreateNoWindow = false,
-            UseShellExecute = true
+            CreateNoWindow = true,
+            UseShellExecute = false,
         });
     }
 }

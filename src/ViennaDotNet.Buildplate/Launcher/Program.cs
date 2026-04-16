@@ -34,14 +34,8 @@ internal static class Program
     }
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
-    private static int Main(string[] args)
+    private static async Task<int> Main(string[] args)
     {
-        Console.CancelKeyPress += (sender, e) =>
-        {
-            Log.Information("Ctrl+C received, ignored");
-            e.Cancel = true;
-        };
-
         if (!Debugger.IsAttached)
         {
             AppDomain.CurrentDomain.UnhandledException += (object sender, UnhandledExceptionEventArgs e) =>
@@ -90,7 +84,7 @@ internal static class Program
         EventBusClient eventBusClient;
         try
         {
-            eventBusClient = EventBusClient.Create(options.EventBusConnectionString);
+            eventBusClient = await EventBusClient.ConnectAsync(options.EventBusConnectionString);
         }
         catch (EventBusClientException ex)
         {
@@ -104,6 +98,13 @@ internal static class Program
         string javaCmd = JavaLocator.Locate();
         Starter starter = new Starter(eventBusClient, options.EventBusConnectionString, options.PublicAddress, javaCmd, options.BridgeJar, options.ServerTemplateDir, options.FabricJarName, options.ConnectorPluginJar);
         InstanceManager instanceManager = new InstanceManager(eventBusClient, starter);
+
+        Console.CancelKeyPress += (sender, e) =>
+        {
+            Log.Information("Ctrl+C received");
+            instanceManager.Shutdown();
+            e.Cancel = true;
+        };
 
         AppDomain.CurrentDomain.ProcessExit += (sender, e) =>
         {

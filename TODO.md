@@ -1,9 +1,9 @@
 # TODO
 
-- Buildplate importing - Project Earth format - MCEToJava
-- Buildplate preview in admin panel - SkiaSharp render lib + SkiaSharp.Views.Blazor
+- Make it easier to update, deleting data/staticdata is kinda bad UX
+- Launcher buildplate preview - don't store preview in earthdb/object store, but in the launcher's db
+- Launcher buildplate preview - liquid rendering
 - Shop management
-- Player buildplate management
 - Player items management
 - Encounter generation and AR
 - Use tiles when spawning tappables - don't spawn on water/forbidden areas, spawn more trees in forest?
@@ -17,12 +17,13 @@
 - Show roles on profile page
 - Export buildplates in both formats
 - Launch/connect to remote components - e.g. run buildplate launcher on another PC
-- Detect if the server is already running - require: EventBus, ObjetcStore, ApiServer and BuildplateLauncher
-- Edit player buildplate name and scale
 - View the player buildplate's template (if exists) - open page, search id?
 - Add the level reward buildplates and add them to level ups
 - NFC mini figures
 - Some kind of auth for the logs, maybe pass a random secret to the cli args and verify it in the controller?
+- A lot of things are quite slower on windows, investigate and/or add spinners
+- Associate a player profile with a user, permissions that only allow editing the associated player.
+- find out the tokens for the first time tutorial, daily login and possibly more
 
 ## Refactoring
 

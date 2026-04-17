@@ -81,13 +81,15 @@ public static class ImporterExtensions
             WorldData? worldData;
             using (var worldDataStream = new MemoryStream(worldDataRaw))
             {
-                worldData = await importer.ReadWorldFile(worldDataStream, cancellationToken);
+                worldData = await WorldData.LoadFromZipAsync(worldDataStream, importer.Logger, cancellationToken);
             }
 
             if (worldData is null)
             {
                 return null;
             }
+
+            worldData = worldData with { Size = template.Size, Offset = template.Offset, Night = template.Night, };
 
             var meshGenerator = new BuildplateMeshGenerator(resourcePackManager);
 
@@ -106,7 +108,7 @@ public static class ImporterExtensions
             {
                 PlayerId = null,
                 BuildplateId = templateId,
-                PreviewData = [.. buffer],  
+                PreviewData = [.. buffer],
             };
 
             appDbContext.BuildplatePreviews.Add(dbBuildplatePreview);
@@ -169,13 +171,15 @@ public static class ImporterExtensions
             WorldData? worldData;
             using (var worldDataStream = new MemoryStream(worldDataRaw))
             {
-                worldData = await importer.ReadWorldFile(worldDataStream, cancellationToken);
+                worldData = await WorldData.LoadFromZipAsync(worldDataStream, importer.Logger, cancellationToken);
             }
 
             if (worldData is null)
             {
                 return null;
             }
+
+            worldData = worldData with { Size = buildplate.Size, Offset = buildplate.Offset, Night = buildplate.Night, };
 
             var meshGenerator = new BuildplateMeshGenerator(resourcePackManager);
 
@@ -194,7 +198,7 @@ public static class ImporterExtensions
             {
                 PlayerId = playerId,
                 BuildplateId = buildplateId,
-                PreviewData = [.. buffer],  
+                PreviewData = [.. buffer],
             };
 
             appDbContext.BuildplatePreviews.Add(dbBuildplatePreview);

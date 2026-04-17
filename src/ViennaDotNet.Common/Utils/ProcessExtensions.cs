@@ -6,7 +6,7 @@ namespace ViennaDotNet.Common.Utils;
 
 public static partial class ProcessExtensions
 {
-    public static void StopGracefullyOrKill(this Process process, int timeout, bool allowConsoleReAlloc = false)
+    public static void StopGracefullyOrKillAndWait(this Process process, int timeout, bool allowConsoleReAlloc = false)
     {
         if (!process.TryStopGracefully(timeout, allowConsoleReAlloc))
         {
@@ -22,6 +22,11 @@ public static partial class ProcessExtensions
         {
             process.Kill();
         }
+    }
+
+    public static async Task StopGracefullyOrKillAndWaitAsync(this Process process, int timeout, bool allowConsoleReAlloc, CancellationToken cancellationToken)
+    {
+        await process.StopGracefullyOrKillAsync(timeout, allowConsoleReAlloc, cancellationToken);
 
         await process.WaitForExitAsync(timeout, cancellationToken);
     }

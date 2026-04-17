@@ -1,36 +1,34 @@
-using Cyotek.Data.Nbt;
-using Cyotek.Data.Nbt.Serialization;
-using Serilog;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO.Compression;
 using System.Text;
 using System.Text.Json.Serialization;
+using Cyotek.Data.Nbt;
+using Cyotek.Data.Nbt.Serialization;
+using Serilog;
 using ViennaDotNet.Buildplate.Connector.Model;
 using ViennaDotNet.Common;
-using ViennaDotNet.Common.Buildplate.Connector.Model;
 using ViennaDotNet.Common.Utils;
 using ViennaDotNet.EventBus.Client;
 
 namespace ViennaDotNet.Buildplate.Launcher;
 
-public class Instance
+public sealed class Instance
 {
-    private const int HOST_PLAYER_CONNECT_TIMEOUT = 20_000;
+    private const long HOST_PLAYER_CONNECT_TIMEOUT = 20000;
 
-    public static Instance Run(EventBusClient eventBusClient, string? playerId, string buildplateId, BuildplateSource buildplateSource, string instanceId, bool survival, bool night, bool saveEnabled, InventoryType inventoryType, long? shutdownTime, string publicAddress, int port, int serverInternalPort, string javaCmd, FileInfo fountainBridgeJar, DirectoryInfo serverTemplateDir, string fabricJarName, FileInfo connectorPluginJar, DirectoryInfo baseDir, string eventBusConnectionstring)
+    public static Instance Run(EventBusClient eventBusClient, string? playerId, string buildplateId, BuildplateSource buildplateSource, string instanceId, bool survival, bool night, bool saveEnabled, InventoryType inventoryType, long? shutdownTime, string publicAddress, int port, int serverInternalPort, string javaCmd, FileInfo fountainBridgeJar, DirectoryInfo serverTemplateDir, string fabricJarName, FileInfo connectorPluginJar, DirectoryInfo baseDir, string eventBusConnectionString)
     {
-        if (playerId is null && buildplateSource is BuildplateSource.PLAYER)
+        if (playerId is null && buildplateSource == BuildplateSource.PLAYER)
         {
-            throw new ArgumentException($"{nameof(playerId)} was not while {nameof(buildplateSource)} was {nameof(BuildplateSource.PLAYER)}.", nameof(playerId));
+            throw new ArgumentException();
         }
 
-        var instance = new Instance(eventBusClient, playerId, buildplateId, buildplateSource, instanceId, survival, night, saveEnabled, inventoryType, shutdownTime, publicAddress, port, serverInternalPort, javaCmd, fountainBridgeJar, serverTemplateDir, fabricJarName, connectorPluginJar, baseDir, eventBusConnectionstring);
-
+        var instance = new Instance(eventBusClient, playerId, buildplateId, buildplateSource, instanceId, survival, night, saveEnabled, inventoryType, shutdownTime, publicAddress, port, serverInternalPort, javaCmd, fountainBridgeJar, serverTemplateDir, fabricJarName, connectorPluginJar, baseDir, eventBusConnectionString);
         instance._threadStartedSemaphore.Wait();
-        instance._thread = instance.RunAsync(instance._threadCancellationToken.Token);
+        instance._thread = instance.RunAsync();
         instance._threadStartedSemaphore.Wait();
         instance._threadStartedSemaphore.Release();
-
         return instance;
     }
 
@@ -61,8 +59,8 @@ public class Instance
     private readonly string _connectorPluginArgString;
 
     private Task? _thread;
-    private readonly CancellationTokenSource _threadCancellationToken = new();
     private readonly SemaphoreSlim _threadStartedSemaphore = new SemaphoreSlim(1, 1);
+    private readonly ILogger _logger;
 
     private Publisher? _publisher = null;
     private RequestSender? _requestSender = null;
@@ -70,12 +68,12 @@ public class Instance
     private Subscriber? _subscriber = null;
     private RequestHandler? _requestHandler = null;
 
-    private DirectoryInfo? _serverWorkDir;
-    private DirectoryInfo? _bridgeWorkDir;
+    private DirectoryInfo _serverWorkDir;
+    private DirectoryInfo _bridgeWorkDir;
     private ConsoleProcess? _serverProcess = null;
     private ConsoleProcess? _bridgeProcess = null;
     private bool _shuttingDown = false;
-    private readonly Lock _subprocessLock = new();
+    private readonly SemaphoreSlim _subprocessLock = new SemaphoreSlim(1, 1);
 
     private volatile bool _hostPlayerConnected = false;
 
@@ -105,10 +103,16 @@ public class Instance
         _baseDir = baseDir;
         _eventBusAddress = eventBusConnectionString;
         _eventBusQueueName = "buildplate_" + InstanceId;
-        _connectorPluginArgString = Json.Serialize(new ConnectorPluginArg(_eventBusAddress, _eventBusQueueName, _inventoryType));
+        _connectorPluginArgString = Json.Serialize(new ConnectorPluginArg(
+            _eventBusAddress,
+            _eventBusQueueName,
+            _inventoryType
+        ));
+
+        _logger = Log.Logger.ForContext("InstanceId", InstanceId);
     }
 
-    private async Task RunAsync(CancellationToken cancellationToken)
+    private async Task RunAsync()
     {
         await Task.Yield();
 
@@ -116,91 +120,86 @@ public class Instance
 
         try
         {
-            Log.Information(_buildplateSource switch
+            switch (_buildplateSource)
             {
-                BuildplateSource.PLAYER => $"Starting for player {_playerId} buildplate {_buildplateId} (survival = {_survival}, saveEnabled = {_saveEnabled}, inventoryType = {_inventoryType})",
-                BuildplateSource.SHARED => $"Starting for shared buildplate {_buildplateId} (player = {_playerId}, survival = {_survival}, saveEnabled = {_saveEnabled}, inventoryType = {_inventoryType})",
-                BuildplateSource.ENCOUNTER => $"Starting for encounter buildplate {_buildplateId} (player = {_playerId}, survival = {_survival}, saveEnabled = {_saveEnabled}, inventoryType = {_inventoryType})",
-                _ => throw new UnreachableException(),
-            });
-            Log.Information($"Using port {Port} internal port {_serverInternalPort}");
+                case BuildplateSource.PLAYER:
+                    _logger.Information($"Starting for player {_playerId} buildplate {_buildplateId} (survival = {_survival}, saveEnabled = {_saveEnabled}, inventoryType = {_inventoryType})");
+                    break;
+                case BuildplateSource.SHARED:
+                    _logger.Information($"Starting for shared buildplate {_buildplateId} (player = {_playerId}, survival = {_survival}, saveEnabled = {_saveEnabled}, inventoryType = {_inventoryType})");
+                    break;
+                case BuildplateSource.ENCOUNTER:
+                    _logger.Information($"Starting for encounter buildplate {_buildplateId} (player = {_playerId}, survival = {_survival}, saveEnabled = {_saveEnabled}, inventoryType = {_inventoryType})");
+                    break;
+            }
+
+            _logger.Information($"Using port {Port} internal port {_serverInternalPort}");
 
             _publisher = _eventBusClient.AddPublisher();
             _requestSender = _eventBusClient.AddRequestSender();
 
-            cancellationToken.ThrowIfCancellationRequested();
-
-            Log.Information("Setting up server");
+            _logger.Information("Setting up server");
 
             BuildplateLoadResponse? buildplateLoadResponse = _buildplateSource switch
             {
-                BuildplateSource.PLAYER => await SendEventBusRequestRaw<BuildplateLoadResponse>("load", new BuildplateLoadRequest(_playerId!, _buildplateId), true),
+                BuildplateSource.PLAYER => await SendEventBusRequestRaw<BuildplateLoadResponse>("load", new BuildplateLoadRequest(_playerId, _buildplateId), true),
                 BuildplateSource.SHARED => await SendEventBusRequestRaw<BuildplateLoadResponse>("loadShared", new SharedBuildplateLoadRequest(_buildplateId), true),
                 BuildplateSource.ENCOUNTER => await SendEventBusRequestRaw<BuildplateLoadResponse>("loadEncounter", new EncounterBuildplateLoadRequest(_buildplateId), true),
                 _ => throw new UnreachableException(),
             };
-
-            Debug.Assert(buildplateLoadResponse is not null);
-
-            cancellationToken.ThrowIfCancellationRequested();
 
             byte[] serverData;
             try
             {
                 serverData = Convert.FromBase64String(buildplateLoadResponse.ServerDataBase64);
             }
-            catch
+            catch (Exception exception)
             {
-                Log.Error("Buildplate load response contained invalid base64 data");
+                _logger.Error(exception, "Buildplate load response contained invalid base64 data");
                 return;
             }
-
-            cancellationToken.ThrowIfCancellationRequested();
 
             try
             {
-                _serverWorkDir = SetupServerFiles(serverData);
+                _serverWorkDir = await SetupServerFiles(serverData);
                 if (_serverWorkDir is null)
                 {
-                    Log.Error("Could not set up files for server");
+                    _logger.Error("Could not set up files for server");
                     return;
                 }
             }
-            catch (IOException ex)
+            catch (IOException exception)
             {
-                Log.Error($"Could not set up files for server: {ex}");
+                _logger.Error("Could not set up files for server", exception);
                 return;
             }
-
-            cancellationToken.ThrowIfCancellationRequested();
 
             try
             {
                 _bridgeWorkDir = SetupBridgeFiles(serverData);
                 if (_bridgeWorkDir is null)
                 {
-                    Log.Error("Could not set up files for bridge");
+                    _logger.Error("Could not set up files for bridge");
                     return;
                 }
             }
-            catch (IOException ex)
+            catch (IOException exception)
             {
-                Log.Error("Could not set up files for bridge", ex);
+                _logger.Error("Could not set up files for bridge", exception);
                 return;
             }
 
-            cancellationToken.ThrowIfCancellationRequested();
-
-            Log.Information("Running server");
+            _logger.Information("Running server");
 
             _subscriber = _eventBusClient.AddSubscriber(_eventBusQueueName, new Subscriber.SubscriberListener(
                 HandleConnectorEvent,
                 () =>
                 {
-                    Log.Error("Event bus subscriber error");
+                    _logger.Error("Event bus subscriber error");
                     BeginShutdown();
                 }
             ));
+
             _requestHandler = _eventBusClient.AddRequestHandler(_eventBusQueueName, new RequestHandler.Handler(
                 async request =>
                 {
@@ -209,61 +208,62 @@ public class Instance
                 },
                 () =>
                 {
-                    Log.Error("Event bus request handler error");
+                    _logger.Error("Event bus request handler error");
                     BeginShutdown();
                 }
             ));
 
-            cancellationToken.ThrowIfCancellationRequested();
-
-            _subprocessLock.Enter();
+            _logger.Debug("Wait");
+            await _subprocessLock.WaitAsync();
+            _logger.Debug("Done");
             if (!_shuttingDown)
             {
-                StartServerProcess();
+                _logger.Debug("Starting");
+                await StartServerProcessAsync();
+                _logger.Debug("Done");
                 if (_serverProcess is not null)
                 {
-                    _subprocessLock.Exit();
+                    _subprocessLock.Release();
                     int exitCode = await WaitForProcessAsync(_serverProcess.Process);
-                    _subprocessLock.Enter();
+                    await _subprocessLock.WaitAsync();
                     _serverProcess = null;
                     if (!_shuttingDown)
                     {
-                        Log.Warning($"Server process has unexpectedly terminated with exit code {exitCode}");
+                        _logger.Warning($"Server process has unexpectedly terminated with exit code {exitCode}");
                     }
                     else
                     {
-                        Log.Information($"Server has finished with exit code {exitCode}");
+                        _logger.Information($"Server has finished with exit code {exitCode}");
                     }
 
                     _shuttingDown = true;
 
                     if (_bridgeProcess is not null)
                     {
-                        Log.Information("Bridge is still running, shutting it down now");
-                        _bridgeProcess.StopAndWait();
-                        _subprocessLock.Exit();
+                        _logger.Information("Bridge is still running, shutting it down now");
+                        await _bridgeProcess.StopAndWaitAsync();
+                        _subprocessLock.Release();
                         exitCode = await WaitForProcessAsync(_bridgeProcess.Process);
-                        _subprocessLock.Enter();
+                        await _subprocessLock.WaitAsync();
                         _bridgeProcess = null;
-                        Log.Information($"Bridge has finished with exit code {exitCode}");
+                        _logger.Information($"Bridge has finished with exit code {exitCode}");
                     }
                 }
                 else
                 {
-                    Log.Information("Server failed to start");
+                    _logger.Information("Server failed to start");
                 }
             }
 
-            _subprocessLock.Exit();
+            _subprocessLock.Release();
         }
-        catch (Exception ex)
+        catch (Exception exception)
         {
-            Log.Error($"Unhandled exception: {ex}");
+            _logger.Error(exception, "Unhandled exception");
         }
         finally
         {
             _subscriber?.Close();
-
             _requestHandler?.Close();
 
             if (_publisher is not null)
@@ -280,7 +280,7 @@ public class Instance
 
             CleanupBaseDir();
 
-            Log.Information("Finished");
+            _logger.Information("Finished");
         }
     }
 
@@ -290,8 +290,8 @@ public class Instance
         {
             case "started":
                 {
-                    Log.Information("Server is ready");
-                    StartBridgeProcess();
+                    _logger.Information("Server is ready");
+                    await StartBridgeProcessAsync();
                     SendEventBusInstanceStatusNotification("ready");
                     if (_shutdownTime is not null)
                     {
@@ -312,9 +312,8 @@ public class Instance
                         if (worldSavedMessage is not null)
                         {
                             if (_hostPlayerConnected)
-
                             {
-                                Log.Information("Saving snapshot");
+                                _logger.Information("Saving snapshot");
                                 SendEventBusRequest<object>("saved", worldSavedMessage, false)
                                     .Forget(ex =>
                                     {
@@ -323,26 +322,23 @@ public class Instance
                             }
                             else
                             {
-                                Log.Information("Not saving snapshot because host player never connected");
+                                _logger.Information("Not saving snapshot because host player never connected");
                             }
                         }
                     }
                     else
                     {
-                        Log.Information("Ignoring save data because saving is disabled");
+                        _logger.Information("Ignoring save data because saving is disabled");
                     }
                 }
 
                 break;
-
             case "inventoryAdd":
                 {
-                    Log.Information("**************AddItem**************");
                     InventoryAddItemMessage? inventoryAddItemMessage = ReadJson<InventoryAddItemMessage>(@event.Data);
                     if (inventoryAddItemMessage is not null)
                     {
                         await SendEventBusRequest<object>("inventoryAdd", inventoryAddItemMessage, false);
-                        Log.Information("**************AddItem null json**************");
                     }
                 }
 
@@ -351,27 +347,22 @@ public class Instance
                 {
                     InventoryUpdateItemWearMessage? inventoryUpdateItemWearMessage = ReadJson<InventoryUpdateItemWearMessage>(@event.Data);
                     if (inventoryUpdateItemWearMessage is not null)
+                    {
                         await SendEventBusRequest<object>("inventoryUpdateWear", inventoryUpdateItemWearMessage, false);
+                    }
                 }
 
                 break;
+
             case "inventorySetHotbar":
                 {
-                    Log.Information("**************SetHotbar**************");
                     InventorySetHotbarMessage? inventorySetHotbarMessage = ReadJson<InventorySetHotbarMessage>(@event.Data);
                     if (inventorySetHotbarMessage is not null)
                     {
                         await SendEventBusRequest<object>("inventorySetHotbar", inventorySetHotbarMessage, false);
                     }
-                    else
-                    {
-                        Log.Information("**************SetHotbar null response**************");
-                    }
                 }
 
-                break;
-            default:
-                Log.Warning($"Unkown connector event: {@event.Type}");
                 break;
         }
     }
@@ -387,14 +378,14 @@ public class Instance
                     {
                         if (_playerId is not null && !_hostPlayerConnected && playerConnectedRequest.Uuid != _playerId)
                         {
-                            Log.Information($"Rejecting player connection for player {playerConnectedRequest.Uuid} because the host player must connect first");
+                            _logger.Information($"Rejecting player connection for player {playerConnectedRequest.Uuid} because the host player must connect first");
                             return new PlayerConnectedResponse(false, null);
                         }
 
                         PlayerConnectedResponse? playerConnectedResponse = await SendEventBusRequest<PlayerConnectedResponse>("playerConnected", playerConnectedRequest, true);
                         if (playerConnectedResponse is not null)
                         {
-                            Log.Information($"Player {playerConnectedRequest.Uuid} has connected");
+                            _logger.Information($"Player {playerConnectedRequest.Uuid} has connected");
 
                             if (_playerId is not null && !_hostPlayerConnected && playerConnectedRequest.Uuid == _playerId)
                             {
@@ -403,41 +394,28 @@ public class Instance
 
                             return playerConnectedResponse;
                         }
-                        else
-                        {
-                            Log.Warning("*******HandleConnectorRequest playerConnected response null*******");
-                        }
-                    }
-                    else
-                    {
-                        Log.Warning("*******HandleConnectorRequest playerConnected request null*******");
                     }
                 }
 
                 break;
             case "playerDisconnected":
                 {
-                    Log.Debug("Player dicconnecting...");
                     PlayerDisconnectedRequest? playerDisconnectedRequest = ReadJson<PlayerDisconnectedRequest>(request.Data);
                     if (playerDisconnectedRequest is not null)
                     {
                         PlayerDisconnectedResponse? playerDisconnectedResponse = await SendEventBusRequest<PlayerDisconnectedResponse>("playerDisconnected", playerDisconnectedRequest, true);
                         if (playerDisconnectedResponse is not null)
                         {
-                            Log.Information($"Player {playerDisconnectedRequest.PlayerId} has disconnected");
+                            _logger.Information($"Player {playerDisconnectedRequest.PlayerId} has disconnected");
 
                             if (_shutdownTime is null && _playerId is not null && playerDisconnectedRequest.PlayerId == _playerId)
                             {
-                                Log.Information("Host player has disconnected, beginning shutdown");
+                                _logger.Information("Host player has disconnected, beginning shutdown");
                                 BeginShutdown();
                             }
 
                             return playerDisconnectedResponse;
                         }
-                    }
-                    else
-                    {
-                        Log.Information("**************playerDisconnected null json**************");
                     }
                 }
 
@@ -452,14 +430,6 @@ public class Instance
                         {
                             return respawn.Value;
                         }
-                        else
-                        {
-                            Log.Information("**************playerDead null response**************");
-                        }
-                    }
-                    else
-                    {
-                        Log.Information("**************playerDead null json**************");
                     }
                 }
 
@@ -467,23 +437,13 @@ public class Instance
             case "getInventory":
                 {
                     string? playerId = ReadJson<string>(request.Data);
-                    Log.Information("**************GetInventory**************");
                     if (playerId is not null)
                     {
                         InventoryResponse? inventoryResponse = await SendEventBusRequest<InventoryResponse>("getInventory", playerId, true);
-
                         if (inventoryResponse is not null)
                         {
                             return inventoryResponse;
                         }
-                        else
-                        {
-                            Log.Information("**************GetInventory response null**************");
-                        }
-                    }
-                    else
-                    {
-                        Log.Warning("**************GetInventory player null**************");
                     }
                 }
 
@@ -491,38 +451,24 @@ public class Instance
             case "inventoryRemove":
                 {
                     InventoryRemoveItemRequest? inventoryRemoveItemRequest = ReadJson<InventoryRemoveItemRequest>(request.Data);
-                    Log.Information("**************InventoryRemove**************");
                     if (inventoryRemoveItemRequest is not null)
                     {
                         if (inventoryRemoveItemRequest.InstanceId is not null)
                         {
-                            bool? success = await SendEventBusRequest<bool>("inventoryRemove", inventoryRemoveItemRequest, true);
-
+                            bool? success = await SendEventBusRequest<bool?>("inventoryRemove", inventoryRemoveItemRequest, true);
                             if (success is not null)
                             {
-                                return success;
-                            }
-                            else
-                            {
-                                Log.Information("**************inventoryRemove response null 1**************");
+                                return success.Value;
                             }
                         }
                         else
                         {
-                            int? removedCount = await SendEventBusRequest<int>("inventoryRemove", inventoryRemoveItemRequest, true);
+                            int? removedCount = await SendEventBusRequest<int?>("inventoryRemove", inventoryRemoveItemRequest, true);
                             if (removedCount is not null)
                             {
-                                return removedCount;
-                            }
-                            else
-                            {
-                                Log.Information("**************inventoryRemove response null 2**************");
+                                return removedCount.Value;
                             }
                         }
-                    }
-                    else
-                    {
-                        Log.Warning("**************InventoryRemove request null**************");
                     }
                 }
 
@@ -534,10 +480,6 @@ public class Instance
                     {
                         // TODO
                         return findPlayerIdRequest.MinecraftName;
-                    }
-                    else
-                    {
-                        Log.Warning("*******HandleConnectorRequest findPlayer request null*******");
                     }
                 }
 
@@ -552,20 +494,9 @@ public class Instance
                         {
                             return initialPlayerStateResponse;
                         }
-                        else
-                        {
-                            Log.Warning("*******HandleConnectorRequest getInitialPlayerState response null*******");
-                        }
-                    }
-                    else
-                    {
-                        Log.Warning("*******HandleConnectorRequest getInitialPlayerState request null*******");
                     }
                 }
 
-                break;
-            default:
-                Log.Warning($"Unkown connector request: {request.Type}");
                 break;
         }
 
@@ -586,11 +517,6 @@ public class Instance
         }
     }
 
-    private sealed record RequestWithInstanceId(
-        string InstanceId,
-        object Request
-    );
-
     private void SendEventBusInstanceStatusNotification(string status)
     {
         Debug.Assert(_publisher is not null);
@@ -605,6 +531,11 @@ public class Instance
         });
     }
 
+    private sealed record RequestWithInstanceId(
+        string InstanceId,
+        object Request
+    );
+
     private Task<T?> SendEventBusRequest<T>(string type, object obj, bool returnResponse)
     {
         var request = new RequestWithInstanceId(InstanceId, obj);
@@ -614,9 +545,11 @@ public class Instance
 
     private async Task<T?> SendEventBusRequestRaw<T>(string type, object obj, bool returnResponse)
     {
+        Debug.Assert(_requestSender is not null);
+
         try
         {
-            string? response = await _requestSender!.Request("buildplates", type, Json.Serialize(obj)).Task;
+            string? response = await _requestSender.Request("buildplates", type, Json.Serialize(obj)).Task;
 
             if (response is null)
             {
@@ -625,9 +558,16 @@ public class Instance
                 return default;
             }
 
-            return returnResponse
-                ? Json.Deserialize<T>(response)
-                : default;
+            if (returnResponse)
+            {
+                Debug.Assert(typeof(T) != typeof(object));
+                return Json.Deserialize<T>(response);
+            }
+            else
+            {
+                Debug.Assert(typeof(T) == typeof(object));
+                return default;
+            }
         }
         catch (Exception ex)
         {
@@ -637,88 +577,85 @@ public class Instance
         }
     }
 
-    private DirectoryInfo? SetupServerFiles(byte[] serverData)
+    private async Task<DirectoryInfo?> SetupServerFiles(byte[] serverData)
     {
         var workDir = new DirectoryInfo(Path.Combine(_baseDir.FullName, "server"));
         if (!workDir.TryCreate())
         {
-            Log.Error("Could not create server working directory");
+            _logger.Error("Could not create server working directory");
             return null;
         }
 
-        if (!CopyServerFile(Path.Combine(_serverTemplateDir.FullName, _fabricJarName), Path.Combine(workDir.FullName, _fabricJarName), false))
+        if (!CopyServerFile(new FileInfo(Path.Combine(_serverTemplateDir.FullName, _fabricJarName)), new FileInfo(Path.Combine(workDir.FullName, _fabricJarName)), false))
         {
-
-            Log.Error($"Fabric JAR {_fabricJarName} does not exist in server template directory");
+            _logger.Error("Fabric JAR {} does not exist in server template directory", _fabricJarName);
             return null;
         }
 
         bool warnedMissingServerFiles = false;
-        if (!CopyServerFile(Path.Combine(Path.Combine(_serverTemplateDir.FullName, ".fabric"), "server"), Path.Combine(workDir.FullName, ".fabric/server"), true))
+        if (!CopyServerFile(new DirectoryInfo(Path.Combine(_serverTemplateDir.FullName, ".fabric", "server")), new DirectoryInfo(Path.Combine(workDir.FullName, ".fabric", "server")), true))
         {
             if (!warnedMissingServerFiles)
             {
-
-                Log.Warning("Server files were not pre-downloaded in server template directory, it is recommended to pre-download all server files to improve instance start-up time and reduce network data usage");
+                _logger.Warning("Server files were not pre-downloaded in server template directory, it is recommended to pre-download all server files to improve instance start-up time and reduce network data usage");
                 warnedMissingServerFiles = true;
             }
         }
 
-        if (!CopyServerFile(Path.Combine(_serverTemplateDir.FullName, "libraries"), Path.Combine(workDir.FullName, "libraries"), true))
+        if (!CopyServerFile(new DirectoryInfo(Path.Combine(_serverTemplateDir.FullName, "libraries")), new DirectoryInfo(Path.Combine(workDir.FullName, "libraries")), true))
         {
             if (!warnedMissingServerFiles)
             {
-                Log.Warning("Server files were not pre-downloaded in server template directory, it is recommended to pre-download all server files to improve instance start-up time and reduce network data usage");
+                _logger.Warning("Server files were not pre-downloaded in server template directory, it is recommended to pre-download all server files to improve instance start-up time and reduce network data usage");
                 warnedMissingServerFiles = true;
             }
         }
 
-        if (!CopyServerFile(Path.Combine(_serverTemplateDir.FullName, "versions"), Path.Combine(workDir.FullName, "versions"), true))
+        if (!CopyServerFile(new DirectoryInfo(Path.Combine(_serverTemplateDir.FullName, "versions")), new DirectoryInfo(Path.Combine(workDir.FullName, "versions")), true))
         {
             if (!warnedMissingServerFiles)
             {
-                Log.Warning("Server files were not pre-downloaded in server template directory, it is recommended to pre-download all server files to improve instance start-up time and reduce network data usage");
+                _logger.Warning("Server files were not pre-downloaded in server template directory, it is recommended to pre-download all server files to improve instance start-up time and reduce network data usage");
                 warnedMissingServerFiles = true;
             }
         }
 
-        if (!CopyServerFile(Path.Combine(_serverTemplateDir.FullName, "mods"), Path.Combine(workDir.FullName, "mods"), true))
+        if (!CopyServerFile(new DirectoryInfo(Path.Combine(_serverTemplateDir.FullName, "mods")), new DirectoryInfo(Path.Combine(workDir.FullName, "mods")), true))
         {
-            Log.Error("Mods directory was not present in server template directory, the buildplate server instance will not function correctly without the Fountain and Vienna Fabric mods installed");
+            _logger.Error("Mods directory was not present in server template directory, the buildplate server instance will not function correctly without the Fountain and Vienna Fabric mods installed");
         }
 
-        File.WriteAllText(Path.Combine(workDir.FullName, "eula.txt"), "eula=true");
+        await File.WriteAllTextAsync(Path.Combine(workDir.FullName, "eula.txt"), "eula=true");
 
         string serverProperties = new StringBuilder()
             .Append("online-mode=false\n")
             .Append("enforce-secure-profile=false\n")
             .Append("sync-chunk-writes=false\n")
             .Append("spawn-protection=0\n")
-            .Append($"server-port={_serverInternalPort}\n")
+            .Append($"server-port={_serverInternalPort.ToString(CultureInfo.InvariantCulture)}\n")
             .Append($"gamemode={(_survival ? "survival" : "creative")}\n")
             .Append($"vienna-event-bus-address={_eventBusAddress}\n")
             .Append($"vienna-event-bus-queue-name={_eventBusQueueName}\n")
             .ToString();
-        File.WriteAllText(Path.Combine(workDir.FullName, "server.properties"), serverProperties);
+        await File.WriteAllTextAsync(Path.Combine(workDir.FullName, "server.properties"), serverProperties);
 
         var worldDir = new DirectoryInfo(Path.Combine(workDir.FullName, "world"));
         if (!worldDir.TryCreate())
         {
-            Log.Error("Could not create server world directory");
+            _logger.Error("Could not create server world directory");
             return null;
         }
-
         var worldEntitiesDir = new DirectoryInfo(Path.Combine(worldDir.FullName, "entities"));
         if (!worldEntitiesDir.TryCreate())
         {
-            Log.Error("Could not create server world entities directory");
+            _logger.Error("Could not create server world entities directory");
             return null;
         }
 
         var worldRegionDir = new DirectoryInfo(Path.Combine(worldDir.FullName, "region"));
         if (!worldRegionDir.TryCreate())
         {
-            Log.Error("Could not create server world regions directory");
+            _logger.Error("Could not create server world regions directory");
             return null;
         }
 
@@ -733,7 +670,6 @@ public class Instance
             writer.WriteEndTag();
             writer.WriteEndDocument();
         }
-        //NBTIO.writeFile(levelDatTag, new File(worldDir, "level.dat"));
 
         using (var byteArrayInputStream = new MemoryStream(serverData))
         using (var zipInputStream = new ZipArchive(byteArrayInputStream))
@@ -758,66 +694,22 @@ public class Instance
         return workDir;
     }
 
-    private static bool CopyServerFile(string src, string dst, bool directory)
+    private static bool CopyServerFile(FileSystemInfo src, FileSystemInfo dst, bool directory)
     {
-        if (directory)
+        if (!src.Exists)
         {
-            if (!Directory.Exists(src))
-                return false;
-        }
-        else if (!File.Exists(src))
             return false;
+        }
 
         if (directory)
         {
-            Files.WalkFileTree(src, new FileVisitor(
-                path =>
-                {
-                    string dstPath;
-                    try
-
-                    {
-                        dstPath = Path.Combine(dst, Path.GetRelativePath(src, path));
-                    }
-                    catch (ArgumentException ex)
-                    {
-                        throw new IOException(null, ex);
-                    }
-
-                    Directory.CreateDirectory(dstPath);
-                    return FileVisitResult.CONTINUE;
-                },
-                path =>
-                {
-                    string dstPath;
-                    try
-                    {
-                        dstPath = Path.Combine(dst, Path.GetRelativePath(src, path));
-                    }
-                    catch (ArgumentException ex)
-                    {
-                        throw new IOException(null, ex);
-                    }
-
-                    File.Copy(path, dstPath);
-                    return FileVisitResult.CONTINUE;
-                },
-                (path, ex) =>
-                {
-                    return ex is not null
-                        ? throw ex
-                        : FileVisitResult.CONTINUE;
-                },
-                (path, ex) =>
-                {
-                    return ex is not null
-                        ? throw ex
-                        : FileVisitResult.CONTINUE;
-                }
-            ));
+            ((DirectoryInfo)src).CopyTo(dst.FullName);
         }
         else
-            File.Copy(src, dst);
+        {
+            ((FileInfo)src).CopyTo(dst.FullName);
+        }
+
         return true;
     }
 
@@ -875,10 +767,10 @@ public class Instance
             .Add("DataVersion", 3700)
             .Add("version", 19133)
             .Add("Version", new NbtBuilder.Compound()
-                .Add("Id", 3700)
-                .Add("Name", "1.20.4")
-                .Add("Series", "main")
-                .Add("Snapshot", (byte)0)
+                    .Add("Id", 3700)
+                    .Add("Name", "1.20.4")
+                    .Add("Series", "main")
+                    .Add("Snapshot", (byte)0)
             )
             .Add("initialized", (byte)1)
             .Build("Data");
@@ -891,7 +783,7 @@ public class Instance
         var workDir = new DirectoryInfo(Path.Combine(_baseDir.FullName, "bridge"));
         if (!workDir.TryCreate())
         {
-            Log.Error("Could not create bridge working directory");
+            _logger.Error("Could not create bridge working directory");
             return null;
         }
 
@@ -902,323 +794,251 @@ public class Instance
 
     private void CleanupBaseDir()
     {
-        Log.Information("Cleaning up runtime directory");
+        _logger.Information("Cleaning up runtime directory");
 
         try
         {
-            Files.WalkFileTree(_baseDir.FullName, new FileVisitor(
-                path =>
-                {
-                    return FileVisitResult.CONTINUE;
-                },
-                path =>
-                {
-                    File.Delete(path);
-                    return FileVisitResult.CONTINUE;
-                },
-                (path, ex) =>
-                {
-                    return ex is not null
-                        ? throw ex
-                        : FileVisitResult.CONTINUE;
-                },
-                (path, ex) =>
-                {
-                    if (ex is not null)
-                        throw ex;
-
-                    Directory.Delete(path);
-                    return FileVisitResult.CONTINUE;
-                }
-            ));
+            _baseDir.Delete(recursive: true);
         }
-        catch (IOException ex)
+        catch (IOException exception)
         {
-            Log.Error($"Exception while cleaning up runtime directory: {ex}");
+            _logger.Error(exception, "Exception while cleaning up runtime directory");
         }
     }
 
-    private void StartServerProcess()
+    private async Task StartServerProcessAsync()
     {
-        lock (_subprocessLock)
+        await _subprocessLock.WaitAsync();
+
+        if (_shuttingDown)
         {
-            if (_shuttingDown)
-            {
-                Log.Debug("Already shutting down, not starting server process");
-                return;
-            }
-
-            if (_serverProcess is not null)
-            {
-                Log.Debug("Server process has already been started");
-                return;
-            }
-
-            Log.Information("Starting server process");
-
-            try
-            {
-                bool openInNewWindow = true;
-
-                _serverProcess = new ConsoleProcess(_javaCmd, openInNewWindow, !openInNewWindow, openInNewWindow: openInNewWindow);
-
-                if (!openInNewWindow)
-                {
-                    _serverProcess.StandartTextReceived += (sender, e) =>
-                    {
-                        if (!string.IsNullOrWhiteSpace(e.Data))
-                        {
-                            Log.Debug($"[server] {e.Data}");
-                        }
-                    };
-                    _serverProcess.ErrorTextReceived += (sender, e) =>
-                    {
-                        if (!string.IsNullOrWhiteSpace(e.Data))
-                        {
-                            Log.Error($"[server] {e.Data}");
-                        }
-                    };
-                }
-
-                _serverProcess.ExecuteAsync(_serverWorkDir!.FullName, ["-jar", _fabricJarName, "-nogui"]);
-
-                Log.Information($"Server process started, PID {_serverProcess.Id}");
-            }
-            catch (IOException ex)
-            {
-                Log.Error($"Could not start server process: {ex}");
-            }
+            _logger.Debug("Already shutting down, not starting server process");
+            _subprocessLock.Release();
+            return;
         }
-    }
 
-    private void StartBridgeProcess()
-    {
-        lock (_subprocessLock)
+        if (_serverProcess is not null)
         {
-            if (_shuttingDown)
+            _logger.Debug("Server process has already been started");
+            _subprocessLock.Release();
+            return;
+        }
+
+        _logger.Information("Starting server process");
+
+        try
+        {
+            bool useShellExecute = true;
+            bool redirect = false;
+
+            _serverProcess = new ConsoleProcess(_javaCmd, useShellExecute: useShellExecute, redirect: redirect, openInNewWindow: true);
+
+            if (redirect && !useShellExecute)
             {
-                Log.Debug("Already shutting down, not starting bridge process");
-                return;
-            }
-
-            if (_bridgeProcess is not null)
-            {
-                Log.Debug("Bridge process has already been started");
-                return;
-            }
-
-            Log.Information("Starting bridge process");
-
-            try
-            {
-                bool openInNewWindow = true;
-
-                _bridgeProcess = new ConsoleProcess(_javaCmd, openInNewWindow, !openInNewWindow, openInNewWindow: openInNewWindow);
-                if (!openInNewWindow)
+                _serverProcess.StandartTextReceived += (sender, e) =>
                 {
-                    _bridgeProcess.StandartTextReceived += (sender, e) =>
+                    if (!string.IsNullOrWhiteSpace(e.Data))
                     {
-                        if (!string.IsNullOrWhiteSpace(e.Data))
-                        {
-                            Log.Debug($"[bridge] {e.Data}");
-                        }
-                    };
-                    _bridgeProcess.ErrorTextReceived += (sender, e) =>
-                    {
-                        if (!string.IsNullOrWhiteSpace(e.Data))
-                        {
-                            Log.Error($"[bridge] {e.Data}");
-                        }
-                    };
-                }
-
-                _bridgeProcess.ProcessExited += (sender, e) =>
-                {
-                    lock (_subprocessLock)
-                    {
-                        if (!_shuttingDown)
-                        {
-                            Log.Warning($"Bridge process has unexpectedly terminated with exit code {_bridgeProcess.ExitCode}");
-                            _bridgeProcess = null;
-                            BeginShutdown();
-                        }
+                        Log.Debug($"[server] {e.Data}");
                     }
                 };
-
-                _bridgeProcess.ExecuteAsync(_bridgeWorkDir!.FullName,
-                [
-                    "-jar", _fountainBridgeJar.FullName,
-                    "-port", Port.ToString(),
-                    "-serverAddress", "127.0.0.1",
-                    "-serverPort", _serverInternalPort.ToString(),
-                    "-connectorPluginJar", _connectorPluginJar.FullName,
-                    "-connectorPluginClass", "micheal65536.vienna.buildplate.connector.plugin.ViennaConnectorPlugin",
-                    "-connectorPluginArg", _connectorPluginArgString,
-                    "-useUUIDAsUsername",
-                ]);
-
-                Log.Information($"Bridge process started, PID {_bridgeProcess.Id}");
+                _serverProcess.ErrorTextReceived += (sender, e) =>
+                {
+                    if (!string.IsNullOrWhiteSpace(e.Data))
+                    {
+                        Log.Error($"[server] {e.Data}");
+                    }
+                };
             }
-            catch (IOException ex)
-            {
-                Log.Error($"Could not start bridge process: {ex}");
-            }
+
+            _serverProcess.ExecuteAsync(_serverWorkDir.FullName, ["-jar", _fabricJarName, "-nogui"]);
+
+            _logger.Information($"Server process started, PID {_serverProcess.Id}");
         }
+        catch (IOException exception)
+        {
+            _logger.Error("Could not start server process", exception);
+        }
+
+        _subprocessLock.Release();
     }
 
-#pragma warning disable IDE0022
-    private void StartHostPlayerConnectTimeout()
+    private async Task StartBridgeProcessAsync()
     {
-        new Thread(() =>
+        await _subprocessLock.WaitAsync();
+
+        if (_shuttingDown)
         {
-            try
+            _logger.Debug("Already shutting down, not starting bridge process");
+            _subprocessLock.Release();
+            return;
+        }
+
+        if (_bridgeProcess is not null)
+        {
+            _logger.Debug("Bridge process has already been started");
+            _subprocessLock.Release();
+            return;
+        }
+
+        _logger.Information("Starting bridge process");
+
+        try
+        {
+            bool useShellExecute = true;
+            bool redirect = false;
+
+            _bridgeProcess = new ConsoleProcess(_javaCmd, useShellExecute: useShellExecute, redirect: redirect, openInNewWindow: true);
+            if (redirect && !useShellExecute)
             {
-                Thread.Sleep(HOST_PLAYER_CONNECT_TIMEOUT);
-            }
-            catch (ThreadInterruptedException exception)
-            {
-                throw new InvalidOperationException(null, exception);
+                _bridgeProcess.StandartTextReceived += (sender, e) =>
+                {
+                    if (!string.IsNullOrWhiteSpace(e.Data))
+                    {
+                        Log.Debug($"[bridge] {e.Data}");
+                    }
+                };
+                _bridgeProcess.ErrorTextReceived += (sender, e) =>
+                {
+                    if (!string.IsNullOrWhiteSpace(e.Data))
+                    {
+                        Log.Error($"[bridge] {e.Data}");
+                    }
+                };
             }
 
-            lock (_subprocessLock)
+            _bridgeProcess.ProcessExited += (sender, e) =>
             {
-                if (_shuttingDown)
+                _subprocessLock.Wait();
+
+                if (!_shuttingDown)
                 {
-                    return;
+                    Log.Warning($"Bridge process has unexpectedly terminated with exit code {_bridgeProcess.ExitCode}");
+                    _bridgeProcess = null;
+                    BeginShutdown();
                 }
+
+                _subprocessLock.Release();
+            };
+
+            _bridgeProcess.ExecuteAsync(_bridgeWorkDir!.FullName,
+            [
+                "-jar", _fountainBridgeJar.FullName,
+                "-port", Port.ToString(),
+                "-serverAddress", "127.0.0.1",
+                "-serverPort", _serverInternalPort.ToString(),
+                "-connectorPluginJar", _connectorPluginJar.FullName,
+                "-connectorPluginClass", "micheal65536.vienna.buildplate.connector.plugin.ViennaConnectorPlugin",
+                "-connectorPluginArg", _connectorPluginArgString,
+                "-useUUIDAsUsername",
+            ]);
+
+            _logger.Information($"Bridge process started, PID {_bridgeProcess.Id}");
+        }
+        catch (IOException exception)
+        {
+            _logger.Error(exception, "Could not start bridge process");
+        }
+
+        _subprocessLock.Release();
+    }
+
+    private void StartHostPlayerConnectTimeout()
+        => Task.Run(async () =>
+        {
+            await Task.Delay(checked((int)HOST_PLAYER_CONNECT_TIMEOUT));
+
+            await _subprocessLock.WaitAsync();
+            if (_shuttingDown)
+            {
+                _subprocessLock.Release();
+                return;
             }
+
+            _subprocessLock.Release();
 
             if (!_hostPlayerConnected)
             {
-                Log.Information("Host player has not connected yet, shutting down");
+                _logger.Information("Host player has not connected yet, shutting down");
                 BeginShutdown();
             }
-        }).Start();
-    }
+        }).Forget();
 
     private void StartShutdownTimer()
-    {
-        new Thread(() =>
+        => Task.Run(async () =>
         {
-            if (_shutdownTime is { } shutdownTimeVal)
+            if (_shutdownTime is { } shutdownTime)
             {
                 long currentTime = U.CurrentTimeMillis();
-                while (currentTime < shutdownTimeVal)
+                while (currentTime < shutdownTime)
                 {
-                    long duration = shutdownTimeVal - currentTime;
+                    long duration = shutdownTime - currentTime;
                     if (duration > 0)
                     {
-                        Log.Information($"Server will shut down in {duration} milliseconds");
-
-                        /*try
-                        {*/
-                        Debug.Assert((duration > 2000 ? (duration / 2) : duration) < int.MaxValue);
-                        Thread.Sleep((int)(duration > 2000 ? (duration / 2) : duration));
-                        /*}
-                        catch (ThreadInterruptedException exception)
-                        {
-                            throw new AssertionError(exception);
-                        }*/
+                        _logger.Information("Server will shut down in {} milliseconds", duration);
+                        await Task.Delay(checked((int)(duration > 2000 ? (duration / 2) : duration)));
                     }
 
                     currentTime = U.CurrentTimeMillis();
                 }
             }
 
-            Log.Information("Shutdown time has been reached, shutting down");
+            _logger.Information("Shutdown time has been reached, shutting down");
             BeginShutdown();
-        }).Start();
-    }
+        }).Forget();
 
     private void BeginShutdown()
-    {
-        Task.Run(async () =>
+        => Task.Run(async () =>
         {
-            await Task.Yield();
-
-            _subprocessLock.Enter();
+            await _subprocessLock.WaitAsync();
 
             if (_shuttingDown)
             {
-                Log.Debug("Already shutting down, not beginning shutdown");
-                _subprocessLock.Exit();
+                _logger.Debug("Already shutting down, not beginning shutdown");
+                _subprocessLock.Release();
                 return;
             }
 
             _shuttingDown = true;
 
-            Log.Information("Beginning shutdown");
+            _logger.Information("Beginning shutdown");
 
             SendEventBusInstanceStatusNotification("shuttingDown");
 
             if (_bridgeProcess is not null)
             {
-                Log.Information("Waiting for bridge to shut down");
-                _subprocessLock.Exit();
-                await _bridgeProcess.StopAndWaitAsync();
-                int exitCode = _bridgeProcess.ExitCode;//waitForProcess(bridgeProcess.Process);
-                _subprocessLock.Enter();
+                _logger.Information("Waiting for bridge to shut down");
+                await _bridgeProcess.StopNoWaitAsync();
+                _subprocessLock.Release();
+                int exitCode = await WaitForProcessAsync(_bridgeProcess.Process);
+                await _subprocessLock.WaitAsync();
                 _bridgeProcess = null;
-                Log.Information($"Bridge has finished with exit code {exitCode}");
+                _logger.Information($"Bridge has finished with exit code {exitCode}");
             }
 
             if (_serverProcess is not null)
             {
-                Log.Information("Asking the server to shut down");
-                await _serverProcess.StopAndWaitAsync();
+                _logger.Information("Asking the server to shut down");
+                await _serverProcess.StopNoWaitAsync();
             }
 
-            _subprocessLock.Exit();
-        }).Forget(ex =>
-        {
-            Log.Error(ex.Message);
-        });
-    }
-#pragma warning restore IDE0022
+            _subprocessLock.Release();
+        }).Forget();
 
-    private static async Task<int> WaitForProcessAsync(Process process, CancellationToken cancellationToken = default)
+    private static async Task<int> WaitForProcessAsync(Process process)
     {
-        int exitCode;
-        while (true)
-        {
-            try
-            {
-                await process.WaitForExitAsync(cancellationToken);
-                exitCode = process.ExitCode;
-                break;
-            }
-            catch (ThreadInterruptedException)
-            {
-                continue;
-            }
-        }
-
-        return exitCode;
+        await process.WaitForExitAsync();
+        return process.ExitCode;
     }
 
     public async Task WaitForShutdownAsync()
     {
-        while (true)
+        while (_thread is null)
         {
-            if (_thread is not null)
-            {
-                break;
-            }
-
-            await Task.Delay(25);
+            await Task.Delay(50);
         }
 
-        try
-        {
-            await _thread;
-        }
-        catch (Exception ex)
-        {
-            if (ex is not OperationCanceledException)
-            {
-                Log.Error(ex, "Error when running instance");
-            }
-        }
+        await _thread;
     }
 
     private sealed record BuildplateLoadRequest(
@@ -1226,12 +1046,12 @@ public class Instance
         string BuildplateId
     );
 
-    private sealed record EncounterBuildplateLoadRequest(
-        string EncounterBuildplateId
-    );
-
     private sealed record SharedBuildplateLoadRequest(
         string SharedBuildplateId
+    );
+
+    private sealed record EncounterBuildplateLoadRequest(
+        string EncounterBuildplateId
     );
 
     private sealed record BuildplateLoadResponse(

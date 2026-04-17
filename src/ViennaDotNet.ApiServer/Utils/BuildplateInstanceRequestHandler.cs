@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.Text;
 using ViennaDotNet.Buildplate.Connector.Model;
 using ViennaDotNet.Common;
-using ViennaDotNet.Common.Buildplate.Connector.Model;
 using ViennaDotNet.Common.Utils;
 using ViennaDotNet.DB;
 using ViennaDotNet.DB.Models.Common;

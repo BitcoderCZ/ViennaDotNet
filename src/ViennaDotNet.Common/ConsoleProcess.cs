@@ -143,10 +143,13 @@ public sealed class ConsoleProcess
         => OnProcessExited();
 
     public void StopAndWait(int timeout = 15 * 1000)
-        => Process.StopGracefullyOrKill(timeout);
+        => Process.StopGracefullyOrKillAndWait(timeout);
+
+    public async Task StopNoWaitAsync(int timeout = 15 * 1000, CancellationToken cancellationToken = default)
+        => await Process.StopGracefullyOrKillAndWaitAsync(timeout, false, cancellationToken);
 
     public async Task StopAndWaitAsync(int timeout = 15 * 1000, CancellationToken cancellationToken = default)
-        => await Process.StopGracefullyOrKillAsync(timeout, false, cancellationToken);
+        => await Process.StopGracefullyOrKillAndWaitAsync(timeout, false, cancellationToken);
 
     private void ApplyTerminalWrapper(IEnumerable<string> args)
     {

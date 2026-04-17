@@ -366,7 +366,7 @@ public sealed class ServerManager
         int stoppedCount = 0;
         foreach (var process in ProcessUtils.GetProgramProcesses(name))
         {
-            await process.StopGracefullyOrKillAsync(3000, false, cancellationToken);
+            await process.StopGracefullyOrKillAndWaitAsync(3000, false, cancellationToken);
             stoppedCount++;
         }
 

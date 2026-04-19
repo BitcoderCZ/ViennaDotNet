@@ -13,7 +13,7 @@ public sealed class InstanceManager
     private readonly Starter _starter;
 
     private readonly Publisher _publisher;
-    private readonly RequestHandler _requestHandler;
+    private RequestHandler _requestHandler = null!;
     private int _runningInstanceCount = 0;
     private bool _shuttingDown = false;
     private readonly Lock _lock = new Lock();
@@ -47,26 +47,33 @@ public sealed class InstanceManager
         InstanceType Type
     );
 
-    public InstanceManager(EventBusClient eventBusClient, Starter starter)
+    public InstanceManager(Starter starter, Publisher publisher)
     {
         _starter = starter;
 
-        _publisher = eventBusClient.AddPublisher();
+        _publisher = publisher;
+    }
 
-        _requestHandler = eventBusClient.AddRequestHandler("buildplates", new RequestHandler.Handler(
+    public static async Task<InstanceManager> CreateAsync(EventBusClient eventBusClient, Starter starter)
+    {
+        var publisher = await eventBusClient.AddPublisherAsync();
+
+        var instanceManager = new InstanceManager(starter, publisher);
+
+        instanceManager._requestHandler = await eventBusClient.AddRequestHandlerAsync("buildplates", new RequestHandlerLister(
             async request =>
             {
                 if (request.Type is "start")
                 {
-                    _lock.Enter();
-                    if (_shuttingDown)
+                    instanceManager._lock.Enter();
+                    if (instanceManager._shuttingDown)
                     {
-                        _lock.Exit();
+                        instanceManager._lock.Exit();
                         return null;
                     }
 
-                    _runningInstanceCount += 1;
-                    _lock.Exit();
+                    instanceManager._runningInstanceCount += 1;
+                    instanceManager._lock.Exit();
 
                     StartRequest startRequest;
                     try
@@ -153,14 +160,14 @@ public sealed class InstanceManager
 
                     Log.Information($"Starting buildplate instance {instanceId}");
 
-                    Instance? instance = _starter.StartInstance(instanceId, startRequest.PlayerId, startRequest.BuildplateId, buildplateSource, survival, startRequest.Night, saveEnabled, inventoryType, shutdownTime);
+                    Instance? instance = instanceManager._starter.StartInstance(instanceId, startRequest.PlayerId, startRequest.BuildplateId, buildplateSource, survival, startRequest.Night, saveEnabled, inventoryType, shutdownTime);
                     if (instance is null)
                     {
                         Log.Error($"Error starting buildplate instance {instanceId}");
                         return null;
                     }
 
-                    SendEventBusMessage("started", Json.Serialize(new StartNotification(
+                    instanceManager.SendEventBusMessage("started", Json.Serialize(new StartNotification(
                         instanceId,
                         startRequest.PlayerId,
                         startRequest.EncounterId,
@@ -176,16 +183,16 @@ public sealed class InstanceManager
                         {
                             await instance.WaitForShutdownAsync();
 
-                            SendEventBusMessage("stopped", instance.InstanceId);
+                            instanceManager.SendEventBusMessage("stopped", instance.InstanceId);
                         }
                         catch (Exception ex)
                         {
                             Log.Error(ex, "Failed to send stopped message");
                         }
 
-                        _lock.Enter();
-                        _runningInstanceCount -= 1;
-                        _lock.Exit();
+                        instanceManager._lock.Enter();
+                        instanceManager._runningInstanceCount -= 1;
+                        instanceManager._lock.Exit();
                     }).Forget();
 
                     return instanceId;
@@ -220,15 +227,17 @@ public sealed class InstanceManager
                     return null;
                 }
             },
-            () =>
+            async () =>
             {
                 Log.Error("Event bus request handler error");
             }
         ));
+
+        return instanceManager;
     }
 
     private void SendEventBusMessage(string type, string message)
-        => _publisher.Publish("buildplates", type, message).ContinueWith(task =>
+        => _publisher.PublishAsync("buildplates", type, message).ContinueWith(task =>
         {
             if (!task.Result)
             {
@@ -236,9 +245,9 @@ public sealed class InstanceManager
             }
         });
 
-    public async Task Shutdown()
+    public async Task ShutdownAsync()
     {
-        _requestHandler.Close();
+        await _requestHandler.CloseAsync();
 
         _lock.Enter();
         _shuttingDown = true;
@@ -259,7 +268,7 @@ public sealed class InstanceManager
 
         _lock.Exit();
 
-        _publisher.Flush();
-        _publisher.Close();
+        await _publisher.FlushAsync();
+        await _publisher.CloseAsync();
     }
 }

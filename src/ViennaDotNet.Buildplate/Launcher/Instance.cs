@@ -135,8 +135,8 @@ public sealed class Instance
 
             _logger.Information($"Using port {Port} internal port {_serverInternalPort}");
 
-            _publisher = _eventBusClient.AddPublisher();
-            _requestSender = _eventBusClient.AddRequestSender();
+            _publisher = await _eventBusClient.AddPublisherAsync();
+            _requestSender = await _eventBusClient.AddRequestSenderAsync();
 
             _logger.Information("Setting up server");
 
@@ -147,6 +147,8 @@ public sealed class Instance
                 BuildplateSource.ENCOUNTER => await SendEventBusRequestRaw<BuildplateLoadResponse>("loadEncounter", new EncounterBuildplateLoadRequest(_buildplateId), true),
                 _ => throw new UnreachableException(),
             };
+
+            Debug.Assert(buildplateLoadResponse is not null);
 
             byte[] serverData;
             try
@@ -191,22 +193,22 @@ public sealed class Instance
 
             _logger.Information("Running server");
 
-            _subscriber = _eventBusClient.AddSubscriber(_eventBusQueueName, new Subscriber.SubscriberListener(
+            _subscriber = await _eventBusClient.AddSubscriberAsync(_eventBusQueueName, new SubscriberListener(
                 HandleConnectorEvent,
-                () =>
+                async () =>
                 {
                     _logger.Error("Event bus subscriber error");
                     BeginShutdown();
                 }
             ));
 
-            _requestHandler = _eventBusClient.AddRequestHandler(_eventBusQueueName, new RequestHandler.Handler(
+            _requestHandler = await _eventBusClient.AddRequestHandlerAsync(_eventBusQueueName, new RequestHandlerLister(
                 async request =>
                 {
                     object? responseObject = await HandleConnectorRequest(request);
                     return responseObject is not null ? Json.Serialize(responseObject) : null;
                 },
-                () =>
+                async () =>
                 {
                     _logger.Error("Event bus request handler error");
                     BeginShutdown();
@@ -214,11 +216,11 @@ public sealed class Instance
             ));
 
             var @lock = await _subprocessLock.LockAsync(CancellationToken.None);
-            
+
             if (!_shuttingDown)
             {
                 await StartServerProcessAsync();
-                
+
                 if (_serverProcess is not null)
                 {
                     await @lock.DisposeAsync();
@@ -261,19 +263,26 @@ public sealed class Instance
         }
         finally
         {
-            _subscriber?.Close();
-            _requestHandler?.Close();
+            if (_subscriber is not null)
+            {
+                await _subscriber.CloseAsync();
+            }
+
+            if (_requestHandler is not null)
+            {
+                await _requestHandler.CloseAsync();
+            }
 
             if (_publisher is not null)
             {
-                _publisher.Flush();
-                _publisher.Close();
+                await _publisher.FlushAsync();
+                await _publisher.CloseAsync();
             }
 
             if (_requestSender is not null)
             {
-                _requestSender.Flush();
-                _requestSender.Close();
+                await _requestSender.FlushAsync();
+                await _requestSender.CloseAsync();
             }
 
             CleanupBaseDir();
@@ -282,7 +291,7 @@ public sealed class Instance
         }
     }
 
-    private async Task HandleConnectorEvent(Subscriber.Event @event)
+    private async Task HandleConnectorEvent(SubscriberEvent @event)
     {
         switch (@event.Type)
         {
@@ -365,7 +374,7 @@ public sealed class Instance
         }
     }
 
-    private async Task<object?> HandleConnectorRequest(RequestHandler.Request request)
+    private async Task<object?> HandleConnectorRequest(RequestHandlerRequest request)
     {
         switch (request.Type)
         {
@@ -519,7 +528,7 @@ public sealed class Instance
     {
         Debug.Assert(_publisher is not null);
 
-        _publisher.Publish("buildplates", status, InstanceId).ContinueWith(task =>
+        _publisher.PublishAsync("buildplates", status, InstanceId).ContinueWith(task =>
         {
             if (!task.Result)
             {
@@ -547,7 +556,7 @@ public sealed class Instance
 
         try
         {
-            string? response = await _requestSender.Request("buildplates", type, Json.Serialize(obj)).Task;
+            string? response = await _requestSender.RequestAsync("buildplates", type, Json.Serialize(obj));
 
             if (response is null)
             {

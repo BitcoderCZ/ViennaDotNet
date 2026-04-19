@@ -248,7 +248,7 @@ public class BuildplatesController : ViennaControllerBase
             return StatusCode(StatusCodes.Status500InternalServerError);
         }
 
-        string? preview = buildplateInstancesManager.GetBuildplatePreview(serverData, sharedBuildplate.Night);
+        string? preview = await buildplateInstancesManager.GetBuildplatePreviewAsync(serverData, sharedBuildplate.Night);
         if (preview is null)
         {
             Log.Error("Could not get preview for buildplate");

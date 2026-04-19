@@ -8,9 +8,41 @@ using System.Threading.Channels;
 
 namespace ViennaDotNet.EventBus.Client;
 
-public sealed class EventBusClient : IAsyncDisposable
+public class EventBusClient : IAsyncDisposable
 {
-    public static async Task<EventBusClient> ConnectAsync(string connectionString, CancellationToken cancellationToken = default)
+    private readonly TcpClient _tcpClient;
+    private readonly NetworkStream _networkStream;
+
+    private readonly Channel<string> _outgoingMessageQueue;
+    private readonly Task _outgoingTask;
+    private readonly Task _incomingTask;
+    private readonly CancellationTokenSource _cts = new();
+
+    private int _isClosed = 0;
+    private int _hasError = 0;
+
+    private readonly ConcurrentDictionary<int, Publisher> _publishers = new();
+    private readonly ConcurrentDictionary<int, Subscriber> _subscribers = new();
+    private readonly ConcurrentDictionary<int, RequestSender> _requestSenders = new();
+    private readonly ConcurrentDictionary<int, RequestHandler> _requestHandlers = new();
+
+    private int _nextChannelId = 1;
+
+    private EventBusClient(TcpClient tcpClient)
+    {
+        _tcpClient = tcpClient;
+        _networkStream = _tcpClient.GetStream();
+        _outgoingMessageQueue = Channel.CreateUnbounded<string>(new UnboundedChannelOptions
+        {
+            SingleReader = true,
+            SingleWriter = false
+        });
+
+        _outgoingTask = Task.Run(ProcessOutgoingMessagesAsync);
+        _incomingTask = Task.Run(ProcessIncomingMessagesAsync);
+    }
+
+    public static async Task<EventBusClient> ConnectAsync(string connectionString)
     {
         string[] parts = connectionString.Split(':', 2);
         string host = parts[0];
@@ -20,105 +52,123 @@ public sealed class EventBusClient : IAsyncDisposable
             port = 5532;
         }
 
-        if (port <= 0 || port > 65535)
+        if (port is <= 0 or > 65535)
         {
-            throw new ArgumentException($"Invalid port number out of range: {port}", nameof(connectionString));
+            throw new ArgumentException("Port number out of range");
         }
 
-        var socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
+        TcpClient tcpClient = new TcpClient();
         try
         {
-            await socket.ConnectAsync(host, port, cancellationToken);
+            await tcpClient.ConnectAsync(host, port);
         }
-        catch (SocketException ex)
+        catch (Exception exception) when (exception is SocketException or IOException)
         {
-            socket.Dispose();
-            throw new ConnectException($"Could not connect socket: {ex.Message}", ex);
+            tcpClient.Dispose();
+            throw new ConnectException("Could not create socket", exception);
         }
 
-        return new EventBusClient(socket);
+        return new EventBusClient(tcpClient);
     }
 
     public sealed class ConnectException : Exception
     {
-        public ConnectException(string? message, Exception? innerException = null) : base(message, innerException) { }
+        public ConnectException(string message) : base(message) { }
+        public ConnectException(string message, Exception innerException) : base(message, innerException) { }
     }
 
-    private readonly Socket _socket;
-    private readonly NetworkStream _networkStream;
-    private readonly Channel<string> _outgoingChannel;
-    private readonly CancellationTokenSource _shutdownCts = new();
-    private readonly Task _sendTask;
-    private readonly Task _receiveTask;
-
-    private int _disposedState = StateActive;
-    private const int StateActive = 0;
-    private const int StateDisposing = 1;
-    private int _nextChannelId = 1;
-
-    private readonly ConcurrentDictionary<int, Publisher> _publishers = new();
-    private readonly ConcurrentDictionary<int, Subscriber> _subscribers = new();
-    private readonly ConcurrentDictionary<int, RequestSender> _requestSenders = new();
-    private readonly ConcurrentDictionary<int, RequestHandler> _requestHandlers = new();
-
-    private EventBusClient(Socket socket)
+    public async ValueTask DisposeAsync()
     {
-        _socket = socket;
-        _networkStream = new NetworkStream(_socket, ownsSocket: true);
+        await InitiateCloseAsync();
 
-        _outgoingChannel = Channel.CreateUnbounded<string>(new UnboundedChannelOptions
+        try
         {
-            SingleReader = true, // We only have one loop reading from this to send to the socket
-            SingleWriter = false
-        });
-
-        _sendTask = HandleSendLoopAsync(_shutdownCts.Token);
-        _receiveTask = HandleReceiveLoopAsync(_shutdownCts.Token);
+            await Task.WhenAll(_incomingTask, _outgoingTask);
+        }
+        catch
+        {
+            // Suppress exceptions from cancelled background tasks
+        }
     }
 
-    private async Task HandleSendLoopAsync(CancellationToken cancellationToken)
+    private async Task InitiateCloseAsync()
+    {
+        if (Interlocked.Exchange(ref _isClosed, 1) == 0)
+        {
+            _cts.Cancel();
+            _outgoingMessageQueue.Writer.TryComplete();
+
+            try
+            {
+                _tcpClient.Dispose(); // Closes underlying stream and socket
+            }
+            catch
+            {
+                // empty
+            }
+        }
+        await Task.CompletedTask;
+    }
+
+    private void SetError()
+    {
+        Interlocked.Exchange(ref _hasError, 1);
+        _ = InitiateCloseAsync(); // Fire and forget closure on error
+    }
+
+    private async Task ProcessOutgoingMessagesAsync()
     {
         try
         {
-            await foreach (var message in _outgoingChannel.Reader.ReadAllAsync(cancellationToken))
+            await foreach (var message in _outgoingMessageQueue.Reader.ReadAllAsync(_cts.Token))
             {
-                byte[] bytes = Encoding.ASCII.GetBytes(message);
-                await _networkStream.WriteAsync(bytes, cancellationToken);
+                byte[] buffer = Encoding.ASCII.GetBytes(message);
+                await _networkStream.WriteAsync(buffer, _cts.Token);
+                await _networkStream.FlushAsync(_cts.Token);
             }
         }
-        catch (OperationCanceledException)
+        catch (Exception ex) when (ex is OperationCanceledException or IOException or SocketException)
         {
-            // Expected on shutdown
+            SetError();
         }
-        catch (Exception ex) when (ex is SocketException or IOException)
+
+        await InitiateCloseAsync();
+
+        foreach (var kvp in _publishers)
         {
-            Log.Error(ex, "Socket error in Send Loop");
+            await kvp.Value.ClosedAsync();
         }
-        finally
+        _publishers.Clear();
+
+        foreach (var kvp in _requestSenders)
         {
-            _shutdownCts.Cancel();
+            await kvp.Value.ClosedAsync();
         }
+        _requestSenders.Clear();
     }
 
-    private async Task HandleReceiveLoopAsync(CancellationToken cancellationToken)
+    private async Task ProcessIncomingMessagesAsync()
     {
         var reader = PipeReader.Create(_networkStream);
 
         try
         {
-            while (!cancellationToken.IsCancellationRequested)
+            while (true)
             {
-                ReadResult result = await reader.ReadAsync(cancellationToken);
+                ReadResult result = await reader.ReadAsync(_cts.Token);
                 ReadOnlySequence<byte> buffer = result.Buffer;
 
                 while (TryReadLine(ref buffer, out ReadOnlySequence<byte> line))
                 {
-                    var message = Encoding.ASCII.GetString(line).TrimEnd('\r');
+                    string message = Encoding.ASCII.GetString(line.IsSingleSegment ? line.FirstSpan : line.ToArray());
 
-                    if (!await DispatchReceivedMessage(message))
+                    bool suppress = Volatile.Read(ref _isClosed) == 1 || Volatile.Read(ref _hasError) == 1;
+                    if (!suppress)
                     {
-                        InitiateClose();
-                        break;
+                        if (!await DispatchReceivedMessageAsync(message))
+                        {
+                            SetError();
+                        }
                     }
                 }
 
@@ -130,27 +180,32 @@ public sealed class EventBusClient : IAsyncDisposable
                 }
             }
         }
-        catch (OperationCanceledException)
+        catch (Exception ex) when (ex is OperationCanceledException or IOException or SocketException)
         {
-            // Expected on shutdown
+            SetError();
         }
-        catch (Exception ex) when (ex is SocketException or IOException)
+
+        await reader.CompleteAsync();
+        await InitiateCloseAsync();
+
+        foreach (var kvp in _subscribers)
         {
-            ClearAndNotify(_subscribers, s => s.Error());
-            ClearAndNotify(_requestHandlers, h => h.Error());
+            await kvp.Value.ErrorAsync();
         }
-        finally
+        _subscribers.Clear();
+
+        foreach (var kvp in _requestHandlers)
         {
-            await reader.CompleteAsync();
-            InitiateClose();
+            await kvp.Value.ErrorAsync();
         }
+
+        _requestHandlers.Clear();
     }
 
     private static bool TryReadLine(ref ReadOnlySequence<byte> buffer, out ReadOnlySequence<byte> line)
     {
         SequencePosition? position = buffer.PositionOf((byte)'\n');
-
-        if (position is null)
+        if (position == null)
         {
             line = default;
             return false;
@@ -158,203 +213,140 @@ public sealed class EventBusClient : IAsyncDisposable
 
         line = buffer.Slice(0, position.Value);
         buffer = buffer.Slice(buffer.GetPosition(1, position.Value));
-
         return true;
     }
 
-    public async ValueTask DisposeAsync()
+    public async Task<Publisher> AddPublisherAsync()
     {
-        if (Interlocked.Exchange(ref _disposedState, StateDisposing) != StateActive)
-        {
-            return;
-        }
-
-        InitiateCloseInternal();
-
-        try
-        {
-            await Task.WhenAll(_sendTask, _receiveTask).ConfigureAwait(false);
-        }
-        catch (Exception ex)
-        {
-            Log.Warning(ex, "Error during EventBusClient background task completion");
-        }
-        finally
-        {
-            _shutdownCts.Dispose();
-            _networkStream.Dispose();
-
-            NotifyAllCollectionsClosed();
-        }
-    }
-
-    public void InitiateClose()
-    {
-        if (Interlocked.Exchange(ref _disposedState, StateDisposing) == StateActive)
-        {
-            InitiateCloseInternal();
-        }
-    }
-
-    private void InitiateCloseInternal()
-    {
-        _outgoingChannel.Writer.TryComplete();
-
-        if (!_shutdownCts.IsCancellationRequested)
-        {
-            _shutdownCts.Cancel();
-        }
-
-        try
-        {
-            if (_socket.Connected)
-            {
-                _socket.Shutdown(SocketShutdown.Both);
-            }
-        }
-        catch
-        {
-        }
-
-        _networkStream.Close();
-    }
-
-    private void NotifyAllCollectionsClosed()
-    {
-        ClearAndNotify(_publishers, p => p.Closed());
-        ClearAndNotify(_requestSenders, r => r.Closed());
-        ClearAndNotify(_subscribers, s => s.Close());
-        ClearAndNotify(_requestHandlers, h => h.Close());
-    }
-
-    public Publisher AddPublisher()
-    {
-        int channelId = Interlocked.Increment(ref _nextChannelId);
+        int channelId = GetUnusedChannelId();
         var publisher = new Publisher(this, channelId);
 
-        if (SendMessage(channelId, "PUB"))
+        if (await SendMessageAsync(channelId, "PUB"))
         {
             _publishers.TryAdd(channelId, publisher);
         }
         else
         {
-            publisher.Closed();
+            await publisher.ClosedAsync();
         }
 
         return publisher;
     }
 
-    public Subscriber AddSubscriber(string queueName, Subscriber.ISubscriberListener listener)
+    public async Task<Subscriber> AddSubscriberAsync(string queueName, ISubscriberListener listener)
     {
-        int channelId = Interlocked.Increment(ref _nextChannelId);
+        int channelId = GetUnusedChannelId();
         var subscriber = new Subscriber(this, channelId, queueName, listener);
 
-        if (SendMessage(channelId, "SUB " + queueName))
+        if (await SendMessageAsync(channelId, $"SUB {queueName}"))
         {
             _subscribers.TryAdd(channelId, subscriber);
         }
         else
         {
-            subscriber.Error();
+            await subscriber.ErrorAsync();
         }
 
         return subscriber;
     }
 
-    public RequestSender AddRequestSender()
+    public async Task<RequestSender> AddRequestSenderAsync()
     {
-        int channelId = Interlocked.Increment(ref _nextChannelId);
+        int channelId = GetUnusedChannelId();
         var requestSender = new RequestSender(this, channelId);
 
-        if (SendMessage(channelId, "REQ"))
+        if (await SendMessageAsync(channelId, "REQ"))
         {
             _requestSenders.TryAdd(channelId, requestSender);
         }
         else
         {
-            requestSender.Closed();
+            await requestSender.ClosedAsync();
         }
 
         return requestSender;
     }
 
-    public RequestHandler AddRequestHandler(string queueName, RequestHandler.IHandler handler)
+    public async Task<RequestHandler> AddRequestHandlerAsync(string queueName, IRequestHandlerLister handler)
     {
-        int channelId = Interlocked.Increment(ref _nextChannelId);
+        int channelId = GetUnusedChannelId();
         var requestHandler = new RequestHandler(this, channelId, queueName, handler);
 
-        if (SendMessage(channelId, "HND " + queueName))
+        if (await SendMessageAsync(channelId, $"HND {queueName}"))
         {
             _requestHandlers.TryAdd(channelId, requestHandler);
         }
         else
         {
-            requestHandler.Error();
+            await requestHandler.ErrorAsync();
         }
 
         return requestHandler;
     }
 
-    internal void RemovePublisher(int channelId)
-        => _publishers.TryRemove(channelId, out _);
+    internal void RemovePublisher(int channelId) => _publishers.TryRemove(channelId, out _);
+    internal void RemoveSubscriber(int channelId) => _subscribers.TryRemove(channelId, out _);
+    internal void RemoveRequestSender(int channelId) => _requestSenders.TryRemove(channelId, out _);
+    internal void RemoveRequestHandler(int channelId) => _requestHandlers.TryRemove(channelId, out _);
 
-    internal void RemoveSubscriber(int channelId)
-        => _subscribers.TryRemove(channelId, out _);
+    private int GetUnusedChannelId()
+        => Interlocked.Increment(ref _nextChannelId) - 1;
 
-    internal void RemoveRequestSender(int channelId)
-        => _requestSenders.TryRemove(channelId, out _);
-
-    internal void RemoveRequestHandler(int channelId)
-        => _requestHandlers.TryRemove(channelId, out _);
-
-    private async Task<bool> DispatchReceivedMessage(string message)
+    private async Task<bool> DispatchReceivedMessageAsync(string message)
     {
         string[] parts = message.Split(' ', 2);
-        if (parts.Length != 2 || !int.TryParse(parts[0], out int channelId) || channelId <= 0)
+        if (parts.Length != 2)
         {
             return false;
         }
 
-        if (_publishers.TryGetValue(channelId, out var publisher) && await publisher.HandleMessage(parts[1]))
-        {
-            return true;
-        }
-
-        if (_subscribers.TryGetValue(channelId, out var subscriber) && await subscriber.HandleMessage(parts[1]))
-        {
-            return true;
-        }
-
-        if (_requestSenders.TryGetValue(channelId, out var sender) && await sender.HandleMessage(parts[1]))
-        {
-            return true;
-        }
-
-        if (_requestHandlers.TryGetValue(channelId, out var handler) && await handler.HandleMessage(parts[1]))
-        {
-            return true;
-        }
-
-        return channelId <= _nextChannelId;
-    }
-
-    internal bool SendMessage(int channelId, string message)
-    {
-        if (_disposedState is not StateActive)
+        if (!int.TryParse(parts[0], out int channelId) || channelId <= 0)
         {
             return false;
         }
 
-        return _outgoingChannel.Writer.TryWrite($"{channelId} {message}\n");
-    }
-
-    private static void ClearAndNotify<T>(ConcurrentDictionary<int, T> collection, Action<T> action)
-    {
-        foreach (var item in collection.Values)
+        if (_publishers.TryGetValue(channelId, out var publisher))
         {
-            action(item);
+            return await publisher.HandleMessageAsync(parts[1]);
         }
 
-        collection.Clear();
+        if (_subscribers.TryGetValue(channelId, out var subscriber))
+        {
+            return await subscriber.HandleMessageAsync(parts[1]);
+        }
+
+        if (_requestSenders.TryGetValue(channelId, out var requestSender))
+        {
+            return await requestSender.HandleMessageAsync(parts[1]);
+        }
+
+        if (_requestHandlers.TryGetValue(channelId, out var requestHandler))
+        {
+            return await requestHandler.HandleMessageAsync(parts[1]);
+        }
+
+        return channelId < Volatile.Read(ref _nextChannelId);
+    }
+
+    internal async ValueTask<bool> SendMessageAsync(int channelId, string message)
+    {
+        if (Volatile.Read(ref _isClosed) == 1 || Volatile.Read(ref _hasError) == 1)
+        {
+            return false;
+        }
+
+        try
+        {
+            await _outgoingMessageQueue.Writer.WriteAsync($"{channelId} {message}\n", _cts.Token);
+            return true;
+        }
+        catch (ChannelClosedException)
+        {
+            return false;
+        }
+        catch (OperationCanceledException)
+        {
+            return false;
+        }
     }
 }

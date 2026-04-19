@@ -260,8 +260,8 @@ public static class Program
 
         Log.Information("Imported shop buidplates");
 
-        tappablesManager = new TappablesManager(eventBus);
-        buildplateInstancesManager = new BuildplateInstancesManager(eventBus);
+        tappablesManager = await TappablesManager.CreateAsync(eventBus);
+        buildplateInstancesManager = await BuildplateInstancesManager.CreateAsync(eventBus);
 
         BuildplateInstanceRequestHandler.Start(DB, eventBus, objectStore, staticData.Catalog);
 

@@ -29,8 +29,8 @@ internal static class TileUtils
         }
 
         Log.Information("Rendering tile");
-        _requestSender ??= Program.eventBus.AddRequestSender();
-        string? tilePng64 = await _requestSender.Request("tile", "renderTile", Json.Serialize(new RenderTileRequest(tileX, tileY, 16))).Task;
+        _requestSender ??= await Program.eventBus.AddRequestSenderAsync();
+        string? tilePng64 = await _requestSender.RequestAsync("tile", "renderTile", Json.Serialize(new RenderTileRequest(tileX, tileY, 16)));
 
         if (tilePng64 is null)
         {

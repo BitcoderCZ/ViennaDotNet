@@ -593,9 +593,9 @@ public sealed class Importer : IAsyncDisposable
         if (EventBusClient is not null)
         {
             Logger.Information("Generating preview");
-            RequestSender requestSender = EventBusClient.AddRequestSender();
-            preview = await requestSender.Request("buildplates", "preview", JsonSerializer.Serialize(new PreviewRequest(Convert.ToBase64String(worldData.ServerData), worldData.Night))).Task;
-            requestSender.Close();
+            RequestSender requestSender = await EventBusClient.AddRequestSenderAsync();
+            preview = await requestSender.RequestAsync("buildplates", "preview", JsonSerializer.Serialize(new PreviewRequest(Convert.ToBase64String(worldData.ServerData), worldData.Night)));
+            await requestSender.CloseAsync();
 
             if (preview is null)
             {

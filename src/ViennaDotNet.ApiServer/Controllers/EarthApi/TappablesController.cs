@@ -31,7 +31,7 @@ public class TappablesController : ViennaControllerBase
 
         long requestStartedOn = HttpContext.GetTimestamp();
 
-        tappablesManager.NotifyTileActive(playerId, lat, lon);
+        await tappablesManager.NotifyTileActiveAsync(playerId, lat, lon);
 
         TappablesManager.Tappable[] tappables = tappablesManager.GetTappablesAround(lat, lon, 5.0);    // TODO: radius
         TappablesManager.Encounter[] encounters = tappablesManager.GetEncountersAround(lat, lon, 5.0);    // TODO: radius

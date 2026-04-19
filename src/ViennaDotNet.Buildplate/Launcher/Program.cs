@@ -98,18 +98,18 @@ internal static class Program
 
         string javaCmd = JavaLocator.Locate();
         var starter = new Starter(eventBusClient, options.EventBusConnectionString, options.PublicAddress, javaCmd, options.BridgeJar, options.ServerTemplateDir, options.FabricJarName, options.ConnectorPluginJar);
-        var instanceManager = new InstanceManager(eventBusClient, starter);
+        var instanceManager = await InstanceManager.CreateAsync(eventBusClient, starter);
 
         Console.CancelKeyPress += (sender, e) =>
         {
             Log.Information("Ctrl+C received");
-            instanceManager.Shutdown().Forget();
+            instanceManager.ShutdownAsync().Forget();
             e.Cancel = true;
         };
 
         AppDomain.CurrentDomain.ProcessExit += (sender, e) =>
         {
-            instanceManager.Shutdown().Forget();
+            instanceManager.ShutdownAsync().Forget();
         };
 
         while (true)

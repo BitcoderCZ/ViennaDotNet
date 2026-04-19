@@ -18,9 +18,9 @@ internal sealed class EventBusTileRenderer : IAsyncDisposable
         _renderer = TileRenderer.Create(dataSource.GetTagMapJson(staticData.TileRenderer), Log.Logger);
     }
 
-    public void Run()
+    public async Task RunAsync()
     {
-        _eventBus.AddRequestHandler("tile", new RequestHandler.Handler(async request =>
+        await _eventBus.AddRequestHandlerAsync("tile", new RequestHandlerLister(async request =>
         {
             if (request.Type == "renderTile")
             {
@@ -69,7 +69,7 @@ internal sealed class EventBusTileRenderer : IAsyncDisposable
 
         while (true)
         {
-            Thread.Sleep(1000);
+            await Task.Delay(1000);
         }
     }
 

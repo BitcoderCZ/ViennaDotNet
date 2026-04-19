@@ -182,7 +182,7 @@ internal static class Program
 
         await using (var renderer = new EventBusTileRenderer(tileDataSource, eventBusClient, staticData))
         {
-            renderer.Run();
+            await renderer.RunAsync();
         }
 
         return 0;

@@ -7,7 +7,7 @@ public sealed record InventoryResponse(
 {
     public sealed record Item(
         string Id,
-        int? Count,
+        int Count,
         string? InstanceId,
         int Wear
     );

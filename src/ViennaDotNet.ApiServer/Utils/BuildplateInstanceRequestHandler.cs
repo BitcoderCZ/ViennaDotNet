@@ -455,7 +455,7 @@ public sealed class BuildplateInstanceRequestHandler
                     initialInventoryContents = new InventoryResponse(
                         [.. Enumerable.Concat(
                             inventory.StackableItems
-                                .Select(item => new InventoryResponse.Item(item.Id, item.Count, null, 0)),
+                                .Select(item => new InventoryResponse.Item(item.Id, item.Count ?? 1, null, 0)),
                             inventory.NonStackableItems
                                 .SelectMany(item => item.Instances
                                     .Select(instance => new InventoryResponse.Item(item.Id, 1, instance.InstanceId, instance.Wear)))
@@ -541,7 +541,7 @@ public sealed class BuildplateInstanceRequestHandler
 
                             InventoryResponse inventoryResponse = new InventoryResponse(
                             [
-                                .. inventoryResponseStackableItems.Select(entry => new InventoryResponse.Item(entry.Key, entry.Value, null, 0)),
+                                .. inventoryResponseStackableItems.Select(entry => new InventoryResponse.Item(entry.Key, entry.Value ?? 1, null, 0)),
                                     .. inventoryResponseNonStackableItems
                             ],
                             inventoryResponseHotbar
@@ -616,10 +616,9 @@ public sealed class BuildplateInstanceRequestHandler
                             continue;
                         }
 
-                        Debug.Assert(item.Count is not null);
                         if (catalogItem.Stackable)
                         {
-                            inventory.AddItems(item.Id, item.Count.Value);
+                            inventory.AddItems(item.Id, item.Count);
                         }
                         else
                         {
@@ -628,7 +627,7 @@ public sealed class BuildplateInstanceRequestHandler
                             inventory.AddItems(item.Id, [new NonStackableItemInstance(item.InstanceId, item.Wear)]);
                         }
 
-                        if (journal.AddCollectedItem(item.Id, timestamp, item.Count.Value) == 0)
+                        if (journal.AddCollectedItem(item.Id, timestamp, item.Count) == 0)
                         {
                             if (catalogItem.JournalEntry is not null)
                             {
@@ -755,7 +754,7 @@ public sealed class BuildplateInstanceRequestHandler
         return new InventoryResponse(
             [.. Enumerable.Concat(
                 inventory.StackableItems
-                    .Select(item => new InventoryResponse.Item(item.Id, item.Count, null, 0)),
+                    .Select(item => new InventoryResponse.Item(item.Id, item.Count ?? 1, null, 0)),
                 inventory.NonStackableItems
                     .SelectMany(item => item.Instances
                     .Select(instance => new InventoryResponse.Item(item.Id, 1, instance.InstanceId, instance.Wear)))

@@ -401,6 +401,14 @@ public sealed class Instance
 
                             return playerConnectedResponse;
                         }
+                        else
+                        {
+                            Log.Debug("[playerConnected] invalid api response");
+                        }
+                    }
+                    else
+                    {
+                        Log.Debug("[playerConnected] failed to read json");
                     }
                 }
 
@@ -446,11 +454,22 @@ public sealed class Instance
                     string? playerId = ReadJson<string>(request.Data);
                     if (playerId is not null)
                     {
+                        Log.Debug($"[getInventory] player {playerId}");
+
                         InventoryResponse? inventoryResponse = await SendEventBusRequest<InventoryResponse>("getInventory", playerId, true);
                         if (inventoryResponse is not null)
                         {
                             return inventoryResponse;
                         }
+                        else
+                        {
+                            Log.Debug("[getInventory] invalid api response");
+
+                        }
+                    }
+                    else
+                    {
+                        Log.Debug("[getInventory] failed to read json");
                     }
                 }
 
@@ -488,6 +507,10 @@ public sealed class Instance
                         // TODO
                         return findPlayerIdRequest.MinecraftName;
                     }
+                    else
+                    {
+                        Log.Debug("[findPlayer] failed to read json");
+                    }
                 }
 
                 break;
@@ -501,6 +524,10 @@ public sealed class Instance
                         {
                             return initialPlayerStateResponse;
                         }
+                    }
+                    else
+                    {
+                        Log.Debug("[getInitialPlayerState] failed to read json");
                     }
                 }
 

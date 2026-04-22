@@ -65,21 +65,20 @@ public static partial class ProcessExtensions
     {
         try
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && allowConsoleReAlloc)
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 if (await process.TryCloseMainWindowAsync(timeout, cancellationToken))
                 {
                     return true;
                 }
 
-                if (await process.WinTrySendCtrlCAsync(timeout, cancellationToken))
+                if (allowConsoleReAlloc && await process.WinTrySendCtrlCAsync(timeout, cancellationToken))
                 {
                     return true;
                 }
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
-                // TODO: test if this actually works
                 if (await process.UnixTrySendShutdownSignalAsync(timeout, cancellationToken))
                 {
                     return true;
@@ -210,6 +209,7 @@ public static partial class ProcessExtensions
     }
     #endregion
     #region Async
+    // TODO: bundle a small program so that we don't have to do this, remove allow console realloc
     private static async Task<bool> WinTrySendCtrlCAsync(this Process process, int timeout, CancellationToken cancellationToken)
     {
         Debug.Assert(RuntimeInformation.IsOSPlatform(OSPlatform.Windows));
@@ -252,8 +252,10 @@ public static partial class ProcessExtensions
     {
         try
         {
-            var killProc = Process.Start("kill", $"-s {await process.UnixGetSignalAsync(cancellationToken)} {process.Id}");
-            killProc.WaitForExit(1000);
+            string signal = await process.UnixGetSignalAsync(cancellationToken);
+
+            var killProc = Process.Start("kill", $"-s {signal} {process.Id}");
+            await killProc.WaitForExitAsync(1000, cancellationToken);
             Debug.Assert(killProc.HasExited);
 
             await process.WaitForExitAsync(timeout, cancellationToken);

@@ -159,7 +159,7 @@ public sealed class ConsoleProcess
         {
             Process.StartInfo.FileName = "cmd.exe";
             string arguments = FormatStandardArguments(args);
-            Process.StartInfo.Arguments = $"/k \"\"{_filePath}\" {arguments}\"";
+            Process.StartInfo.Arguments = $"/c \"\"{_filePath}\" {arguments}\"";
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
@@ -167,21 +167,21 @@ public sealed class ConsoleProcess
 
             var linuxArgs = args.Select(a => $"'{a.Replace("'", "'\\''")}'");
 
-            string innerCommand = $"'{_filePath.Replace("'", "'\\''")}' {string.Join(" ", linuxArgs)}; exec bash";
+            string innerCommand = $"'{_filePath.Replace("'", "'\\''")}' {string.Join(" ", linuxArgs)}";
 
             string safeInnerCommand = innerCommand
                 .Replace("\\", "\\\\")
                 .Replace("$", "\\$")
                 .Replace("\"", "\\\"");
 
-            Process.StartInfo.Arguments = $"-e bash -c \"{safeInnerCommand}\"";
+            Process.StartInfo.Arguments = $"-e bash -c \"exec {safeInnerCommand}\"";
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
             // todo: currently not tested
             string arguments = FormatStandardArguments(args);
             string command = $"'{_filePath}' {arguments}";
-            string appleScript = $"tell application \"Terminal\" to do script \"{command.Replace("\"", "\\\"")}\"";
+            string appleScript = $"tell application \"Terminal\" to do script \"{command.Replace("\"", "\\\"")}; exit\"";
 
             Process.StartInfo.FileName = "osascript";
             Process.StartInfo.Arguments = $"-e \"{appleScript}\"";

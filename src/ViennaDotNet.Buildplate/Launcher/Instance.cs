@@ -322,10 +322,7 @@ public sealed class Instance
                             {
                                 _logger.Information("Saving snapshot");
                                 SendEventBusRequest<object>("saved", worldSavedMessage, false)
-                                    .Forget(ex =>
-                                    {
-                                        Log.Error($"Failed to send event bus request 'saved': {ex}");
-                                    });
+                                    .Forget();
                             }
                             else
                             {
@@ -345,7 +342,8 @@ public sealed class Instance
                     InventoryAddItemMessage? inventoryAddItemMessage = ReadJson<InventoryAddItemMessage>(@event.Data);
                     if (inventoryAddItemMessage is not null)
                     {
-                        await SendEventBusRequest<object>("inventoryAdd", inventoryAddItemMessage, false);
+                        SendEventBusRequest<object>("inventoryAdd", inventoryAddItemMessage, false)
+                            .Forget();
                     }
                 }
 
@@ -355,7 +353,8 @@ public sealed class Instance
                     InventoryUpdateItemWearMessage? inventoryUpdateItemWearMessage = ReadJson<InventoryUpdateItemWearMessage>(@event.Data);
                     if (inventoryUpdateItemWearMessage is not null)
                     {
-                        await SendEventBusRequest<object>("inventoryUpdateWear", inventoryUpdateItemWearMessage, false);
+                        SendEventBusRequest<object>("inventoryUpdateWear", inventoryUpdateItemWearMessage, false)
+                            .Forget();
                     }
                 }
 
@@ -366,7 +365,8 @@ public sealed class Instance
                     InventorySetHotbarMessage? inventorySetHotbarMessage = ReadJson<InventorySetHotbarMessage>(@event.Data);
                     if (inventorySetHotbarMessage is not null)
                     {
-                        await SendEventBusRequest<object>("inventorySetHotbar", inventorySetHotbarMessage, false);
+                        SendEventBusRequest<object>("inventorySetHotbar", inventorySetHotbarMessage, false)
+                            .Forget();
                     }
                 }
 
@@ -454,8 +454,6 @@ public sealed class Instance
                     string? playerId = ReadJson<string>(request.Data);
                     if (playerId is not null)
                     {
-                        Log.Debug($"[getInventory] player {playerId}");
-
                         InventoryResponse? inventoryResponse = await SendEventBusRequest<InventoryResponse>("getInventory", playerId, true);
                         if (inventoryResponse is not null)
                         {

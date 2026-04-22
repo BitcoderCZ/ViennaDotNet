@@ -224,8 +224,10 @@ public sealed class Instance
                 if (_serverProcess is not null)
                 {
                     await @lock.DisposeAsync();
-                    int exitCode = await WaitForProcessAsync(_serverProcess.Process);
+                    await _serverProcess.WaitForExitAsync();
                     @lock = await _subprocessLock.LockAsync(CancellationToken.None);
+                    var exitCode = _serverProcess.ExitCodeText;
+                    _serverProcess.Dispose();
                     _serverProcess = null;
                     if (!_shuttingDown)
                     {
@@ -243,8 +245,9 @@ public sealed class Instance
                         _logger.Information("Bridge is still running, shutting it down now");
                         await @lock.DisposeAsync();
                         await _bridgeProcess.StopAndWaitAsync();
-                        exitCode = _bridgeProcess.ExitCode;
+                        exitCode = _bridgeProcess.ExitCodeText;
                         @lock = await _subprocessLock.LockAsync(CancellationToken.None);
+                        _bridgeProcess.Dispose();
                         _bridgeProcess = null;
                         _logger.Information($"Bridge has finished with exit code {exitCode}");
                     }
@@ -286,6 +289,9 @@ public sealed class Instance
             }
 
             CleanupBaseDir();
+
+            _serverProcess?.Dispose();
+            _bridgeProcess?.Dispose();
 
             _logger.Information("Finished");
         }
@@ -882,7 +888,7 @@ public sealed class Instance
                     };
                 }
 
-                _serverProcess.ExecuteAsync(_serverWorkDir.FullName, ["-jar", _fabricJarName, "-nogui"]);
+                await _serverProcess.ExecuteAsync(_serverWorkDir.FullName, ["-jar", _fabricJarName, "-nogui"]);
 
                 _logger.Information($"Server process started, PID {_serverProcess.Id}");
             }
@@ -944,6 +950,7 @@ public sealed class Instance
                             if (!_shuttingDown)
                             {
                                 Log.Warning($"Bridge process has unexpectedly terminated with exit code {_bridgeProcess.ExitCode}");
+                                _bridgeProcess.Dispose();
                                 _bridgeProcess = null;
                                 BeginShutdown();
                             }
@@ -951,7 +958,7 @@ public sealed class Instance
                     }).Forget();
                 };
 
-                _bridgeProcess.ExecuteAsync(_bridgeWorkDir!.FullName,
+                await _bridgeProcess.ExecuteAsync(_bridgeWorkDir!.FullName,
                 [
                     "-jar", _fountainBridgeJar.FullName,
                     "-port", Port.ToString(),
@@ -1042,8 +1049,9 @@ public sealed class Instance
                 _logger.Information("Waiting for bridge to shut down");
                 await @lock.DisposeAsync();
                 await _bridgeProcess.StopAndWaitAsync();
-                int exitCode = _bridgeProcess.ExitCode;
+                var exitCode = _bridgeProcess.ExitCodeText;
                 @lock = await _subprocessLock.LockAsync(CancellationToken.None);
+                _bridgeProcess.Dispose();
                 _bridgeProcess = null;
                 _logger.Information($"Bridge has finished with exit code {exitCode}");
             }
@@ -1056,12 +1064,6 @@ public sealed class Instance
 
             await @lock.DisposeAsync();
         }).Forget();
-
-    private static async Task<int> WaitForProcessAsync(Process process)
-    {
-        await process.WaitForExitAsync();
-        return process.ExitCode;
-    }
 
     public async Task WaitForShutdownAsync()
     {

@@ -6,7 +6,7 @@ using ViennaDotNet.Common.Utils;
 namespace ViennaDotNet.Common;
 
 // from https://stackoverflow.com/a/50311340/15878562
-public sealed class ConsoleProcess
+public sealed class ConsoleProcess : IDisposable
 {
     private readonly string _filePath;
     public readonly Process Process = new Process();
@@ -26,10 +26,56 @@ public sealed class ConsoleProcess
         remove => Process.OutputDataReceived -= value;
     }
 
-    public int ExitCode => Process.ExitCode;
-    public int Id => Process.Id;
+    public int? ExitCode
+    {
+        get
+        {
+            try
+            {
+                return ActualProcess.ExitCode;
+            }
+            catch (InvalidOperationException)
+            {
+                return null;
+            }
+        }
+    }
+
+    public string ExitCodeText => ExitCode is { } exitCode ? exitCode.ToString() : "Unknown"; // TODO 
+
+    public int Id => _actualAppPid is null ? Process.Id : _actualAppPid.Value;
 
     private bool running;
+
+    private string? _pidFilePath;
+    private int? _actualAppPid;
+    private Process? _cachedActualProcess;
+
+    private Process ActualProcess
+    {
+        get
+        {
+            if (_actualAppPid is null)
+            {
+                return Process;
+            }
+
+            if (_cachedActualProcess is not null)
+            {
+                return _cachedActualProcess;
+            }
+
+            try
+            {
+                _cachedActualProcess = Process.GetProcessById(_actualAppPid.Value);
+                return _cachedActualProcess;
+            }
+            catch (ArgumentException)
+            {
+                return Process;
+            }
+        }
+    }
 
     public ConsoleProcess(string appName, bool useShellExecute, bool redirect, bool openInNewWindow = false)
     {
@@ -66,7 +112,7 @@ public sealed class ConsoleProcess
         Process.Exited += ProcessOnExited;
     }
 
-    public void ExecuteAsync(string? workingDir, params string[] args)
+    public async Task ExecuteAsync(string? workingDir, params string[] args)
     {
         if (running)
         {
@@ -89,6 +135,11 @@ public sealed class ConsoleProcess
 
         Process.Start();
         running = true;
+
+        if (_pidFilePath != null)
+        {
+            _actualAppPid = await ResolveActualPidAsync(_pidFilePath);
+        }
 
         if (IORedirected)
         {
@@ -142,14 +193,17 @@ public sealed class ConsoleProcess
     private void ProcessOnExited(object? sender, EventArgs eventArgs)
         => OnProcessExited();
 
+    public async Task WaitForExitAsync(CancellationToken cancellationToken = default)
+        => await ActualProcess.WaitForExitAsync(cancellationToken);
+
     public void StopAndWait(int timeout = 15 * 1000)
-        => Process.StopGracefullyOrKillAndWait(timeout);
+        => ActualProcess.StopGracefullyOrKillAndWait(timeout);
 
     public async Task StopNoWaitAsync(int timeout = 15 * 1000, CancellationToken cancellationToken = default)
-        => await Process.StopGracefullyOrKillAsync(timeout, false, cancellationToken);
+        => await ActualProcess.StopGracefullyOrKillAsync(timeout, false, cancellationToken);
 
     public async Task StopAndWaitAsync(int timeout = 15 * 1000, CancellationToken cancellationToken = default)
-        => await Process.StopGracefullyOrKillAndWaitAsync(timeout, false, cancellationToken);
+        => await ActualProcess.StopGracefullyOrKillAndWaitAsync(timeout, false, cancellationToken);
 
     private void ApplyTerminalWrapper(IEnumerable<string> args)
     {
@@ -169,12 +223,14 @@ public sealed class ConsoleProcess
 
             string innerCommand = $"'{_filePath.Replace("'", "'\\''")}' {string.Join(" ", linuxArgs)}";
 
-            string safeInnerCommand = innerCommand
+            innerCommand = innerCommand
                 .Replace("\\", "\\\\")
                 .Replace("$", "\\$")
                 .Replace("\"", "\\\"");
 
-            Process.StartInfo.Arguments = $"-e bash -c \"exec {safeInnerCommand}\"";
+            _pidFilePath = Path.GetTempFileName();
+
+            Process.StartInfo.Arguments = $"-e bash -c \"echo $$ > '{_pidFilePath}'; exec {innerCommand}\"";
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
@@ -214,5 +270,41 @@ public sealed class ConsoleProcess
         {
             return false;
         }
+    }
+
+    private static async Task<int?> ResolveActualPidAsync(string pidFile, int timeout = 5000)
+    {
+        using var cts = new CancellationTokenSource(timeout);
+        while (!cts.IsCancellationRequested)
+        {
+            try
+            {
+                var content = await File.ReadAllTextAsync(pidFile, cts.Token);
+                if (int.TryParse(content.Trim(), out int pid))
+                {
+                    // Clean up the temp file
+                    File.Delete(pidFile);
+                    return pid;
+                }
+            }
+            catch (IOException)
+            {
+            }
+
+            await Task.Delay(100, cts.Token);
+        }
+
+        if (File.Exists(pidFile))
+        {
+            File.Delete(pidFile);
+        }
+
+        return null;
+    }
+
+    public void Dispose()
+    {
+        Process.Dispose();
+        _cachedActualProcess?.Dispose();
     }
 }

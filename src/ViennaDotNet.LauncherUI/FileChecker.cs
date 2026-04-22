@@ -149,7 +149,7 @@ internal static class FileChecker
 
                 bool useShellExecute = false;
 
-                var serverProcess = new ConsoleProcess(javaExe, useShellExecute, !useShellExecute);
+                using var serverProcess = new ConsoleProcess(javaExe, useShellExecute, !useShellExecute);
 
                 if (!useShellExecute)
                 {
@@ -169,7 +169,7 @@ internal static class FileChecker
                     };
                 }
 
-                serverProcess.ExecuteAsync(Path.GetFullPath(Path.Combine(Program.StaticDataDir, "server_template_dir")), ["-jar", BuildplateLauncher.ServerJarName, "-nogui"]);
+                await serverProcess.ExecuteAsync(Path.GetFullPath(Path.Combine(Program.StaticDataDir, "server_template_dir")), ["-jar", BuildplateLauncher.ServerJarName, "-nogui"]);
                 logger.Information("Server process started, waiting for exit");
                 await serverProcess.Process.WaitForExitAsync(cancellationToken);
 
@@ -196,7 +196,7 @@ internal static class FileChecker
 
                 bool useShellExecute = true;
 
-                var serverProcess = new ConsoleProcess(javaExe, useShellExecute, !useShellExecute);
+                using var serverProcess = new ConsoleProcess(javaExe, useShellExecute, !useShellExecute);
 
                 if (!useShellExecute)
                 {
@@ -216,7 +216,7 @@ internal static class FileChecker
                     };
                 }
 
-                serverProcess.ExecuteAsync(Path.GetFullPath(Path.Combine(Program.StaticDataDir, "server_template_dir")), ["-jar", BuildplateLauncher.ServerJarName, "-nogui"]);
+                await serverProcess.ExecuteAsync(Path.GetFullPath(Path.Combine(Program.StaticDataDir, "server_template_dir")), ["-jar", BuildplateLauncher.ServerJarName, "-nogui"]);
                 logger.Information("Server process started, waiting for exit");
                 await serverProcess.Process.WaitForExitAsync(cancellationToken);
 

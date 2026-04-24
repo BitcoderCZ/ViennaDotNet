@@ -124,7 +124,7 @@ public sealed class ConsoleProcess : IDisposable
             Process.StartInfo.WorkingDirectory = workingDir;
         }
 
-        if (OpenInNewWindow)
+        if (OpenInNewWindow && !RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             ApplyTerminalWrapper(args);
         }
@@ -209,13 +209,7 @@ public sealed class ConsoleProcess : IDisposable
     {
         Process.StartInfo.UseShellExecute = true;
 
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
-            Process.StartInfo.FileName = "cmd.exe";
-            string arguments = FormatStandardArguments(args);
-            Process.StartInfo.Arguments = $"/c \"\"{_filePath}\" {arguments}\"";
-        }
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
             Process.StartInfo.FileName = "x-terminal-emulator";
 
@@ -241,6 +235,10 @@ public sealed class ConsoleProcess : IDisposable
 
             Process.StartInfo.FileName = "osascript";
             Process.StartInfo.Arguments = $"-e \"{appleScript}\"";
+        }
+        else
+        {
+            Debug.Fail("Unsupported platform");
         }
     }
 

@@ -36,7 +36,7 @@ git clone https://github.com/Earth-Restored/ViennaDotNet.git
 - CD to the ViennaDotNet directory, then run "publish.ps1";
 - CD to build/{configuration}/{profile};
 - Run "run_launcher.ps1";
-- Now on the same device open http://localhost:5000, create an account and login;
+- Now on the same device open http://localhost:5000, create an account, make sure you confirm your email on the page that opens, if you fail to do this, you need to [Delete account db (Option B)](#i-cannot-see-the-start-server-button-when-logged-in), and login;
 - Under "Server Options", set "Network/IPv4 Address" to your PC's IP address and either disable "Map/Enable Tile Rendering" or set the "Map/MapTiler API Key" (it can be found [here](https://cloud.maptiler.com/account/keys/) when logged in);
 - Under "Server Status", click "Start";
 - Accept the Minecraft Server's EULA when prompted in the Launcher's logs;

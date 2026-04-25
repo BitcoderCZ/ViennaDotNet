@@ -124,7 +124,7 @@ public sealed class ConsoleProcess : IDisposable
             Process.StartInfo.WorkingDirectory = workingDir;
         }
 
-        if (OpenInNewWindow)
+        if (OpenInNewWindow && !RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
             ApplyTerminalWrapper(args);
         }
@@ -196,26 +196,17 @@ public sealed class ConsoleProcess : IDisposable
     public async Task WaitForExitAsync(CancellationToken cancellationToken = default)
         => await ActualProcess.WaitForExitAsync(cancellationToken);
 
-    public void StopAndWait(int timeout = 15 * 1000)
-        => ActualProcess.StopGracefullyOrKillAndWait(timeout);
-
     public async Task StopNoWaitAsync(int timeout = 15 * 1000, CancellationToken cancellationToken = default)
-        => await ActualProcess.StopGracefullyOrKillAsync(timeout, false, cancellationToken);
+        => await ActualProcess.StopGracefullyOrKillAsync(timeout, cancellationToken);
 
     public async Task StopAndWaitAsync(int timeout = 15 * 1000, CancellationToken cancellationToken = default)
-        => await ActualProcess.StopGracefullyOrKillAndWaitAsync(timeout, false, cancellationToken);
+        => await ActualProcess.StopGracefullyOrKillAndWaitAsync(timeout, cancellationToken);
 
     private void ApplyTerminalWrapper(IEnumerable<string> args)
     {
         Process.StartInfo.UseShellExecute = true;
 
-        if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-        {
-            Process.StartInfo.FileName = "cmd.exe";
-            string arguments = FormatStandardArguments(args);
-            Process.StartInfo.Arguments = $"/c \"\"{_filePath}\" {arguments}\"";
-        }
-        else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+        if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
             Process.StartInfo.FileName = "x-terminal-emulator";
 
@@ -241,6 +232,10 @@ public sealed class ConsoleProcess : IDisposable
 
             Process.StartInfo.FileName = "osascript";
             Process.StartInfo.Arguments = $"-e \"{appleScript}\"";
+        }
+        else
+        {
+            Debug.Fail("Unsupported platform");
         }
     }
 

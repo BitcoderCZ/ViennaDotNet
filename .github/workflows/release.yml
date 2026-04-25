@@ -25,33 +25,35 @@ jobs:
             arch: arm64
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-dotnet@v4
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: 10.0.x
 
       - name: Build
         shell: pwsh
         run: |
-          cd ViennaDotNet
           ./publish.ps1 -profiles framework-dependent-${{ matrix.os }}-${{ matrix.arch }}
 
-      - name: Download resourcepack
+      - name: Download resource pack
         shell: pwsh
         run: |
-          $path = "ViennaDotNet/build/Release/framework-dependent-${{ matrix.os }}-${{ matrix.arch }}/staticdata/resourcepacks/vanilla.zip"
+          $file = "build/Release/framework-dependent-${{ matrix.os }}-${{ matrix.arch }}/staticdata/resourcepacks/vanilla.zip"
           Invoke-WebRequest `
             -Uri "https://web.archive.org/web/20210624200250if_/https://cdn.mceserv.net/availableresourcepack/resourcepacks/dba38e59-091a-4826-b76a-a08d7de5a9e2-1301b0c257a311678123b9e7325d0d6c61db3c35" `
-            -OutFile $path
+            -OutFile $file
 
-      - name: Zip
+      - name: Zip build
         shell: pwsh
         run: |
           Compress-Archive `
-            -Path "ViennaDotNet/build/Release/framework-dependent-${{ matrix.os }}-${{ matrix.arch }}/*" `
+            -Path "build/Release/framework-dependent-${{ matrix.os }}-${{ matrix.arch }}/*" `
             -DestinationPath "ViennaDotNet-${{ matrix.os }}-${{ matrix.arch }}.zip"
 
-      - uses: softprops/action-gh-release@v2
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
         with:
           files: ViennaDotNet-${{ matrix.os }}-${{ matrix.arch }}.zip

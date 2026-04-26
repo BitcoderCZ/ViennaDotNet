@@ -188,13 +188,24 @@ echo "- Files are stored inside Ubuntu using proot-distro"
 echo "- Enter Ubuntu with: proot-distro login ubuntu"
 echo
 echo "Admin Panel Configuration:"
-echo "- If running patched Minecraft Earth on same device:"
+echo "- If you are running a patched Minecraft Earth APK on the same device:"
 echo "  → Use IP: 127.0.0.1"
 echo
-echo "MapTiler:"
-echo "https://cloud.maptiler.com/account/keys/"
+echo "MapTiler Setup:"
+echo "- Create an API key at: https://cloud.maptiler.com/account/keys/"
+echo "- Add the API key inside the server admin panel settings"
+echo
+echo "APK:"
+echo "- Placeholder download wait till update:"
+echo "  https://example.com/minecraft-earth-patched.apk"
+echo
+echo "Notes:"
+echo "- This setup is intended for local device use only"
+echo "- You can change the IP if you want to host it for multiple devices"
+echo "- Make sure your APK is patched to match the server IP"
 echo
 echo "======================================="
+echo ""
 
 CHOICE=$(printf "Back\n" | fzf --height=20% --reverse --border --prompt="Info > ")
 [ "$CHOICE" = "Back" ] && return

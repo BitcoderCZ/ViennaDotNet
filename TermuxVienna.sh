@@ -2,34 +2,33 @@
 
 REMOTE_URL="https://raw.githubusercontent.com/FroquaCubez/ViennaDotNet-PreCompiled/refs/heads/main/TermuxVienna.sh"
 SELF_PATH="$(realpath "$0")"
-TMP_PATH="$SELF_PATH.tmp"
 
-# --- SELF UPDATE (safe) ---
 update_self() {
-    if ! command -v curl >/dev/null 2>&1; then
-        return
-    fi
+    command -v curl >/dev/null 2>&1 || return
 
-    if curl -fsSL --max-time 5 "$REMOTE_URL" -o "$TMP_PATH" 2>/dev/null; then
-        if [ -s "$TMP_PATH" ]; then
-            chmod +x "$TMP_PATH"
+    TMP_PATH="$(mktemp -u /data/data/com.termux/files/usr/tmp/.earth_update_XXXXXX)"
 
-            # only replace if different
-            if ! cmp -s "$TMP_PATH" "$SELF_PATH"; then
-                mv "$TMP_PATH" "$SELF_PATH"
-                echo "[earth] updated, restarting..."
-                exec "$SELF_PATH" "$@"
-            else
-                rm -f "$TMP_PATH"
-            fi
+    curl -fsSL --max-time 5 "$REMOTE_URL" -o "$TMP_PATH" 2>/dev/null
+
+    if [ -s "$TMP_PATH" ]; then
+        chmod +x "$TMP_PATH"
+
+        if ! cmp -s "$TMP_PATH" "$SELF_PATH"; then
+            mv "$TMP_PATH" "$SELF_PATH"
+            echo "[earth] updated, restarting..."
+            exec "$SELF_PATH" "$@"
+        else
+            rm -f "$TMP_PATH"
         fi
+    else
+        rm -f "$TMP_PATH"
     fi
 }
 
 update_self "$@"
 
 # =========================
-# MAIN SCRIPT STARTS HERE
+#        MAIN SCRIPT 
 # =========================
 
 proot-distro login ubuntu -- bash << 'EOF'

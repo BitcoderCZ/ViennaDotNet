@@ -225,12 +225,87 @@ done
 done
 }
 
+update_viennadotnet() {
+
+    while true; do
+        clear
+        echo "======================================="
+        echo "        UPDATE VIENNADOTNET"
+        echo "======================================="
+        echo ""
+        echo "This will download the latest build"
+        echo "and overwrite existing files in:"
+        echo "   ~/Vienna"
+        echo ""
+        echo "IMPORTANT:"
+        echo "- Your databases and extra files will NOT be deleted"
+        echo "- Only matching files from the update will be replaced"
+        echo ""
+        echo "======================================="
+
+        CHOICE=$(printf "Yes\nNo" | fzf --height=20% --reverse --border --prompt="Confirm Update > ")
+
+        if [ "$CHOICE" = "No" ] || [ -z "$CHOICE" ]; then
+            return
+        fi
+
+        if [ "$CHOICE" = "Yes" ]; then
+            echo "[earth] fetching update URL..."
+
+            URL=$(curl -s https://api.github.com/repos/FroquaCubez/ViennaDotNet-PreCompiled/releases/tags/v1 \
+                | grep browser_download_url \
+                | grep linux-arm64 \
+                | cut -d '"' -f 4)
+
+            if [ -z "$URL" ]; then
+                echo "[earth] failed to get update URL"
+                sleep 2
+                return
+            fi
+
+            TMP_DIR=~/Vienna_update_tmp
+            rm -rf "$TMP_DIR"
+            mkdir -p "$TMP_DIR"
+            cd "$TMP_DIR" || return
+
+            echo "[earth] downloading update..."
+            curl -L --fail "$URL" -o update.zip
+
+            if [ ! -f update.zip ]; then
+                echo "[earth] download failed"
+                sleep 2
+                return
+            fi
+
+            echo "[earth] extracting..."
+            unzip -o update.zip >/dev/null 2>&1
+
+            SRC="ViennaDotNet-linux-arm64"
+            TARGET=~/Vienna
+
+            if [ -d "$SRC" ]; then
+                echo "[earth] applying update..."
+
+                # SAFE OVERWRITE ONLY (NO DELETE OF EXTRA FILES)
+                rsync -a "$SRC"/ "$TARGET"/
+
+                echo "[earth] update complete"
+            else
+                echo "[earth] invalid package structure"
+            fi
+
+            sleep 2
+            return
+        fi
+    done
+}
+
 info_panel() {
 while true; do
 clear
 
 echo "======================================="
-echo " INFO"
+echo " INFORMATION"
 echo "======================================="
 echo
 echo "Made with ♡ by Cosmetide"
@@ -248,8 +323,8 @@ echo "- Create an API key at: https://cloud.maptiler.com/account/keys/"
 echo "- Add the API key inside the server admin panel settings"
 echo
 echo "APK:"
-echo "- Placeholder download wait till update:"
-echo "  https://example.com/minecraft-earth-patched.apk"
+echo "Patch your own LEGALLY obtained minecraft earth app"
+echo "and set the IP to 127.0.0.1 if you're using it on the same device"
 echo
 echo "Notes:"
 echo "- This setup is intended for local device use only"
@@ -283,7 +358,8 @@ CHOICE=$(printf "%s\n%s\n%s\n%s\n%s\n" \
 "Start/Stop Server" \
 "Process Explorer" \
 "Open Admin Panel" \
-"Info" \
+"Update ViennaDotNet" \
+"Information" \
 "Exit" \
 | fzf --height=50% --reverse --border --prompt="$TITLE > ")
 
@@ -291,7 +367,8 @@ case "$CHOICE" in
 "Start/Stop Server") toggle_server ;;
 "Process Explorer") process_viewer ;;
 "Open Admin Panel") open_admin_panel ;;
-"Info") info_panel ;;
+"Update ViennaDotNet") update_viennadotnet ;;
+"Information") info_panel ;;
 "Exit") exit 0 ;;
 esac
 

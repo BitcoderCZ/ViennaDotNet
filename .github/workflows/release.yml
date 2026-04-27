@@ -2,14 +2,13 @@ name: Build and Release
 
 on:
   release:
-    types: [published]
+    types: [created]
 
 permissions:
   contents: write
 
 jobs:
   build:
-    if: github.event.release.tag_name == 'nightly'
     runs-on: windows-latest
 
     strategy:
@@ -49,7 +48,8 @@ jobs:
             -Path "build/Release/framework-dependent-${{ matrix.os }}-${{ matrix.arch }}/*" `
             -DestinationPath "ViennaDotNet-${{ matrix.os }}-${{ matrix.arch }}.zip"
 
-      - name: Upload release
+      - name: Upload release asset
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.event.release.tag_name }}
           files: ViennaDotNet-${{ matrix.os }}-${{ matrix.arch }}.zip

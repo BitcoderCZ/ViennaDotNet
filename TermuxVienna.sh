@@ -354,14 +354,22 @@ else
     TITLE="ViennaTermux [STOPPED]"
 fi
 
-CHOICE=$(printf "%s\n%s\n%s\n%s\n%s\n" \
-"Start/Stop Server" \
-"Process Explorer" \
-"Open Admin Panel" \
-"Update ViennaDotNet" \
-"Information" \
-"Exit" \
-| fzf --height=50% --reverse --border --prompt="$TITLE > ")
+OPTIONS=(
+"Start/Stop Server"
+"Process Explorer"
+"Open Admin Panel"
+"Update ViennaDotNet"
+"Information"
+"Exit"
+)
+
+CHOICE=$(printf "%s\n" "${OPTIONS[@]}" | fzf \
+    --height=50% \
+    --reverse \
+    --border \
+    --prompt="$TITLE > " \
+    --no-multi \
+    --ansi)
 
 case "$CHOICE" in
 "Start/Stop Server") toggle_server ;;

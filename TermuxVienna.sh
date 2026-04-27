@@ -52,8 +52,8 @@ mkdir -p ~/Vienna
 # RESOURCE PACK CHECK
 # =========================
 
+ensure_resource_pack
 RESOURCE_URL="https://web.archive.org/web/20210624200250if_/https://cdn.mceserv.net/availableresourcepack/resourcepacks/dba38e59-091a-4826-b76a-a08d7de5a9e2-1301b0c257a311678123b9e7325d0d6c61db3c35"
-
 RESOURCE_DIR="$HOME/Vienna/staticdata/resourcepacks"
 RESOURCE_FILE="$RESOURCE_DIR/vanilla.zip"
 

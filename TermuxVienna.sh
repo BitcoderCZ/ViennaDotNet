@@ -226,7 +226,7 @@ done
 }
 
 update_viennadotnet() {
-
+    force_stop_server
     while true; do
         clear
         echo "======================================="
@@ -292,6 +292,25 @@ update_viennadotnet() {
         sleep 2
         return
     done
+}
+
+force_stop_server() {
+    if is_running; then
+        echo "[earth] stopping server before update..."
+
+        if [ -f "$PID_FILE" ]; then
+            PID=$(cat "$PID_FILE")
+            PGID=$(ps -o pgid= "$PID" 2>/dev/null | tr -d ' ')
+            kill -- -"$PGID" 2>/dev/null
+            kill "$PID" 2>/dev/null
+        fi
+
+        pkill -f run_launcher.ps1 2>/dev/null
+        fuser -k 5000/tcp 2>/dev/null
+
+        rm -f "$PID_FILE" "$TIME_FILE"
+        sleep 2
+    fi
 }
 
 info_panel() {

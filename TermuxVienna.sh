@@ -41,6 +41,50 @@ TIME_FILE=~/Vienna/server.start
 
 mkdir -p ~/Vienna
 
+# =========================
+# RESOURCE PACK CHECK
+# =========================
+
+RESOURCE_URL="https://web.archive.org/web/20210624200250if_/https://cdn.mceserv.net/availableresourcepack/resourcepacks/dba38e59-091a-4826-b76a-a08d7de5a9e2-1301b0c257a311678123b9e7325d0d6c61db3c35"
+
+RESOURCE_DIR="$HOME/Vienna/staticdata/resourcepacks"
+RESOURCE_FILE="$RESOURCE_DIR/vanilla.zip"
+
+
+EXPECTED_SIZE=131885348 ## Hopefully right size that what mine said lol
+
+ensure_resource_pack() {
+    echo "[earth] checking resource pack..."
+
+    mkdir -p "$RESOURCE_DIR"
+
+    if [ -f "$RESOURCE_FILE" ]; then
+        ACTUAL_SIZE=$(stat -c%s "$RESOURCE_FILE" 2>/dev/null)
+
+        if [ "$ACTUAL_SIZE" = "$EXPECTED_SIZE" ]; then
+            echo "[earth] resource pack OK"
+            return
+        else
+            echo "[earth] size mismatch ($ACTUAL_SIZE != $EXPECTED_SIZE), re-downloading..."
+            rm -f "$RESOURCE_FILE"
+        fi
+    else
+        echo "[earth] resource pack missing, downloading..."
+    fi
+
+    curl -L "$RESOURCE_URL" -o "$RESOURCE_FILE"
+
+    # verify again after download
+    ACTUAL_SIZE=$(stat -c%s "$RESOURCE_FILE" 2>/dev/null)
+
+    if [ "$ACTUAL_SIZE" != "$EXPECTED_SIZE" ]; then
+        echo "[earth] download failed or corrupted (size mismatch)"
+        exit 1
+    fi
+
+    echo "[earth] resource pack downloaded successfully"
+}
+
 is_running() {
     if [ -f "$PID_FILE" ]; then
         PID=$(cat "$PID_FILE")

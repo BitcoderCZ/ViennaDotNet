@@ -238,28 +238,16 @@ update_viennadotnet() {
         echo ""
 
         CURRENT_VERSION="unknown"
-
-        if [ -f ~/Vienna/version.txt ]; then
-            CURRENT_VERSION=$(cat ~/Vienna/version.txt)
-        fi
-
-        echo "Current Version: $CURRENT_VERSION"
-        echo ""        
+        [ -f ~/Vienna/version.txt ] && CURRENT_VERSION=$(cat ~/Vienna/version.txt)
 
         RELEASE_JSON=$(curl -s https://api.github.com/repos/FroquaCubez/ViennaDotNet-PreCompiled/releases)
 
-        TAG=$(echo "$RELEASE_JSON" | grep '"tag_name"' | head -n1 | cut -d '"' -f4)
+        LATEST_TAG=$(echo "$RELEASE_JSON" | grep '"tag_name"' | head -n1 | cut -d '"' -f4)
 
-        if [ -z "$TAG" ]; then
-            echo "Failed to fetch latest version"
-            sleep 2
-            return
-        fi
-
-        echo "Latest Version: $TAG"
+        echo "Current Version: $CURRENT_VERSION"
+        echo "Latest Version:  $LATEST_TAG"
         echo ""
-
-        echo "Download latest ViennaDotNet build?"
+        echo "Download ViennaDotNet build?"
         echo ""
         echo "This will:"
         echo "- Replace updated files ONLY"
@@ -267,12 +255,24 @@ update_viennadotnet() {
         echo ""
         echo "======================================="
 
-        CHOICE=$(printf "Yes\nNo" | fzf --height=20% --reverse --border --prompt="Confirm Update > ")
+        CHOICE=$(printf "Latest ($LATEST_TAG)\nOther versions...\nNo" \
+            | fzf --height=20% --reverse --border --prompt="Select update option > ")
 
-        [ "$CHOICE" != "Yes" ] && return
+        [ "$CHOICE" = "No" ] && return
+
+        if echo "$CHOICE" | grep -q "Other versions"; then
+            TAG=$(echo "$RELEASE_JSON" \
+                | grep '"tag_name"' \
+                | cut -d '"' -f4 \
+                | fzf --height=50% --reverse --border --prompt="Select version > ")
+        else
+            TAG="$LATEST_TAG"
+        fi
+
+        [ -z "$TAG" ] && return
 
         force_stop_server
-        echo "[earth] fetching download URL for $TAG..."
+        echo "[earth] preparing download for $TAG..."
 
         URL=$(echo "$RELEASE_JSON" \
             | grep -A2 "\"tag_name\": \"$TAG\"" \
@@ -280,11 +280,7 @@ update_viennadotnet() {
             | grep linux-arm64 \
             | cut -d '"' -f4 | head -n1)
 
-        if [ -z "$URL" ]; then
-            echo "[earth] failed to get URL"
-            sleep 2
-            return
-        fi
+        [ -z "$URL" ] && echo "[earth] failed to get download URL" && sleep 2 && return
 
         TMP_DIR="$(mktemp -d ~/Vienna_update_XXXXXX)"
         cd "$TMP_DIR" || return
@@ -292,27 +288,16 @@ update_viennadotnet() {
         echo "[earth] downloading $TAG..."
         curl -L --fail "$URL" -o update.zip
 
-        if [ ! -f update.zip ]; then
-            echo "[earth] download failed"
-            rm -rf "$TMP_DIR"
-            sleep 2
-            return
-        fi
-
-        echo "[earth] extracting..."
         unzip -o update.zip >/dev/null 2>&1
 
         SRC="ViennaDotNet-linux-arm64"
         TARGET=~/Vienna
 
         if [ -d "$SRC" ]; then
-            echo "[earth] applying update from $TAG..."
+            echo "[earth] applying update ($TAG)..."
 
             cp -r "$SRC"/. "$TARGET"/
 
-            # -----------------------------
-            # SAVE NEW VERSION
-            # -----------------------------
             echo "$TAG" > ~/Vienna/version.txt
 
             echo "[earth] update complete ($TAG)"

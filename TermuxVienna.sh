@@ -1,6 +1,6 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
-REMOTE_URL="https://raw.githubusercontent.com/FroquaCubez/ViennaDotNet-PreCompiled/refs/heads/main/TermuxVienna.sh"
+REMOTE_URL="https://raw.githubusercontent.com/Earth-Restored/ViennaDotNet/refs/heads/main/TermuxVienna.sh"
 SELF_PATH="$(realpath "$0")"
 
 echo "Checking for updates..."
@@ -240,7 +240,7 @@ update_viennadotnet() {
         CURRENT_VERSION="unknown"
         [ -f ~/Vienna/version.txt ] && CURRENT_VERSION=$(cat ~/Vienna/version.txt)
 
-        RELEASE_JSON=$(curl -s https://api.github.com/repos/FroquaCubez/ViennaDotNet-PreCompiled/releases)
+        RELEASE_JSON=$(curl -s https://api.github.com/repos/Earth-Restored/ViennaDotNet/releases)
 
         LATEST_TAG=$(echo "$RELEASE_JSON" | grep '"tag_name"' | head -n1 | cut -d '"' -f4)
 

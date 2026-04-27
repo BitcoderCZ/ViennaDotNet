@@ -275,10 +275,9 @@ update_viennadotnet() {
         echo "[earth] preparing download for $TAG..."
 
         URL=$(echo "$RELEASE_JSON" \
-            | grep -A2 "\"tag_name\": \"$TAG\"" \
-            | grep browser_download_url \
-            | grep linux-arm64 \
-            | cut -d '"' -f4 | head -n1)
+            | grep -o '"browser_download_url": "[^"]*linux-arm64[^"]*"' \
+            | cut -d '"' -f4 \
+            | head -n1)
 
         [ -z "$URL" ] && echo "[earth] failed to get download URL" && sleep 2 && return
 

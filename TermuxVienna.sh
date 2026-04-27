@@ -231,9 +231,25 @@ done
 update_viennadotnet() {
     while true; do
         clear
+
         echo "======================================="
         echo "        UPDATE VIENNADOTNET"
         echo "======================================="
+        echo ""
+
+        echo "Checking latest version..."
+
+        RELEASE_JSON=$(curl -s https://api.github.com/repos/FroquaCubez/ViennaDotNet-PreCompiled/releases/latest)
+
+        TAG=$(echo "$RELEASE_JSON" | grep -m1 '"tag_name"' | cut -d '"' -f4)
+
+        if [ -z "$TAG" ]; then
+            echo "Failed to fetch latest version"
+            sleep 2
+            return
+        fi
+
+        echo "Latest Version: $TAG"
         echo ""
         echo "Download latest ViennaDotNet build?"
         echo ""
@@ -246,11 +262,11 @@ update_viennadotnet() {
         CHOICE=$(printf "Yes\nNo" | fzf --height=20% --reverse --border --prompt="Confirm Update > ")
 
         [ "$CHOICE" != "Yes" ] && return
-        
-        force_stop_server
-        echo "[earth] fetching update URL..."
 
-        URL=$(curl -s https://api.github.com/repos/FroquaCubez/ViennaDotNet-PreCompiled/releases/tags/v1 \
+        force_stop_server
+        echo "[earth] fetching download URL for $TAG..."
+
+        URL=$(echo "$RELEASE_JSON" \
             | grep browser_download_url \
             | grep linux-arm64 \
             | cut -d '"' -f 4)
@@ -264,7 +280,7 @@ update_viennadotnet() {
         TMP_DIR="$(mktemp -d ~/Vienna_update_XXXXXX)"
         cd "$TMP_DIR" || return
 
-        echo "[earth] downloading..."
+        echo "[earth] downloading $TAG..."
         curl -L --fail "$URL" -o update.zip
 
         if [ ! -f update.zip ]; then
@@ -281,12 +297,11 @@ update_viennadotnet() {
         TARGET=~/Vienna
 
         if [ -d "$SRC" ]; then
-            echo "[earth] applying safe update..."
+            echo "[earth] applying update from $TAG..."
 
-            # SAFE MERGE (NO DELETION)
             cp -r "$SRC"/. "$TARGET"/
 
-            echo "[earth] update complete"
+            echo "[earth] update complete ($TAG)"
         else
             echo "[earth] invalid package"
         fi
@@ -323,8 +338,6 @@ clear
 echo "======================================="
 echo " INFORMATION"
 echo "======================================="
-echo
-echo "Made with ♡ by Cosmetide"
 echo
 echo "Resourcepack:"
 echo "- Check the server log on the admin panel or ask for help on the Discord server"

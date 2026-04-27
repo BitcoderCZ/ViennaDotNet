@@ -50,39 +50,40 @@ RESOURCE_URL="https://web.archive.org/web/20210624200250if_/https://cdn.mceserv.
 RESOURCE_DIR="$HOME/Vienna/staticdata/resourcepacks"
 RESOURCE_FILE="$RESOURCE_DIR/vanilla.zip"
 
-
-EXPECTED_SIZE=131885348 ## Hopefully right size that what mine said lol
+EXPECTED_SIZE=131885348
 
 ensure_resource_pack() {
     echo "[earth] checking resource pack..."
 
     mkdir -p "$RESOURCE_DIR"
 
-    if [ -f "$RESOURCE_FILE" ]; then
-        ACTUAL_SIZE=$(stat -c%s "$RESOURCE_FILE" 2>/dev/null)
+    check_file() {
+        if [ -f "$RESOURCE_FILE" ]; then
+            ACTUAL_SIZE=$(stat -c%s "$RESOURCE_FILE" 2>/dev/null)
 
-        if [ "$ACTUAL_SIZE" = "$EXPECTED_SIZE" ]; then
-            echo "[earth] resource pack OK"
-            return
-        else
-            echo "[earth] size mismatch ($ACTUAL_SIZE != $EXPECTED_SIZE), re-downloading..."
-            rm -f "$RESOURCE_FILE"
+            if [ "$ACTUAL_SIZE" -eq "$EXPECTED_SIZE" ] 2>/dev/null; then
+                echo "[earth] resource pack OK"
+                return 0
+            else
+                echo "[earth] size mismatch ($ACTUAL_SIZE != $EXPECTED_SIZE)"
+                rm -f "$RESOURCE_FILE"
+                return 1
+            fi
         fi
-    else
-        echo "[earth] resource pack missing, downloading..."
-    fi
+        return 1
+    }
 
-    curl -L "$RESOURCE_URL" -o "$RESOURCE_FILE"
+    # first check
+    check_file && return
 
-    # verify again after download
-    ACTUAL_SIZE=$(stat -c%s "$RESOURCE_FILE" 2>/dev/null)
+    echo "[earth] downloading resource pack..."
+    curl -L --fail --retry 3 "$RESOURCE_URL" -o "$RESOURCE_FILE"
 
-    if [ "$ACTUAL_SIZE" != "$EXPECTED_SIZE" ]; then
-        echo "[earth] download failed or corrupted (size mismatch)"
-        exit 1
-    fi
+    # verify again
+    check_file && return
 
-    echo "[earth] resource pack downloaded successfully"
+    echo "[earth] download failed or corrupted after retry"
+    exit 1
 }
 
 is_running() {

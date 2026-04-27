@@ -98,8 +98,54 @@ toggle_server() {
         CH=$(printf "Yes\nNo" | fzf --height=20% --reverse --border --prompt="Stop server? > ")
         [ "$CH" = "Yes" ] && stop_server
     else
+        check_eula || return
         start_server
     fi
+}
+
+check_eula() {
+    EULA_FILE=~/Vienna/eula.txt
+
+    # If already accepted → skip
+    if [ -f "$EULA_FILE" ] && grep -q "eula=true" "$EULA_FILE"; then
+        return 0
+    fi
+
+    while true; do
+        clear
+        echo "======================================="
+        echo "        MINECRAFT SERVER EULA"
+        echo "======================================="
+        echo ""
+        echo "Before starting the server, you must accept"
+        echo "the End User License Agreement (EULA)."
+        echo ""
+        echo "You can read it here:"
+        echo "https://aka.ms/MinecraftEULA"
+        echo ""
+        echo "======================================="
+
+        CHOICE=$(printf "Yes, I agree\nNo, I deny" | fzf \
+            --height=20% \
+            --reverse \
+            --border \
+            --prompt="Accept EULA > ")
+
+        case "$CHOICE" in
+            "Yes, I agree")
+                mkdir -p ~/Vienna
+                echo "eula=true" > "$EULA_FILE"
+                echo "[earth] EULA accepted"
+                sleep 1
+                return 0
+                ;;
+            "No, I deny"|"")
+                echo "[earth] You must accept the EULA to start the server"
+                sleep 2
+                return 1
+                ;;
+        esac
+    done
 }
 
 process_viewer() {

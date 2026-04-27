@@ -233,70 +233,65 @@ update_viennadotnet() {
         echo "        UPDATE VIENNADOTNET"
         echo "======================================="
         echo ""
-        echo "This will download the latest build"
-        echo "and overwrite existing files in:"
-        echo "   ~/Vienna"
+        echo "Download latest ViennaDotNet build?"
         echo ""
-        echo "IMPORTANT:"
-        echo "- Your databases and extra files will NOT be deleted"
-        echo "- Only matching files from the update will be replaced"
+        echo "This will:"
+        echo "- Replace updated files ONLY"
+        echo "- Keep your databases untouched"
+        echo "- NOT delete extra local files"
         echo ""
         echo "======================================="
 
         CHOICE=$(printf "Yes\nNo" | fzf --height=20% --reverse --border --prompt="Confirm Update > ")
 
-        if [ "$CHOICE" = "No" ] || [ -z "$CHOICE" ]; then
-            return
-        fi
+        [ "$CHOICE" != "Yes" ] && return
 
-        if [ "$CHOICE" = "Yes" ]; then
-            echo "[earth] fetching update URL..."
+        echo "[earth] fetching update URL..."
 
-            URL=$(curl -s https://api.github.com/repos/FroquaCubez/ViennaDotNet-PreCompiled/releases/tags/v1 \
-                | grep browser_download_url \
-                | grep linux-arm64 \
-                | cut -d '"' -f 4)
+        URL=$(curl -s https://api.github.com/repos/FroquaCubez/ViennaDotNet-PreCompiled/releases/tags/v1 \
+            | grep browser_download_url \
+            | grep linux-arm64 \
+            | cut -d '"' -f 4)
 
-            if [ -z "$URL" ]; then
-                echo "[earth] failed to get update URL"
-                sleep 2
-                return
-            fi
-
-            TMP_DIR=~/Vienna_update_tmp
-            rm -rf "$TMP_DIR"
-            mkdir -p "$TMP_DIR"
-            cd "$TMP_DIR" || return
-
-            echo "[earth] downloading update..."
-            curl -L --fail "$URL" -o update.zip
-
-            if [ ! -f update.zip ]; then
-                echo "[earth] download failed"
-                sleep 2
-                return
-            fi
-
-            echo "[earth] extracting..."
-            unzip -o update.zip >/dev/null 2>&1
-
-            SRC="ViennaDotNet-linux-arm64"
-            TARGET=~/Vienna
-
-            if [ -d "$SRC" ]; then
-                echo "[earth] applying update..."
-
-                # SAFE OVERWRITE ONLY (NO DELETE OF EXTRA FILES)
-                rsync -a "$SRC"/ "$TARGET"/
-
-                echo "[earth] update complete"
-            else
-                echo "[earth] invalid package structure"
-            fi
-
+        if [ -z "$URL" ]; then
+            echo "[earth] failed to get URL"
             sleep 2
             return
         fi
+
+        TMP_DIR="$(mktemp -d ~/Vienna_update_XXXXXX)"
+        cd "$TMP_DIR" || return
+
+        echo "[earth] downloading..."
+        curl -L --fail "$URL" -o update.zip
+
+        if [ ! -f update.zip ]; then
+            echo "[earth] download failed"
+            rm -rf "$TMP_DIR"
+            sleep 2
+            return
+        fi
+
+        echo "[earth] extracting..."
+        unzip -o update.zip >/dev/null 2>&1
+
+        SRC="ViennaDotNet-linux-arm64"
+        TARGET=~/Vienna
+
+        if [ -d "$SRC" ]; then
+            echo "[earth] applying safe update..."
+
+            # SAFE MERGE (NO DELETION)
+            cp -r "$SRC"/. "$TARGET"/
+
+            echo "[earth] update complete"
+        else
+            echo "[earth] invalid package"
+        fi
+
+        rm -rf "$TMP_DIR"
+        sleep 2
+        return
     done
 }
 

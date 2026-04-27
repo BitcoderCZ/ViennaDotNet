@@ -39,50 +39,6 @@ update_self "$@"
 proot-distro login ubuntu -- bash << 'EOF'
 
 # =========================
-# RESOURCE PACK CHECK
-# =========================
-
-RESOURCE_URL="https://web.archive.org/web/20210624200250if_/https://cdn.mceserv.net/availableresourcepack/resourcepacks/dba38e59-091a-4826-b76a-a08d7de5a9e2-1301b0c257a311678123b9e7325d0d6c61db3c35"
-RESOURCE_DIR="$HOME/Vienna/staticdata/resourcepacks"
-RESOURCE_FILE="$RESOURCE_DIR/vanilla.zip"
-
-EXPECTED_SIZE=131885348
-
-ensure_resource_pack() {
-    echo "[earth] checking resource pack..."
-
-    mkdir -p "$RESOURCE_DIR"
-
-    check_file() {
-        if [ -f "$RESOURCE_FILE" ]; then
-            ACTUAL_SIZE=$(stat -c%s "$RESOURCE_FILE" 2>/dev/null)
-
-            if [ "$ACTUAL_SIZE" -eq "$EXPECTED_SIZE" ] 2>/dev/null; then
-                echo "[earth] resource pack OK"
-                return 0
-            else
-                echo "[earth] size mismatch ($ACTUAL_SIZE != $EXPECTED_SIZE)"
-                rm -f "$RESOURCE_FILE"
-                return 1
-            fi
-        fi
-        return 1
-    }
-
-    # first check
-    check_file && return
-
-    echo "[earth] downloading resource pack..."
-    curl -L --fail --retry 3 "$RESOURCE_URL" -o "$RESOURCE_FILE"
-
-    # verify again
-    check_file && return
-
-    echo "[earth] download failed or corrupted after retry"
-    exit 1
-}
-
-# =========================
 #        MAIN SCRIPT 
 # =========================
 
@@ -91,7 +47,7 @@ PID_FILE=~/Vienna/server.pid
 TIME_FILE=~/Vienna/server.start
 
 mkdir -p ~/Vienna
-ensure_resource_pack
+
 
 is_running() {
     if [ -f "$PID_FILE" ]; then
@@ -322,6 +278,11 @@ echo " INFORMATION"
 echo "======================================="
 echo
 echo "Made with ♡ by Cosmetide"
+echo
+echo "Resourcepack:"
+echo "- Check the server log on the admin panel or ask for help on the Discord server"
+echo "- Location of the file: ~/Vienna/staticdata/resourcepacks/vanilla.zip"
+echo "- This can be accessed using the proot-distro command referred below"
 echo
 echo "ViennaDotNet Storage:"
 echo "- Files are stored inside Ubuntu using proot-distro"

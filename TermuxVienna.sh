@@ -104,7 +104,7 @@ toggle_server() {
 }
 
 check_eula() {
-    EULA_FILE=~/Vienna/eula.txt
+    EULA_FILE=~/Vienna/staticdata/server_template_dir/eula.txt
 
     # If already accepted → skip
     if [ -f "$EULA_FILE" ] && grep -q "eula=true" "$EULA_FILE"; then
@@ -120,7 +120,7 @@ check_eula() {
         echo "Before starting the server, you must accept"
         echo "the End User License Agreement (EULA)."
         echo ""
-        echo "You can read it here:"
+        echo "Read it here:"
         echo "https://aka.ms/MinecraftEULA"
         echo ""
         echo "======================================="
@@ -133,8 +133,10 @@ check_eula() {
 
         case "$CHOICE" in
             "Yes, I agree")
-                mkdir -p ~/Vienna
-                echo "eula=true" > "$EULA_FILE"
+                mkdir -p "$(dirname "$EULA_FILE")"
+                echo "# By changing the setting below to TRUE you are indicating your agreement to the EULA." > "$EULA_FILE"
+                echo "eula=true" >> "$EULA_FILE"
+
                 echo "[earth] EULA accepted"
                 sleep 1
                 return 0
@@ -147,7 +149,6 @@ check_eula() {
         esac
     done
 }
-
 process_viewer() {
 while true; do
 clear

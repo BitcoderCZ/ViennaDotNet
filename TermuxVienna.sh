@@ -8,7 +8,7 @@ echo "Checking for updates..."
 update_self() {
     command -v curl >/dev/null 2>&1 || return
 
-    TMP_PATH="$(mktemp -u /data/data/com.termux/files/usr/tmp/.earth_update_XXXXXX)"
+    TMP_PATH="$(mktemp /data/data/com.termux/files/usr/tmp/.earth_update_XXXXXX)"
 
     curl -fsSL --max-time 5 "$REMOTE_URL" -o "$TMP_PATH" 2>/dev/null
 
@@ -17,8 +17,15 @@ update_self() {
 
         if ! cmp -s "$TMP_PATH" "$SELF_PATH"; then
             mv "$TMP_PATH" "$SELF_PATH"
-            echo "[earth] updated, restarting..."
-            exec "$SELF_PATH" "$@"
+            echo "[earth] updated"
+
+            if [ -n "$PROOT" ]; then
+                echo "Please exit proot environment and run the command again."
+                exit 0
+            else
+                echo "[earth] restarting..."
+                exec "$SELF_PATH" "$@"
+            fi
         else
             rm -f "$TMP_PATH"
         fi

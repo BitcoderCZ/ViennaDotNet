@@ -1,5 +1,11 @@
 ![Banner](src/ViennaDotNet.LauncherUI/wwwroot/banner.png)
+
+![GitHub License](https://img.shields.io/github/license/Earth-Restored/ViennaDotNet?style=flat-square)
+![GitHub Repo stars](https://img.shields.io/github/stars/Earth-Restored/ViennaDotNet?style=flat-square)
+![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/Earth-Restored/ViennaDotNet/total?style=flat-square)
+
 # ViennaDotNet
+
 An unofficial port of [Project Vienna](https://github.com/Project-Genoa/Vienna) to .NET
 
 > [!WARNING]
@@ -15,58 +21,73 @@ An unofficial port of [Project Vienna](https://github.com/Project-Genoa/Vienna) 
 * This project is provided "as-is" without any warranty of any kind, express or implied. In no event shall the authors be held liable for any claim, damages, or other liability.
 
 ## New Features
+
 In addition to the original Vienna feature set, this port adds:
-- Shop
-- Map rendering
-- Admin panel
 
-## Installation guide
+* Shop
+* Map rendering
+* Admin panel
 
-### Requirements
+## System Requirements
 
-- Hardware/OS: A PC running Windows or Linux.
-   - Note: macOS is currently untested. High-end Android devices using Termux may work but are not officially supported.
-- [.NET 10.0 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/10.0)
-- Java 17 (JRE or JDK), newer versions may not work
-- On linux, [powershell](https://learn.microsoft.com/en-us/powershell/scripting/install/linux-overview) to run the build script
+### Hardware & OS
 
-### Instructions
+* **PC:** Windows or Linux (macOS is currently untested).
+* **Mobile:** High-end Android devices via Termux.
 
-- Before you start, you'll need to know the IP address of your PC
- - Windows
-   - Type `ipconfig` and press enter
-   - Look for either `Wireless LAN adapter Wi-Fi` if you use WiFi or `Ethernet adapter Ethernet` if you use ethernet
-   - Under it, there should be `IPv4 Address`
-- Linux
-   - Use a command such as `ip address`, `hostname -I` or `ifconfig -a`
-   - The address will usually (but not always) be in the format `192.168.XXX.XXX`
+### Software Dependencies
 
-## Semi-automatic (Linux, macOS, Termux only)
-- Open your terminal and run the following command:
-```
+Installed automatically if using the [Semi-automatic installation method](#semi-automatic-linux-macos-termux-only)
+
+* [.NET 10.0 SDK](https://dotnet.microsoft.com/en-us/download/dotnet/10.0)
+* Java 17 (JRE or JDK), newer versions may not work
+* On linux, [powershell](https://learn.microsoft.com/en-us/powershell/scripting/install/linux-overview) to run the build script
+
+## Setup Prerequisites
+
+* Before you start, you'll need to know the IP address of your PC
+* Windows
+  * Type `ipconfig` and press enter
+  * Look for either `Wireless LAN adapter Wi-Fi` if you use WiFi or `Ethernet adapter Ethernet` if you use ethernet
+  * Under it, there should be `IPv4 Address`
+* Linux
+  * Use a command such as `ip address`, `hostname -I` or `ifconfig -a`
+  * The address will usually (but not always) be in the format `192.168.XXX.XXX`
+
+## Installation Methods
+
+### Semi-automatic (Linux, macOS, Termux only)
+
+* Open your terminal and run the following command:
+
+```bash
 curl -sSl https://raw.githubusercontent.com/Earth-Restored/ViennaDotNet/main/install.sh | bash
 ```
-- Wait until the command finishes
-- Continue following the guide from the 4th point of the "Server" part in the Manual instructions
 
-## Manual
+* Wait until the command finishes
+* Continue following the guide from the 4th point of the "Server" part in the Manual instructions
+
+### Manual
+
 #### Server
 
-- Clone the repository by running the following command on your terminal:
-```
-git clone https://github.com/Earth-Restored/ViennaDotNet.git
-```
-1. CD to the ViennaDotNet directory, then run `publish.ps1 -profiles framework-dependent-{os}-{arch}`, replace `{os}` with you os (win, linux, osx) and `{arch}` with the cpu architecture (x64, x86, arm64, arm32), e.g. `framework-dependent-win-x64`
-2. Run "run_launcher.ps1"
-3. Now on the same device open http://localhost:5000, create an account, make sure you confirm your email on the page that opens, if you fail to do this, you need to [Delete account db (Option B)](#i-cannot-see-the-start-server-button-when-logged-in), and login
-4. Under "Server Options", set "Network/IPv4 Address" to your PC's IP address and either disable "Map/Enable Tile Rendering" or set the "Map/MapTiler API Key" (it can be found [here](https://cloud.maptiler.com/account/keys/) when logged in)
-5. Under "Server Status", click "Start"
-6. Accept the Minecraft Server's EULA when prompted in the Launcher's logs
-7. Download and move the "resourcepack" file as described in the Launcher's logs
+1. Clone the repository by running the following command on your terminal:
+
+    ```shell
+    git clone https://github.com/Earth-Restored/ViennaDotNet.git
+    ```
+
+2. CD to the ViennaDotNet directory, then run `publish.ps1 -profiles framework-dependent-{os}-{arch}`, replace `{os}` with you os (win, linux, osx) and `{arch}` with the cpu architecture (x64, x86, arm64, arm32), e.g. `framework-dependent-win-x64`
+3. Run "run_launcher.ps1"
+4. Now on the same device open http://localhost:5000, create an account, make sure you confirm your email on the page that opens, if you fail to do this, you need to [Delete account db (Option B)](#i-cannot-see-the-start-server-button-when-logged-in), and login
+5. Under "Server Options", set "Network/IPv4 Address" to your PC's IP address and either disable "Map/Enable Tile Rendering" or set the "Map/MapTiler API Key" (it can be found [here](https://cloud.maptiler.com/account/keys/) when logged in)
+6. Under "Server Status", click "Start"
+7. Accept the Minecraft Server's EULA when prompted in the Launcher's logs
+8. Download and move the "resourcepack" file as described in the Launcher's logs
 
 #### Client
 
-- For iOS you may use [this patcher](https://github.com/catdogmat/ProjectEarthiOSPatcher), but it is not officially supported
+* For iOS you may use [this patcher](https://github.com/catdogmat/ProjectEarthiOSPatcher), but it is not officially supported
 
 | Feature | Project Earth patcher | MCE Patcher |
 | ------- | --------------------- | ----------- |
@@ -89,44 +110,51 @@ git clone https://github.com/Earth-Restored/ViennaDotNet.git
 
 1. Download [the patcher](https://github.com/Earth-Restored/Minecraft_Earth_Patcher/releases) (UI is highly recommended) or build it from source
 2. Acquire a Minecraft Earth apk, such as by dumping in from you phone.
-2. Run the patcher.
-3. Select the downloaded APK file.
-4. Change locator Hostname/IP to `http://{ip}:8080`, replace `{ip}` with your PC's ip or hostname
-- If you want to use non microsoft login, change the options like so (use the same ip/hostname as the locator):
-![Correct options for replacement server](https://github.com/Earth-Restored/ViennaDotNet/blob/main/images/patcher-login-server-options.png?raw=true)
-5. Click patch
-6. Move the patched apk to your phone and install it
-7. Once that's done, congratulations! You can now open the newly installed app and play Minecraft Earth!
+3. Run the patcher.
+4. Select the downloaded APK file.
+5. Change locator Hostname/IP to `http://{ip}:8080`, replace `{ip}` with your PC's ip or hostname
+    * If you want to use non microsoft login, change the options like so (use the same ip/hostname as the locator):
+    ![Correct options for replacement server](https://github.com/Earth-Restored/ViennaDotNet/blob/main/images/patcher-login-server-options.png?raw=true)
+6. Click patch
+7. Move the patched apk to your phone and install it
+8. Once that's done, congratulations! You can now open the newly installed app and play Minecraft Earth!
 
-#### Launcher Buildplate Preview
+### Launcher Buildplate Preview
+
 1. To enable the buildplate preview, you must first obtain the Minecraft 1.20.4 resource pack.
 2. The simplest method is to extract the files directly from the game's JAR:
-   - Locate and open '1.20.4.jar' in your Minecraft installation folder using an archive viewer (like 7-Zip).
-   - Navigate to the 'assets/minecraft/' directory.
+    * Locate and open '1.20.4.jar' in your Minecraft installation folder using an archive viewer (like 7-Zip).
+    * Navigate to the 'assets/minecraft/' directory.
 3. Copy all folders from 'assets/minecraft/' and paste them into:
-   - 'staticdata/resourcepacks/java/minecraft/'
+    * 'staticdata/resourcepacks/java/minecraft/'
 4. Finally, toggle 'Enable Buildplate Preview in Launcher' within ServerOptions/Data Handling.
 
 ## Common Errors & Troubleshooting
 
 ### I cannot see the "Start Server" button when logged in
+
 **Cause:** Only the very first account created on the launcher is granted full administrative permissions by default. Subsequent accounts lack the necessary privileges to manage the server.
 
 **Solutions:**
+
 * **Option A (Grant Permissions):** Log into the original (first) account and use the Manage Users/Roles page to grant server permissions to your second account.
-* **Option B (Reset Database):** If you have lost access to the first account and need to start fresh, you can reset the user database. 
-    * Navigate to: `launcher/Data/`
-    * **Delete** the `app.db` file.
-    * *Note: This will remove all existing accounts and allow you to register a new primary admin account.*
+* **Option B (Reset Database):** If you have lost access to the first account and need to start fresh, you can reset the user database.
+  * Navigate to: `launcher/Data/`
+  * **Delete** the `app.db` file.
+  * *Note: This will remove all existing accounts and allow you to register a new primary admin account.*
 
 ### When I open the app, I get "Cannot connect to the network! ..."
+
 **Possible causes**:
-- Server is not running
-- Incorrect PC IP address
-- Firewall blocks the server
-- PC and phone are not on the same network
+
+* Server is not running
+* Incorrect PC IP address
+* Firewall blocks the server
+* PC and phone are not on the same network
 
 ### The app closes when I join a buildplate
+
 **Possible causes**:
-- The server took too long to start - quickly open the app and join the same buildplate again
-- You do not have Java 17 installed - check that the `JAVA_HOME` environment variable is set to Java 17, or that `java --version` prints java 17
+
+* The server took too long to start - quickly open the app and join the same buildplate again
+* You do not have Java 17 installed - check that the `JAVA_HOME` environment variable is set to Java 17, or that `java --version` prints java 17

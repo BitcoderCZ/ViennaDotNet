@@ -2,7 +2,9 @@
 @rendermode InteractiveServer
 @using Microsoft.AspNetCore.Authorization
 @using System.Security.Claims
+@using Serilog
 @using Solace.Common.Utils
+@using Solace.DB
 @using Solace.LauncherUI.Utils
 @using System.IO.Compression
 @using System.Diagnostics
@@ -141,36 +143,120 @@
                     <button type="button" class="btn-close" @onclick="CancelImport"></button>
                 </div>
                 <div class="modal-body">
-                    <p>Data already exists on this server. Importing a new dataset will <strong>merge</strong> the incoming
-                        data with the existing records.</p>
-                        <p class="mb-0 text-muted small">Conflicts will be resolved by keeping the newest records. Do you wish
-                            to proceed?</p>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" @onclick="CancelImport">Cancel</button>
-                            <button type="button" class="btn btn-warning" @onclick="ConfirmImport">Proceed with Merge</button>
-                        </div>
-                    </div>
+                    <p>
+                        Data already exists on this server. Importing a new dataset will <strong>merge</strong> the incoming
+                        data with the existing records.
+                    </p>
+                    <p class="mb-0 text-muted small">
+                        Conflicts will be resolved by keeping the newest records. Do you wish
+                        to proceed?
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelImport">Cancel</button>
+                    <button type="button" class="btn btn-warning" @onclick="ConfirmImport">Proceed with Merge</button>
                 </div>
             </div>
-        }
+        </div>
+    </div>
+}
 
-        @if (_isProcessing)
-        {
-            <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.7); z-index: 1060;">
-                <div class="modal-dialog modal-dialog-centered modal-sm">
-                    <div class="modal-content bg-transparent border-0 text-center">
-                        <div class="modal-body text-white">
-                            <div class="spinner-border text-light mb-3" role="status" style="width: 3rem; height: 3rem;">
-                                <span class="visually-hidden">Loading...</span>
-                            </div>
-                            <h5>@_processingAction...</h5>
-                            <p class="small text-light opacity-75">Please do not close this page.</p>
+@if (_isProcessing)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.7); z-index: 1060;">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content bg-transparent border-0 text-center">
+                <div class="modal-body text-white">
+                    <div class="spinner-border text-light mb-3" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <h5>@_processingAction...</h5>
+                    <p class="small text-light opacity-75">Please do not close this page.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (_mergeConflictTcs != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.8); z-index: 1070;">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="bi bi-arrows-collapse"></i> Merge Conflict</h5>
+                </div>
+                <div class="modal-body">
+                    <p>A collision was detected for: <strong>@_conflictContext</strong></p>
+                    
+                    <div class="row mb-3 text-center">
+                        <div class="col-6 border-end">
+                            <h6 class="text-muted small text-uppercase">Current Server</h6>
+                            <span class="fs-5">@_currentValueDisplay</span>
                         </div>
+                        <div class="col-6">
+                            <h6 class="text-muted small text-uppercase">Incoming Data</h6>
+                            <span class="fs-5">@_incomingValueDisplay</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-light p-3 rounded border">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" id="alwaysApplyCheck"
+                                   @bind="_alwaysApplyChoice" />
+                            <label class="form-check-label user-select-none" for="alwaysApplyCheck">
+                                Always apply my choice to future conflicts
+                            </label>
+                        </div>
+
+                        @if (_alwaysApplyChoice && _supportsNewest)
+                        {
+                            <div class="mt-3 p-2 border-start border-3 border-warning">
+                                <label class="small text-muted mb-1">
+                                    If you choose 'Newest', but 'Newest' is unavailable in a
+                                    future conflict, fallback to:
+                                </label>
+                                <select class="form-select form-select-sm" @bind="_fallbackAction">
+                                    <option value="@MergeAction.KeepCurrent">Keep Current</option>
+                                    <option value="@MergeAction.KeepIncoming">Keep Incoming</option>
+                                </select>
+                            </div>
+                        }
+                    </div>
+                </div>
+                <div class="modal-footer d-flex">
+                    <div class="flex-fill text-start">
+                        <button type="button" class="btn btn-outline-secondary"
+                                @onclick="() => ResolveConflict(MergeAction.KeepCurrent)">
+                            Keep Current
+                        </button>
+                    </div>
+
+                    <div class="flex-fill text-center">
+                        @if (_supportsNewest)
+                        {
+                            <button type="button" class="btn btn-success"
+                                    @onclick="() => ResolveConflict(MergeAction.KeepNewest)">
+                                Keep Newest
+                            </button>
+                        }
+                        else
+                        {
+                            <span>&nbsp;</span>
+                        }
+                    </div>
+
+                    <div class="flex-fill text-end">
+                        <button type="button" class="btn btn-outline-primary"
+                                @onclick="() => ResolveConflict(MergeAction.KeepIncoming)">
+                            Keep Incoming
+                        </button>
                     </div>
                 </div>
             </div>
-        }
+        </div>
+    </div>
+}
 
 @code {
     private ClaimsPrincipal? _user;
@@ -196,6 +282,19 @@
     private string? _uploadError;
     private long _maxAllowedSize = 1024 * 1024 * 500;
 
+    // merge conflict
+    private TaskCompletionSource<MergeAction>? _mergeConflictTcs;
+    
+    private string _conflictContext = "";
+    private string _currentValueDisplay = "";
+    private string _incomingValueDisplay = "";
+    private bool _supportsNewest = false;
+    private bool _alwaysApplyChoice = false;
+    private MergeAction _fallbackAction = MergeAction.KeepIncoming;
+
+    private MergeAction? _globalMergePreference = null;
+    private MergeAction? _globalFallbackPreference = null;
+
     // Size
     private long _totalSpaceB => long.Max(_earthDbB + _liveDbB + _objectStoreB, -1);
     private long _earthDbB = -1;
@@ -219,7 +318,7 @@
         _earthDB.Refresh();
         _liveDB.Refresh();
         _objectStore.Refresh();
-        
+
         _earthDbB = _earthDB.SafeLength;
         _liveDbB = _liveDB.SafeLength;
         _objectStoreB = _objectStore.SafeLength;
@@ -275,6 +374,9 @@
 
         _showImportWarning = false;
         _isProcessing = true;
+        _fallbackAction = MergeAction.KeepIncoming;
+        _globalMergePreference = null;
+        _globalFallbackPreference = null;
         _processingAction = "Uploading";
 
         try
@@ -376,12 +478,6 @@
             _processingAction = isSolace ? "Processing Solace Format" : "Processing Vienna Format";
             StateHasChanged();
 
-            if (_totalSpaceB > 0)
-            {
-                _uploadError = "Merging data is not yet supported.";
-                return;
-            }
-
             string earthDbFile = isSolace ? "earth.db" : "db/earth.db";
             string? liveDbFile = isSolace ? "live.db" : null;
             string objectsDir = isSolace ? "object_store" : "objects";
@@ -389,15 +485,14 @@
             var earthDbEntry = archive.GetEntry(earthDbFile);
             if (earthDbEntry is not null)
             {
-                // todo: merge
-                await earthDbEntry.ExtractToFileAsync(_earthDB.FullName, overwrite: false);
+                await ImportEarthDb(earthDbEntry, isSolace);
             }
 
             var liveDbEntry = liveDbFile is null ? null : archive.GetEntry(liveDbFile);
             if (liveDbEntry is not null)
             {
                 // todo: merge
-                await liveDbEntry.ExtractToFileAsync(_liveDB.FullName, overwrite: false);
+                await liveDbEntry.ExtractToFileAsync(_liveDB.FullName, overwrite: true);
             }
 
             foreach (var entry in archive.Entries)
@@ -406,14 +501,32 @@
                 {
                     string destinationFileName = Path.Combine(_objectStore.FullName, Path.GetRelativePath(objectsDir, entry.FullName));
                     Directory.CreateDirectory(Path.GetDirectoryName(destinationFileName)!);
-                    await entry.ExtractToFileAsync(destinationFileName);
+                    await entry.ExtractToFileAsync(destinationFileName, overwrite: true);
                 }
             }
         }
         catch (Exception ex)
         {
+            Log.Error(ex, "Error processing file");
             _uploadError = $"Error processing file: {ex.Message}";
         }
+    }
+
+    private async Task ImportEarthDb(ZipArchiveEntry earthDbEntry, bool isSolace)
+    {
+        if (isSolace && !_earthDB.Exists)
+        {
+            await earthDbEntry.ExtractToFileAsync(_earthDB.FullName, overwrite: false);
+        }
+
+        var importDbPath = Path.GetTempFileName();
+        await earthDbEntry.ExtractToFileAsync(importDbPath, overwrite: true);
+
+        var importDb = EarthDB.Open(importDbPath);
+
+        
+
+        File.Delete(importDbPath);
     }
 
     private static readonly string[] SizeUnits = ["B", "KB", "MB", "GB", "TB", "PB"];
@@ -440,5 +553,62 @@
         }
 
         return $"{displaySize:n2} {SizeUnits[unitIndex]}";
+    }
+
+    private async Task<MergeAction> PromptMergeConflictAsync(string context, string currentValue, string incomingValue, bool
+allowNewest)
+    {
+        if (_globalMergePreference.HasValue)
+        {
+            if (_globalMergePreference.Value == MergeAction.KeepNewest && !allowNewest)
+            {
+                if (_globalFallbackPreference.HasValue)
+                {
+                    return _globalFallbackPreference.Value;
+                }
+            }
+            else
+            {
+                return _globalMergePreference.Value;
+            }
+        }
+
+        _conflictContext = context;
+        _currentValueDisplay = currentValue;
+        _incomingValueDisplay = incomingValue;
+        _supportsNewest = allowNewest;
+        _alwaysApplyChoice = false;
+        _fallbackAction = MergeAction.KeepIncoming;
+
+        _mergeConflictTcs = new TaskCompletionSource<MergeAction>();
+        StateHasChanged();
+
+        var finalAction = await _mergeConflictTcs.Task;
+
+        if (_alwaysApplyChoice)
+        {
+            _globalMergePreference = finalAction;
+            if (finalAction == MergeAction.KeepNewest)
+            {
+                _globalFallbackPreference = _fallbackAction;
+            }
+        }
+
+        _mergeConflictTcs = null;
+        StateHasChanged();
+
+        return finalAction;
+    }
+
+    private void ResolveConflict(MergeAction actionSelected)
+    {
+        _mergeConflictTcs?.SetResult(actionSelected);
+    }
+
+    public enum MergeAction
+    {
+        KeepCurrent,
+        KeepIncoming,
+        KeepNewest
     }
 }

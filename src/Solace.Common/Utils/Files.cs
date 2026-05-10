@@ -8,6 +8,31 @@ public static class Files
     {
         public static FileStream OpenWriteNew(string path)
             => File.Open(path, FileMode.Create, FileAccess.Write, FileShare.Read);
+
+        public static string GetUniqueFilePath(string filePath)
+        {
+            if (!File.Exists(filePath))
+            {
+                return filePath;
+            }
+
+            var directory = Path.GetDirectoryName(filePath)!;
+            var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(filePath);
+            var extension = Path.GetExtension(filePath);
+
+            int count = 1;
+            string uniquePath;
+
+            do
+            {
+                var newFileName = $"{fileNameWithoutExtension} {count}{extension}";
+                uniquePath = Path.Combine(directory, newFileName);
+                count++;
+            }
+            while (File.Exists(uniquePath));
+
+            return uniquePath;
+        }
     }
 
     extension(FileInfo file)

@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Serilog;
@@ -56,6 +57,12 @@ public partial class Program
 
         Log.Logger = log;
 
+        bool isLegacyDb = await IsLegacyEarthDb("Data Source=" + Settings.Instance.EarthDatabaseConnectionString!);
+        if (isLegacyDb)
+        {
+            
+        }
+
         builder.Services.AddSingleton<ServerManager>();
 
         // Add services to the container.
@@ -78,15 +85,15 @@ public partial class Program
 
         var launcherConnectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
-        // builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
-        //     options.UseSqlite(launcherConnectionString));
+        builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
+            options.UseSqlite(launcherConnectionString));
         builder.Services.AddDbContext<ApplicationDbContext>(options =>
             options.UseSqlite(launcherConnectionString));
 
         string earthConnectionString = "Data Source=" + Settings.Instance.EarthDatabaseConnectionString!;
 
-        // builder.Services.AddDbContextFactory<EarthDbContext>(options =>
-        //     options.UseSqlite(earthConnectionString));
+        builder.Services.AddDbContextFactory<EarthDbContext>(options =>
+            options.UseSqlite(earthConnectionString));
         builder.Services.AddDbContext<EarthDbContext>(options =>
             options.UseSqlite(earthConnectionString));
         builder.Services.AddDatabaseDeveloperPageExceptionFilter();
@@ -164,10 +171,13 @@ public partial class Program
         {
             // make sure Data dir exists
             Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), "Data"));
-            Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), Path.GetDirectoryName(Settings.Instance.LiveDatabaseConnectionString)!));
+            Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), Path.GetDirectoryName(Settings.Instance.EarthDatabaseConnectionString)!));
 
             var appDbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             await appDbContext.Database.MigrateAsync();
+
+            var earthDbContext = scope.ServiceProvider.GetRequiredService<EarthDbContext>();
+            await earthDbContext.Database.MigrateAsync();
 
             var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
             await EnsureBuiltInRolesAsync(roleManager);
@@ -238,6 +248,23 @@ public partial class Program
             if (!Permissions.All.Contains(claim.Value))
             {
                 await roleManager.RemoveClaimAsync(ownerRole, claim);
+            }
+        }
+    }
+
+    private static async Task<bool> IsLegacyEarthDb(string connectionString)
+    {
+        using var connection = new SqliteConnection(connectionString);
+        await connection.OpenAsync();
+
+        using (var command = connection.CreateCommand())
+        {
+            command.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name=$name;";
+            command.Parameters.AddWithValue("$name", "__EFMigrationsHistory");
+
+            using (var reader = command.ExecuteReader())
+            {
+                return !reader.HasRows;
             }
         }
     }

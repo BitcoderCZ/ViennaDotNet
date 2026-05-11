@@ -38,11 +38,17 @@ update_self "$@"
 
 if [ "$1" = "eula" ]; then
     EULA_ACTION="$2"
-    proot-distro login ubuntu -- bash -s -- "$EULA_ACTION" << 'EOF'
 
-EULA_FILE=~/Solace/staticdata/server_template_dir/eula.txt
+    TMP_SCRIPT=$(mktemp)
 
-if [ "$1" = "--delete" ]; then
+    cat > "$TMP_SCRIPT" << 'EOF'
+#!/usr/bin/env bash
+
+export TERM=xterm
+
+EULA_FILE="$HOME/Solace/staticdata/server_template_dir/eula.txt"
+
+if [ "$EULA_ACTION" = "--delete" ]; then
     rm -f "$EULA_FILE"
 
     echo "[Solace]: The eula file has been deleted you can now start the server to generate a new one."
@@ -52,6 +58,7 @@ fi
 
 if [ ! -f "$EULA_FILE" ]; then
     clear
+
     echo "======================================="
     echo "        MINECRAFT SERVER EULA"
     echo "======================================="
@@ -67,9 +74,9 @@ if [ ! -f "$EULA_FILE" ]; then
     echo "======================================="
     echo ""
 
-    read -n 1 -s -r -p "Press any key to exit...."
+    printf "Press ENTER to exit..."
+    read -r
 
-    echo ""
     exit 1
 fi
 
@@ -79,6 +86,7 @@ if grep -q "eula=true" "$EULA_FILE"; then
 fi
 
 clear
+
 echo "======================================="
 echo "        MINECRAFT SERVER EULA"
 echo "======================================="
@@ -94,12 +102,16 @@ echo ""
 echo "======================================="
 echo ""
 
-read -p "Accept EULA > " CONFIRM
+printf "Accept EULA > "
+
+read CONFIRM < /dev/tty
+
+CONFIRM="$(echo "$CONFIRM" | tr -d '\r\n')"
 
 if [ "$CONFIRM" = "YES" ]; then
-    sed -i 's/eula=false/eula=true/g' "$EULA_FILE"
-
-    if ! grep -q "eula=true" "$EULA_FILE"; then
+    if grep -q "eula=false" "$EULA_FILE"; then
+        sed -i 's/eula=false/eula=true/g' "$EULA_FILE"
+    else
         echo "eula=true" >> "$EULA_FILE"
     fi
 
@@ -111,13 +123,20 @@ else
 fi
 
 EOF
+
+    chmod +x "$TMP_SCRIPT"
+
+    proot-distro login ubuntu --shared-tmp -- env EULA_ACTION="$EULA_ACTION" bash "$TMP_SCRIPT"
+
+    rm -f "$TMP_SCRIPT"
+
     exit 0
 fi
 
 proot-distro login ubuntu -- bash << 'EOF'
 
 # =========================
-#        MAIN SCRIPT 
+#        MAIN SCRIPT
 # =========================
 
 DB=~/Solace/nohup.log
@@ -135,6 +154,7 @@ is_process_alive() {
         PID=$(cat "$PID_FILE")
         kill -0 "$PID" 2>/dev/null && return 0
     fi
+
     pgrep -f run_launcher.ps1 >/dev/null 2>&1
 }
 
@@ -143,27 +163,42 @@ get_pid() {
 }
 
 start_server() {
-    if is_process_alive; then return; fi
+    if is_process_alive; then
+        return
+    fi
 
     cd ~/Solace || exit 1
 
     export DOTNET_ROOT=$HOME/.dotnet
     export PATH=$PATH:$HOME/.dotnet:$HOME/.dotnet/tools
     export COMPlus_gcServer=0
-    
-    setsid pwsh run_launcher.ps1 > "$DB" 2>&1 &
+
+    nohup setsid pwsh run_launcher.ps1 > "$DB" 2>&1 < /dev/null &
 
     PID=$!
+
+    disown
+
     echo "$PID" > "$PID_FILE"
     date +%s > "$TIME_FILE"
+
+    clear
+    echo "[Solace] server is now running."
+    echo ""
+    echo "Admin Panel:"
+    echo "http://127.0.0.1:5000"
+    sleep 1
 }
 
 stop_server() {
-    if ! is_process_alive; then return; fi
+    if ! is_process_alive; then
+        return
+    fi
 
     if [ -f "$PID_FILE" ]; then
         PID=$(cat "$PID_FILE")
         PGID=$(ps -o pgid= "$PID" 2>/dev/null | tr -d ' ')
+
         kill -- -"$PGID" 2>/dev/null
         kill "$PID" 2>/dev/null
     fi
@@ -171,7 +206,11 @@ stop_server() {
     pkill -f run_launcher.ps1 2>/dev/null
     fuser -k 5000/tcp 2>/dev/null
 
-    rm -f "$PID_FILE" "$TIME_FILE" 
+    rm -f "$PID_FILE" "$TIME_FILE"
+
+    clear
+    echo "[Solace] server stopped."
+    sleep 1
 }
 
 first_start_checks() {
@@ -180,6 +219,7 @@ first_start_checks() {
 
     if [ ! -f "$RESOURCEPACK" ]; then
         clear
+
         echo "======================================="
         echo "         RESOURCE PACK REQUIRED"
         echo "======================================="
@@ -205,6 +245,7 @@ first_start_checks() {
 
     if [ ! -f "$EULA_FILE" ]; then
         clear
+
         echo "======================================="
         echo "           FIRST TIME SETUP"
         echo "======================================="
@@ -215,7 +256,7 @@ first_start_checks() {
         echo "setup instructions on the"
         echo "Solace GitHub repository."
         echo ""
-        echo "Use: "earth eula" after the setup."
+        echo 'Use: "earth eula" after the setup.'
         echo ""
         echo "======================================="
         echo ""
@@ -233,13 +274,14 @@ first_start_checks() {
 
     if grep -q "eula=false" "$EULA_FILE"; then
         clear
+
         echo "======================================="
         echo "            EULA REQUIRED"
         echo "======================================="
         echo ""
-        echo 'Please run:'
+        echo "Please run:"
         echo ""
-        echo 'earth eula'
+        echo "earth eula"
         echo ""
         echo "to accept the Minecraft EULA"
         echo "before starting the server."
@@ -261,7 +303,12 @@ first_start_checks() {
 
 toggle_server() {
     if is_process_alive; then
-        CH=$(printf "Yes\nNo" | fzf --height=20% --reverse --border --prompt="Stop server? > ")
+        CH=$(printf "Yes\nNo" | fzf \
+            --height=20% \
+            --reverse \
+            --border \
+            --prompt="Stop server? > ")
+
         [ "$CH" = "Yes" ] && stop_server
     else
         first_start_checks || return
@@ -271,6 +318,7 @@ toggle_server() {
 
 process_viewer() {
 while true; do
+
 clear
 
 PID=$(get_pid)
@@ -281,8 +329,8 @@ if is_running && [ -f "$TIME_FILE" ]; then
     UPTIME_SEC=$((NOW - START))
 
     DAYS=$((UPTIME_SEC/86400))
-    HOURS=$(( (UPTIME_SEC%86400)/3600 ))
-    MINS=$(( (UPTIME_SEC%3600)/60 ))
+    HOURS=$(((UPTIME_SEC%86400)/3600))
+    MINS=$(((UPTIME_SEC%3600)/60))
 
     UPTIME_TEXT="${DAYS}d ${HOURS}h ${MINS}m"
 else
@@ -305,6 +353,7 @@ PROC_COUNT=$(ps -eo cmd 2>/dev/null | grep -E "pwsh|Launcher|ApiServer|EventBus|
 
 if is_running; then
     echo "Solace [RUNNING] http://localhost:5000"
+
     printf "Uptime: %s | RAM: %s%% | Processes: %s\n" \
     "$UPTIME_TEXT" "$MEM_PCT" "$PROC_COUNT"
 else
@@ -332,17 +381,25 @@ fi
 [ "$SELECT" = "Back to Main Menu" ] && return
 
 SELPID=$(echo "$SELECT" | awk '{print $1}')
+
 [[ "$SELPID" =~ ^[0-9]+$ ]] || continue
 
 while true; do
-clear
-echo "==== PROCESS LOG ===="
-echo "PID: $SELPID"
-echo ""
-tail -n 120 "$DB"
+    clear
 
-CH=$(printf "Refresh\nBack" | fzf --height=10% --reverse --border --prompt="Log > ")
-[ "$CH" = "Back" ] && break
+    echo "==== PROCESS LOG ===="
+    echo "PID: $SELPID"
+    echo ""
+
+    tail -n 120 "$DB"
+
+    CH=$(printf "Refresh\nBack" | fzf \
+        --height=10% \
+        --reverse \
+        --border \
+        --prompt="Log > ")
+
+    [ "$CH" = "Back" ] && break
 done
 
 done
@@ -358,6 +415,7 @@ update_solace() {
         echo ""
 
         CURRENT_VERSION="unknown"
+
         [ -f ~/Solace/version.txt ] && CURRENT_VERSION=$(cat ~/Solace/version.txt)
 
         RELEASE_JSON=$(curl -s https://api.github.com/repos/Earth-Restored/Solace/releases)
@@ -376,7 +434,11 @@ update_solace() {
         echo "======================================="
 
         CHOICE=$(printf "Latest ($LATEST_TAG)\nOther versions...\nNo" \
-            | fzf --height=20% --reverse --border --prompt="Select update option > ")
+            | fzf \
+            --height=20% \
+            --reverse \
+            --border \
+            --prompt="Select update option > ")
 
         [ "$CHOICE" = "No" ] && return
 
@@ -384,7 +446,11 @@ update_solace() {
             TAG=$(echo "$RELEASE_JSON" \
                 | grep '"tag_name"' \
                 | cut -d '"' -f4 \
-                | fzf --height=50% --reverse --border --prompt="Select version > ")
+                | fzf \
+                --height=50% \
+                --reverse \
+                --border \
+                --prompt="Select version > ")
         else
             TAG="$LATEST_TAG"
         fi
@@ -392,6 +458,7 @@ update_solace() {
         [ -z "$TAG" ] && return
 
         force_stop_server
+
         echo "[Solace] preparing download for $TAG..."
 
         URL=$(echo "$RELEASE_JSON" \
@@ -402,9 +469,11 @@ update_solace() {
         [ -z "$URL" ] && echo "[Solace] failed to get download URL" && sleep 2 && return
 
         TMP_DIR="$(mktemp -d ~/Solace_update_XXXXXX)"
+
         cd "$TMP_DIR" || return
 
         echo "[Solace] downloading $TAG..."
+
         curl -L --fail "$URL" -o update.zip
 
         unzip -o update.zip >/dev/null 2>&1
@@ -412,12 +481,17 @@ update_solace() {
         TARGET=~/Solace
 
         echo "[Solace] applying update ($TAG)..."
+
         cp -r . "$TARGET"/
+
         echo "$TAG" > ~/Solace/version.txt
+
         echo "[Solace] update complete ($TAG)"
+
         rm -rf "$TMP_DIR"
 
         sleep 2
+
         return
     done
 }
@@ -429,6 +503,7 @@ force_stop_server() {
         if [ -f "$PID_FILE" ]; then
             PID=$(cat "$PID_FILE")
             PGID=$(ps -o pgid= "$PID" 2>/dev/null | tr -d ' ')
+
             kill -- -"$PGID" 2>/dev/null
             kill "$PID" 2>/dev/null
         fi
@@ -437,12 +512,14 @@ force_stop_server() {
         fuser -k 5000/tcp 2>/dev/null
 
         rm -f "$PID_FILE" "$TIME_FILE"
+
         sleep 2
     fi
 }
 
 info_panel() {
 while true; do
+
 clear
 
 echo "======================================="
@@ -478,21 +555,29 @@ echo
 echo "======================================="
 echo ""
 
-CHOICE=$(printf "Back\n" | fzf --height=20% --reverse --border --prompt="Info > ")
+CHOICE=$(printf "Back\n" | fzf \
+    --height=20% \
+    --reverse \
+    --border \
+    --prompt="Info > ")
+
 [ "$CHOICE" = "Back" ] && return
 
 done
 }
 
 open_admin_panel() {
-termux-open-url "http://localhost:5000" 2>/dev/null || echo "Open: http://127.0.0.1:5000"
-sleep 2
+    termux-open-url "http://localhost:5000" 2>/dev/null || \
+    echo "Open: http://127.0.0.1:5000"
+
+    sleep 2
 }
 
 while true; do
+
 clear
 
-if is_running; then
+if is_process_alive; then
     TITLE="Solace [RUNNING] http://127.0.0.1:5000"
 else
     TITLE="Solace [STOPPED]"
@@ -516,12 +601,24 @@ CHOICE=$(printf "%s\n" "${OPTIONS[@]}" | fzf \
     --ansi)
 
 case "$CHOICE" in
-"Start/Stop Server") toggle_server ;;
-"Process Explorer") process_viewer ;;
-"Open Admin Panel") open_admin_panel ;;
-"Update Solace") update_solace ;;
-"Information") info_panel ;;
-"Exit") exit 0 ;;
+    "Start/Stop Server")
+        toggle_server
+        ;;
+    "Process Explorer")
+        process_viewer
+        ;;
+    "Open Admin Panel")
+        open_admin_panel
+        ;;
+    "Update Solace")
+        update_solace
+        ;;
+    "Information")
+        info_panel
+        ;;
+    "Exit")
+        break
+        ;;
 esac
 
 done

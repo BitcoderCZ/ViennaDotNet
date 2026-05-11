@@ -281,7 +281,33 @@ public sealed class EarthDbContext : DbContext
 
     private async Task<Account> InitAccountAndAddToDb(Guid id)
     {
+        var account = new Account()
+        {
+            Id = id,
+            CreatedDate = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+            Username = null,
+            ProfilePictureUrl = null,
+            FirstName = null,
+            LastName = null,
+            PasswordSalt = new byte[16],
+            PasswordHash = new byte[64],
+            Profile = new ProfileEF(),
+            ActivityLog = new ActivityLogEF(),
+            Boosts = new BoostsEF(),
+            Hotbar = new HotbarEF(),
+            Inventory = new InventoryEF(),
+            Journal = new JournalEF(),
+            RedeemedTappables = new RedeemedTappablesEF(),
+            Tokens = new TokensEF(),
+            CraftingSlots = new CraftingSlotsEF(),
+            SmeltingSlots = new SmeltingSlotsEF(),
+        };
 
+        Accounts.Add(account);
+
+        await SaveChangesAsync();
+
+        return account;
     }
 }
 

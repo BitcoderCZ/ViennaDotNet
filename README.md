@@ -85,7 +85,7 @@ curl -sSl https://raw.githubusercontent.com/Earth-Restored/Solace/main/install.s
 
 #### Client
 
-* For iOS you may use [this patcher](https://github.com/catdogmat/ProjectEarthiOSPatcher), but it is not officially supported
+* For iOS you can use [this patcher](https://github.com/catdogmat/ProjectEarthiOSPatcher), but it is not officially supported. Installation methods other than AltStore may not work
 
 | Feature | Project Earth patcher | MCE Patcher |
 | ------- | --------------------- | ----------- |

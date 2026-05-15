@@ -18,7 +18,7 @@ internal sealed class CdnTileController : SolaceControllerBase
             return TypedResults.NotFound();
         }
 
-        var cd = new System.Net.Mime.ContentDisposition { FileName = tilePos1 + "_" + tilePos2 + "_16.png", Inline = true };
+        var cd = new System.Net.Mime.ContentDisposition { FileName = $"{tilePos1}_{tilePos2}_16.png", Inline = true };
         Response.Headers.Append("Content-Disposition", cd.ToString());
         Response.Headers.ContentType = "application/octet-stream";
 

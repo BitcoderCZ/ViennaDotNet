@@ -24,23 +24,28 @@ namespace Solace.ApiServer.Controllers.EarthApi;
 [Route("1/api/v{version:apiVersion}")]
 internal sealed class CatalogController : SolaceControllerBase
 {
-    private static Catalog catalog => Program.staticData.Catalog;
+    private readonly Catalog _catalog;
+
+    public CatalogController(StaticData.StaticData staticData)
+    {
+        _catalog = staticData.Catalog;
+    }
 
     [HttpGet("inventory/catalogv3")]
     public ContentHttpResult GetItemsCatalog()
-        => EarthJson(MakeItemsCatalogApiResponse(catalog));
+        => EarthJson(MakeItemsCatalogApiResponse(_catalog));
 
     [HttpGet("recipes")]
     public ContentHttpResult GetRecipeCatalog()
-        => EarthJson(MakeRecipesCatalogApiResponse(catalog));
+        => EarthJson(MakeRecipesCatalogApiResponse(_catalog));
 
     [HttpGet("journal/catalog")]
     public ContentHttpResult GetJournalCatalog()
-        => EarthJson(MakeJournalCatalogApiResponse(catalog));
+        => EarthJson(MakeJournalCatalogApiResponse(_catalog));
 
     [HttpGet("products/catalog")]
     public ContentHttpResult GetNFCBoostsCatalog()
-        => EarthJson(MakeNFCBoostsCatalogApiResponse(catalog));
+        => EarthJson(MakeNFCBoostsCatalogApiResponse(_catalog));
 
     // TODO: cache these?
     private static ItemsCatalog MakeItemsCatalogApiResponse(Catalog catalog)

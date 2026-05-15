@@ -2,8 +2,8 @@
 
 namespace Solace.TappablesGenerator;
 
-public record Tappable(
-    string Id,
+public sealed record Tappable(
+    Guid Id,
     float Lat,
     float Lon,
     long SpawnTime,

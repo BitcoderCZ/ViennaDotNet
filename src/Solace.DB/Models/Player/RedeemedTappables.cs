@@ -11,12 +11,12 @@ public sealed class RedeemedTappablesEF : IVersionedEntity
 
     public Account Account { get; set; } = null!;
 
-    public Dictionary<string, long> Tappables = [];
+    public Dictionary<Guid, long> Tappables = [];
 
-    public bool IsRedeemed(string id)
+    public bool IsRedeemed(Guid id)
         => Tappables.ContainsKey(id);
 
-    public void Add(string id, long expiresAt)
+    public void Add(Guid id, long expiresAt)
         => Tappables[id] = expiresAt;
 
     public void Prune(long currentTime)

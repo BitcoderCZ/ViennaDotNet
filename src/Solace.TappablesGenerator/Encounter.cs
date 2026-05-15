@@ -3,7 +3,7 @@
 namespace Solace.TappablesGenerator;
 
 public sealed record Encounter(
-    string Id,
+    Guid Id,
     float Lat,
     float Lon,
     long SpawnTime,

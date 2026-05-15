@@ -14,8 +14,8 @@ public sealed class TappablesManager
     private Subscriber _subscriber = null!;
     private RequestSender _requestSender = null!;
 
-    private readonly Dictionary<string, Dictionary<string, Tappable>> _tappables = [];
-    private readonly Dictionary<string, Dictionary<string, Encounter>> _encounters = [];
+    private readonly Dictionary<string, Dictionary<Guid, Tappable>> _tappables = [];
+    private readonly Dictionary<string, Dictionary<Guid, Encounter>> _encounters = [];
     private int _pruneCounter;
 
     private TappablesManager()
@@ -90,12 +90,12 @@ public sealed class TappablesManager
         return [.. Enumerable.Range(tileX - tileRadius, sideLength).Select(x => Enumerable.Range(tileY - tileRadius, sideLength).Select(y => $"{x}_{y}")).SelectMany(stream => stream)];
     }
 
-    public Tappable? GetTappableWithId(string id, string tileId)
+    public Tappable? GetTappableWithId(Guid id, string tileId)
     {
-        Dictionary<string, Tappable>? tappablesInTile = _tappables.GetOrDefault(tileId, null);
+        var tappablesInTile = _tappables.GetOrDefault(tileId, null);
         if (tappablesInTile is not null)
         {
-            Tappable? tappable = tappablesInTile.GetOrDefault(id, null);
+            var tappable = tappablesInTile.GetOrDefault(id, null);
             if (tappable is not null)
             {
                 return tappable;
@@ -105,7 +105,7 @@ public sealed class TappablesManager
         return null;
     }
 
-    public Encounter? GetEncounterWithId(string id, string tileId)
+    public Encounter? GetEncounterWithId(Guid id, string tileId)
     {
         var encountersInTile = _encounters.GetOrDefault(tileId);
         if (encountersInTile is not null)
@@ -287,7 +287,7 @@ public sealed class TappablesManager
         => (int)Math.Floor(y * (1 << 16));
 
     public sealed record Tappable(
-        string Id,
+        Guid Id,
         float Lat,
         float Lon,
         long SpawnTime,
@@ -314,14 +314,14 @@ public sealed class TappablesManager
     }
 
     public sealed record Encounter(
-        string Id,
+        Guid Id,
         float Lat,
         float Lon,
         long SpawnTime,
         long ValidFor,
         string Icon,
         Encounter.RarityE Rarity,
-        string EncounterBuildplateId
+        Guid EncounterBuildplateId
     )
     {
         [JsonConverter(typeof(JsonStringEnumConverter))]

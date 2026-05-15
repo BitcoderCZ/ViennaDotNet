@@ -225,7 +225,7 @@ internal sealed class TappablesController : SolaceControllerBase
     }
 
     private sealed record TappableRequest(
-        string Id,
+        Guid Id,
         Coordinate PlayerCoordinate
     );
 }

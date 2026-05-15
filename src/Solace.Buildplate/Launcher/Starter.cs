@@ -40,7 +40,7 @@ public sealed class Starter
 		_connectorPluginJar = new FileInfo(connectorPluginJar);
 	}
 
-    public Instance? StartInstance(string instanceId, string? playerId, string buildplateId, Instance.BuildplateSource buildplateSource, bool survival, bool night, bool saveEnabled, InventoryType inventoryType, long? shutdownTime)
+    public Instance? StartInstance(Guid instanceId, Guid? playerId, Guid buildplateId, Instance.BuildplateSource buildplateSource, bool survival, bool night, bool saveEnabled, InventoryType inventoryType, long? shutdownTime)
 	{
 		DirectoryInfo? baseDir = CreateInstanceBaseDir(instanceId);
 		if (baseDir is null)
@@ -88,7 +88,7 @@ public sealed class Starter
 		}
 	}
 
-    private DirectoryInfo? CreateInstanceBaseDir(string instanceId)
+    private DirectoryInfo? CreateInstanceBaseDir(Guid instanceId)
 	{
 		var file = new DirectoryInfo(Path.Combine(_tmpDir.FullName, $"vienna-buildplate-instance_{instanceId}"));
 		if (!file.TryCreate())

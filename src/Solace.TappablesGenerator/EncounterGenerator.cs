@@ -54,7 +54,7 @@ public class EncounterGenerator
             float lon = _random.NextSingle(tileBounds[2], tileBounds[3]);
 
             var encounter = new Encounter(
-                U.RandomUuid().ToString(),
+                Guid.NewGuid(),
                 lat,
                 lon,
                 currentTime + spawnDelay,

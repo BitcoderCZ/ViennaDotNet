@@ -12,6 +12,7 @@
 @using Solace.Buildplate.Model
 @using Solace.BuildplateImporter
 @using Solace.BuildplateRenderer
+@using Solace.DB
 @using Solace.LauncherUI.Data
 @using Solace.LauncherUI.Programs
 @using Solace.LauncherUI.Utils
@@ -20,11 +21,10 @@
 @inject IJSRuntime JSRuntime
 @inject ServerManager ServerManager
 @inject IDbContextFactory<ApplicationDbContext> DbFactory
+@inject EarthDbContext EarthDb
 @implements IAsyncDisposable
 
-<div @ref="_previewContainer"
-     class="bg-dark text-secondary d-flex align-items-center justify-content-center position-relative preview-container"
-     style="height: 220px; overflow: hidden;">
+<div @ref="_previewContainer" class="bg-dark text-secondary d-flex align-items-center justify-content-center position-relative preview-container" style="height: 220px; overflow: hidden;">
     @if (_isPreviewLoading)
     {
         <div class="spinner-border text-light" role="status">
@@ -54,15 +54,13 @@
 
     @if (!_isPreviewLoading)
     {
-        <button class="btn btn-sm btn-light position-absolute bottom-0 start-0 m-2 opacity-75 hover-opacity-100"
-                @onclick="RefreshPreviewAsync" title="Refresh Preview">
+        <button class="btn btn-sm btn-light position-absolute bottom-0 start-0 m-2 opacity-75 hover-opacity-100" @onclick="RefreshPreviewAsync" title="Refresh Preview">
             <i class="bi bi-arrow-clockwise"></i>
         </button>
 
         if (_previewDataUri is not null)
         {
-            <button class="btn btn-sm btn-light position-absolute bottom-0 end-0 m-2 opacity-75 hover-opacity-100"
-                    @onclick="ToggleFullscreen" title="Toggle Fullscreen">
+            <button class="btn btn-sm btn-light position-absolute bottom-0 end-0 m-2 opacity-75 hover-opacity-100" @onclick="ToggleFullscreen" title="Toggle Fullscreen">
                 <i class="bi bi-arrows-fullscreen"></i>
             </button>
         }
@@ -212,12 +210,12 @@
 
         try
         {
-            await using var importer = await Importer.CreateFromSettings(Settings.Instance, Log.Logger, createEventBus: false);
+            await using var importer = await Importer.CreateFromSettings(Settings.Instance, EarthDb, Log.Logger, createEventBus: false);
 
             var dbContext = await DbFactory.CreateDbContextAsync();
             var previewData = IsTemplate
                 ? await importer.GetTemplateLauncherPreviewAsync(BuildplateId, dbContext, ResourcePackManager, getFromCache: getFromCache)
-                : await importer.GetPlayerBuildplateLauncherPreviewAsync(PlayerId!, BuildplateId, dbContext, ResourcePackManager, getFromCache:
+                : await importer.GetPlayerBuildplateLauncherPreviewAsync(PlayerId!.Value, BuildplateId, dbContext, ResourcePackManager, getFromCache:
 getFromCache);
 
             if (previewData is null)

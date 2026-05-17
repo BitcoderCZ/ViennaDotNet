@@ -528,7 +528,7 @@ BuildplateLauncher.ExeName))
 
         try
         {
-            await using var importer = await Importer.CreateFromSettings(Settings.Instance, Log.Logger);
+            await using var importer = await Importer.CreateFromSettings(Settings.Instance, EarthDb, Log.Logger);
 
             var buildplateIdNullable = await importer.AddBuidplateToPlayer(template.Id, AccountId, default);
             if (buildplateIdNullable is null)
@@ -634,7 +634,7 @@ BuildplateLauncher.ExeName))
 
     private async Task<bool> RemoveBuildplate(Guid id)
     {
-        await using var importer = await Importer.CreateFromSettings(Settings.Instance, Log.Logger);
+        await using var importer = await Importer.CreateFromSettings(Settings.Instance, EarthDb, Log.Logger);
 
         return await importer.RemoveBuildplateFromPlayer(id, AccountId, default);
     }
@@ -718,7 +718,7 @@ BuildplateLauncher.ExeName))
 
         try
         {
-            await using var importer = await Importer.CreateFromSettings(Settings.Instance, Log.Logger);
+            await using var importer = await Importer.CreateFromSettings(Settings.Instance, EarthDb, Log.Logger);
 
             if (!await importer.RegeneratePlayerBuildplatePreviewAsync(AccountId, bp.Id, default))
             {

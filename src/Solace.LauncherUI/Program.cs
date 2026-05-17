@@ -203,10 +203,12 @@ public partial class Program
 
             if (isLegacyDb)
             {
+#pragma warning disable CS0618 // Type or member is obsolete - needed for migration
                 var optionsBuilder = new DbContextOptionsBuilder<LiveDbContext>();
                 optionsBuilder.UseSqlite("Data Source=" + Settings.Instance.LiveDatabaseConnectionString!);
 
                 using var liveDbContext = new LiveDbContext(optionsBuilder.Options);
+#pragma warning restore CS0618 // Type or member is obsolete
 
                 await MigrateLegacyDataAsync(earthDbContext, liveDbContext, legacyDbPath);
             }
@@ -303,7 +305,9 @@ public partial class Program
         }
     }
 
+#pragma warning disable CS0618 // Type or member is obsolete - needed for migration
     private static async Task MigrateLegacyDataAsync(EarthDbContext earthDb, LiveDbContext liveDb, string legacyDbPath)
+#pragma warning restore CS0618 // Type or member is obsolete
     {
         using var legacyEarthDb = new SqliteConnection("Data Source=" + legacyDbPath);
         await legacyEarthDb.OpenAsync();

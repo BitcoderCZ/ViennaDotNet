@@ -15,7 +15,7 @@ internal sealed class ObjectController : SolaceControllerBase
     )
     {
         public sealed record EntityR(
-            string Id,
+            Guid Id,
             string Type
         );
     }
@@ -231,7 +231,7 @@ internal sealed class ObjectController : SolaceControllerBase
     )
     {
         public sealed record EntityR(
-            string Id,
+            Guid Id,
             string Type
         );
 

@@ -11,7 +11,7 @@ public sealed class Account
 
     public required long CreatedDate { get; set; }
 
-    public required string? Username { get; set; }
+    public required string Username { get; set; }
 
     public required string? ProfilePictureUrl { get; set; }
 

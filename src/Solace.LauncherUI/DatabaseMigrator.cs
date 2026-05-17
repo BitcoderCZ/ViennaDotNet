@@ -75,7 +75,7 @@ internal sealed class DatabaseMigrator
             {
                 while (await reader.ReadAsync())
                 {
-                    int id = reader.GetInt32(0);
+                    ulong id = (ulong)reader.GetInt64(0);
                     string value = reader.GetString(1);
 
                     _earthDb.Tiles.Add(new Tile()

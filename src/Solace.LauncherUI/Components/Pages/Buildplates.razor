@@ -376,7 +376,7 @@ BuildplateLauncher.ExeName))
 
         try
         {
-            await using var importer = await Importer.CreateFromSettings(Settings.Instance, Log.Logger);
+            await using var importer = await Importer.CreateFromSettings(Settings.Instance, EarthDb, Log.Logger);
 
             if (!await importer.RegenerateTemplatePreviewAsync(bp.Id, default))
             {
@@ -476,7 +476,7 @@ BuildplateLauncher.ExeName))
                 _isDeleting = true;
                 StateHasChanged();
 
-                await using var importer = await Importer.CreateFromSettings(Settings.Instance, Log.Logger);
+                await using var importer = await Importer.CreateFromSettings(Settings.Instance, EarthDb, Log.Logger);
 
                 if (!await importer.RemoveTemplateAsync(_bpToDelete.Id, _removeTemplateFromPlayers, default))
                 {

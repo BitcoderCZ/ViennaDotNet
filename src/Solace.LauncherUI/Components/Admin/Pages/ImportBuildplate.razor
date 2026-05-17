@@ -14,6 +14,7 @@
 @rendermode InteractiveServer
 @inject NavigationManager NavManager
 @inject ServerManager ServerManager
+@inject EarthDbContext EarthDb
 
 <PageTitle>Import Buildplate(s) - Solace</PageTitle>
 
@@ -307,7 +308,7 @@ BuildplateLauncher.ExeName))
 
         try
         {
-            await using var importer = await Importer.CreateFromSettings(Settings.Instance, Log.Logger);
+            await using var importer = await Importer.CreateFromSettings(Settings.Instance, EarthDb, Log.Logger);
             int successCount = 0;
 
             foreach (var fileState in filesToImport)
@@ -356,11 +357,11 @@ BuildplateLauncher.ExeName))
                         }
 
                         zipStream.Position = 0;
-                        await importer.ImportTemplateAsync(Guid.NewGuid().ToString(), displayName, zipStream);
+                        await importer.ImportTemplateAsync(Guid.NewGuid(), displayName, zipStream);
                     }
                     else
                     {
-                        await importer.ImportTemplateAsync(Guid.NewGuid().ToString(), displayName, memoryStream);
+                        await importer.ImportTemplateAsync(Guid.NewGuid(), displayName, memoryStream);
                     }
 
                     fileState.IsComplete = true;

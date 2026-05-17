@@ -20,19 +20,18 @@ public static class ImporterExtensions
 {
     extension(Importer)
     {
-        public static async Task<Importer> CreateFromSettings(Settings settings, Serilog.ILogger logger, bool createEventBus = true)
+        public static async Task<Importer> CreateFromSettings(Settings settings, EarthDbContext earthDb, Serilog.ILogger logger, bool createEventBus = true)
         {
-            var earthDB = EarthDB.Open(settings.EarthDatabaseConnectionString ?? "");
             var eventBus = createEventBus ? await EventBusClient.ConnectAsync($"localhost:{settings.EventBusPort}") : null;
             var objectStore = await ObjectStoreClient.ConnectAsync($"localhost:{settings.ObjectStorePort}");
 
-            return new Importer(earthDB, eventBus, objectStore, logger);
+            return new Importer(earthDb, eventBus, objectStore, logger);
         }
     }
 
     extension(Importer importer)
     {
-        public async Task<ArraySegment<byte>?> GetTemplateLauncherPreviewAsync(string templateId, ApplicationDbContext appDbContext, ResourcePackManager resourcePackManager, bool getFromCache = true, CancellationToken cancellationToken = default)
+        public async Task<ArraySegment<byte>?> GetTemplateLauncherPreviewAsync(Guid templateId, ApplicationDbContext appDbContext, ResourcePackManager resourcePackManager, bool getFromCache = true, CancellationToken cancellationToken = default)
         {
             var dbBuildplatePreview = await appDbContext.BuildplatePreviews
                 .AsNoTracking()
@@ -51,20 +50,9 @@ public static class ImporterExtensions
                 }
             }
 
-            TemplateBuildplate? template;
-            try
-            {
-                var results = await new EarthDB.ObjectQuery(false)
-                   .GetBuildplate(templateId)
-                   .ExecuteAsync(importer.EarthDB, cancellationToken);
-
-                template = results.GetBuildplate(templateId);
-            }
-            catch (EarthDB.DatabaseException ex)
-            {
-                importer.Logger.Error($"Failed to fetch template {templateId}: {ex}");
-                return null;
-            }
+            var template = await importer.EarthDB.TemplateBuildplates
+                .AsNoTracking()
+                .FirstOrDefaultAsync(template => template.Id == templateId, cancellationToken);
 
             if (template is null)
             {
@@ -119,11 +107,11 @@ public static class ImporterExtensions
             return buffer;
         }
 
-        public async Task<ArraySegment<byte>?> GetPlayerBuildplateLauncherPreviewAsync(string playerId, string buildplateId, ApplicationDbContext appDbContext, ResourcePackManager resourcePackManager, bool getFromCache = true, CancellationToken cancellationToken = default)
+        public async Task<ArraySegment<byte>?> GetPlayerBuildplateLauncherPreviewAsync(Guid accountId, Guid buildplateId, ApplicationDbContext appDbContext, ResourcePackManager resourcePackManager, bool getFromCache = true, CancellationToken cancellationToken = default)
         {
             var dbBuildplatePreview = await appDbContext.BuildplatePreviews
                 .AsNoTracking()
-                .FirstOrDefaultAsync(preview => preview.PlayerId == playerId && preview.BuildplateId == buildplateId, cancellationToken: cancellationToken);
+                .FirstOrDefaultAsync(preview => preview.PlayerId == accountId && preview.BuildplateId == buildplateId, cancellationToken: cancellationToken);
 
             if (dbBuildplatePreview is not null)
             {
@@ -138,23 +126,9 @@ public static class ImporterExtensions
                 }
             }
 
-            LegacyBuildplates playerBuildplates;
-
-            try
-            {
-                playerBuildplates = (await new EarthDB.Query(false)
-                    .Get("buildplates", playerId, typeof(LegacyBuildplates))
-                    .ExecuteAsync(importer.EarthDB, cancellationToken))
-                    .Get<LegacyBuildplates>("buildplates");
-
-            }
-            catch (EarthDB.DatabaseException ex)
-            {
-                importer.Logger.Error($"Failed to remove buildplate '{buildplateId}' from database for player '{playerId}': {ex}");
-                return null;
-            }
-
-            var buildplate = playerBuildplates.GetBuildplate(buildplateId);
+            var buildplate = await importer.EarthDB.PlayerBuildplates
+                .AsNoTracking()
+                .FirstOrDefaultAsync(buildplate => buildplate.Id == buildplateId && buildplate.AccountId == accountId, cancellationToken);
 
             if (buildplate is null)
             {
@@ -198,7 +172,7 @@ public static class ImporterExtensions
 
             dbBuildplatePreview = new DbBuildplatePreview()
             {
-                PlayerId = playerId,
+                PlayerId = accountId,
                 BuildplateId = buildplateId,
                 PreviewData = [.. buffer],
             };

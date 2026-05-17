@@ -38,7 +38,7 @@ public record ActiveLocation(
     public sealed record EncounterMetadataR(
         EncounterMetadataR.EncounterTypeE EncounterType,
         Guid LocationId,
-        string WorldId,
+        Guid WorldId,
         EncounterMetadataR.AnchorStateE AnchorState,
         string AnchorId,
         string AugmentedImageSetId

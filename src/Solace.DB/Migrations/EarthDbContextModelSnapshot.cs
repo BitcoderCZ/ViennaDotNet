@@ -93,6 +93,10 @@ namespace Solace.DB.Migrations
                     b.Property<long>("Created")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("Hotbar")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<long>("LastViewed")
                         .HasColumnType("INTEGER");
 
@@ -183,7 +187,7 @@ namespace Solace.DB.Migrations
 
                     b.Property<string>("Entries")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("Version")
                         .IsConcurrencyToken()
@@ -197,6 +201,10 @@ namespace Solace.DB.Migrations
             modelBuilder.Entity("Solace.DB.Models.Player.BoostsEF", b =>
                 {
                     b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ActiveBoosts")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Version")
@@ -263,6 +271,10 @@ namespace Solace.DB.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Items")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("Version")
                         .IsConcurrencyToken()
                         .HasColumnType("INTEGER");
@@ -279,11 +291,11 @@ namespace Solace.DB.Migrations
 
                     b.Property<string>("NonStackableItemsData")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("StackableItemsData")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("Version")
                         .IsConcurrencyToken()
@@ -301,7 +313,7 @@ namespace Solace.DB.Migrations
 
                     b.Property<string>("Items")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("Version")
                         .IsConcurrencyToken()
@@ -356,7 +368,7 @@ namespace Solace.DB.Migrations
 
                     b.Property<string>("Tokens")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("Version")
                         .IsConcurrencyToken()
@@ -372,6 +384,10 @@ namespace Solace.DB.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Slots")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("Version")
                         .IsConcurrencyToken()
                         .HasColumnType("INTEGER");
@@ -384,6 +400,10 @@ namespace Solace.DB.Migrations
             modelBuilder.Entity("Solace.DB.Models.Player.Workshop.SmeltingSlotsEF", b =>
                 {
                     b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Slots")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<int>("Version")
@@ -403,37 +423,7 @@ namespace Solace.DB.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.OwnsMany("Solace.DB.Models.Global.SharedBuildplateEF+HotbarItem", "Hotbar", b1 =>
-                        {
-                            b1.Property<Guid>("SharedBuildplateEFId");
-
-                            b1.Property<int>("__synthesizedOrdinal")
-                                .ValueGeneratedOnAddOrUpdate();
-
-                            b1.Property<int>("Count");
-
-                            b1.Property<string>("InstanceId");
-
-                            b1.Property<string>("Uuid")
-                                .IsRequired();
-
-                            b1.Property<int>("Wear");
-
-                            b1.HasKey("SharedBuildplateEFId", "__synthesizedOrdinal");
-
-                            b1.ToTable("SharedBuildplates");
-
-                            b1
-                                .ToJson("Hotbar")
-                                .HasColumnType("TEXT");
-
-                            b1.WithOwner()
-                                .HasForeignKey("SharedBuildplateEFId");
-                        });
-
                     b.Navigation("Account");
-
-                    b.Navigation("Hotbar");
                 });
 
             modelBuilder.Entity("Solace.DB.Models.Player.ActivityLogEF", b =>
@@ -455,38 +445,7 @@ namespace Solace.DB.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.OwnsMany("Solace.DB.Models.Player.BoostsEF+ActiveBoost", "ActiveBoosts", b1 =>
-                        {
-                            b1.Property<Guid>("BoostsEFId");
-
-                            b1.Property<int>("__synthesizedOrdinal")
-                                .ValueGeneratedOnAddOrUpdate();
-
-                            b1.Property<long>("Duration");
-
-                            b1.Property<string>("InstanceId")
-                                .IsRequired();
-
-                            b1.Property<string>("ItemId")
-                                .IsRequired();
-
-                            b1.Property<long>("StartTime");
-
-                            b1.HasKey("BoostsEFId", "__synthesizedOrdinal");
-
-                            b1.ToTable("Boosts");
-
-                            b1
-                                .ToJson("ActiveBoosts")
-                                .HasColumnType("TEXT");
-
-                            b1.WithOwner()
-                                .HasForeignKey("BoostsEFId");
-                        });
-
                     b.Navigation("Account");
-
-                    b.Navigation("ActiveBoosts");
                 });
 
             modelBuilder.Entity("Solace.DB.Models.Player.BuildplateEF", b =>
@@ -508,35 +467,7 @@ namespace Solace.DB.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.OwnsMany("Solace.DB.Models.Player.HotbarEF+Item", "Items", b1 =>
-                        {
-                            b1.Property<Guid>("HotbarEFId");
-
-                            b1.Property<int>("__synthesizedOrdinal")
-                                .ValueGeneratedOnAddOrUpdate();
-
-                            b1.Property<int>("Count");
-
-                            b1.Property<string>("InstanceId");
-
-                            b1.Property<string>("Uuid")
-                                .IsRequired();
-
-                            b1.HasKey("HotbarEFId", "__synthesizedOrdinal");
-
-                            b1.ToTable("Hotbars");
-
-                            b1
-                                .ToJson("Items")
-                                .HasColumnType("TEXT");
-
-                            b1.WithOwner()
-                                .HasForeignKey("HotbarEFId");
-                        });
-
                     b.Navigation("Account");
-
-                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("Solace.DB.Models.Player.InventoryEF", b =>
@@ -643,30 +574,7 @@ namespace Solace.DB.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.OwnsMany("Solace.DB.Models.Player.Workshop.CraftingSlotEF", "Slots", b1 =>
-                        {
-                            b1.Property<Guid>("CraftingSlotsEFId");
-
-                            b1.Property<int>("__synthesizedOrdinal")
-                                .ValueGeneratedOnAddOrUpdate();
-
-                            b1.Property<bool>("Locked");
-
-                            b1.HasKey("CraftingSlotsEFId", "__synthesizedOrdinal");
-
-                            b1.ToTable("CraftingSlots");
-
-                            b1
-                                .ToJson("Slots")
-                                .HasColumnType("TEXT");
-
-                            b1.WithOwner()
-                                .HasForeignKey("CraftingSlotsEFId");
-                        });
-
                     b.Navigation("Account");
-
-                    b.Navigation("Slots");
                 });
 
             modelBuilder.Entity("Solace.DB.Models.Player.Workshop.SmeltingSlotsEF", b =>
@@ -677,30 +585,7 @@ namespace Solace.DB.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.OwnsMany("Solace.DB.Models.Player.Workshop.SmeltingSlot", "Slots", b1 =>
-                        {
-                            b1.Property<Guid>("SmeltingSlotsEFId");
-
-                            b1.Property<int>("__synthesizedOrdinal")
-                                .ValueGeneratedOnAddOrUpdate();
-
-                            b1.Property<bool>("Locked");
-
-                            b1.HasKey("SmeltingSlotsEFId", "__synthesizedOrdinal");
-
-                            b1.ToTable("SmeltingSlots");
-
-                            b1
-                                .ToJson("Slots")
-                                .HasColumnType("TEXT");
-
-                            b1.WithOwner()
-                                .HasForeignKey("SmeltingSlotsEFId");
-                        });
-
                     b.Navigation("Account");
-
-                    b.Navigation("Slots");
                 });
 
             modelBuilder.Entity("Solace.DB.Models.Account", b =>

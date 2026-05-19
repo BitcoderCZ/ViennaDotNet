@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace Solace.DB.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialMigration : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -18,7 +18,7 @@ namespace Solace.DB.Migrations
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     CreatedDate = table.Column<long>(type: "INTEGER", nullable: false),
                     Username = table.Column<string>(type: "TEXT", nullable: false),
-                    ProfilePictureUrl = table.Column<string>(type: "TEXT", nullable: false),
+                    ProfilePictureUrl = table.Column<string>(type: "TEXT", nullable: true),
                     FirstName = table.Column<string>(type: "TEXT", nullable: true),
                     LastName = table.Column<string>(type: "TEXT", nullable: true),
                     PasswordSalt = table.Column<byte[]>(type: "BLOB", maxLength: 16, nullable: false),
@@ -67,7 +67,7 @@ namespace Solace.DB.Migrations
                 name: "Tiles",
                 columns: table => new
                 {
-                    Id = table.Column<long>(type: "INTEGER", nullable: false)
+                    Id = table.Column<ulong>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
                     ObjectStoreId = table.Column<string>(type: "TEXT", nullable: false)
                 },
@@ -82,7 +82,7 @@ namespace Solace.DB.Migrations
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     Version = table.Column<int>(type: "INTEGER", nullable: false),
-                    Entries = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                    Entries = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -101,7 +101,7 @@ namespace Solace.DB.Migrations
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     Version = table.Column<int>(type: "INTEGER", nullable: false),
-                    ActiveBoosts = table.Column<string>(type: "TEXT", nullable: true)
+                    ActiveBoosts = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -120,7 +120,7 @@ namespace Solace.DB.Migrations
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     Version = table.Column<int>(type: "INTEGER", nullable: false),
-                    Slots = table.Column<string>(type: "TEXT", nullable: true)
+                    Slots = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -139,7 +139,7 @@ namespace Solace.DB.Migrations
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     Version = table.Column<int>(type: "INTEGER", nullable: false),
-                    Items = table.Column<string>(type: "TEXT", nullable: true)
+                    Items = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -158,8 +158,8 @@ namespace Solace.DB.Migrations
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     Version = table.Column<int>(type: "INTEGER", nullable: false),
-                    StackableItemsData = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    NonStackableItemsData = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                    StackableItemsData = table.Column<string>(type: "TEXT", nullable: false),
+                    NonStackableItemsData = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -178,7 +178,7 @@ namespace Solace.DB.Migrations
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     Version = table.Column<int>(type: "INTEGER", nullable: false),
-                    Items = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                    Items = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -198,7 +198,7 @@ namespace Solace.DB.Migrations
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     Version = table.Column<int>(type: "INTEGER", nullable: false),
                     AccountId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    TemplateId = table.Column<string>(type: "TEXT", nullable: true),
+                    TemplateId = table.Column<Guid>(type: "TEXT", nullable: true),
                     Name = table.Column<string>(type: "TEXT", nullable: false),
                     Size = table.Column<int>(type: "INTEGER", nullable: false),
                     Offset = table.Column<int>(type: "INTEGER", nullable: false),
@@ -274,8 +274,8 @@ namespace Solace.DB.Migrations
                     BuildplateLastModifed = table.Column<long>(type: "INTEGER", nullable: false),
                     LastViewed = table.Column<long>(type: "INTEGER", nullable: false),
                     NumberOfTimesViewed = table.Column<int>(type: "INTEGER", nullable: false),
-                    ServerDataObjectId = table.Column<string>(type: "TEXT", nullable: false),
-                    Hotbar = table.Column<string>(type: "TEXT", nullable: true)
+                    Hotbar = table.Column<string>(type: "TEXT", nullable: false),
+                    ServerDataObjectId = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -294,7 +294,7 @@ namespace Solace.DB.Migrations
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     Version = table.Column<int>(type: "INTEGER", nullable: false),
-                    Slots = table.Column<string>(type: "TEXT", nullable: true)
+                    Slots = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -313,7 +313,7 @@ namespace Solace.DB.Migrations
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     Version = table.Column<int>(type: "INTEGER", nullable: false),
-                    Tokens = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                    Tokens = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {

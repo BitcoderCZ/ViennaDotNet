@@ -4,7 +4,7 @@
 
 # Solace
 
-An unofficial port of [Vienna](https://github.com/Project-Genoa/Vienna) to .NET
+Replacement server for Minecraft Earth™, based on [Vienna](https://github.com/Project-Genoa/Vienna)
 
 > [!WARNING]
 > **Work In Progress (WIP):** This project is currently under active development. Some features may be incomplete, and you may encounter bugs or breaking changes. Use at your own risk!
@@ -50,7 +50,7 @@ Installed automatically if using the [Semi-automatic installation method](#semi-
   * Under it, there should be `IPv4 Address`
 * Linux
   * Use a command such as `ip address`, `hostname -I` or `ifconfig -a`
-  * The address will usually (but not always) be in the format `192.168.XXX.XXX`
+* The address will usually (but not always) be in the format `192.168.XXX.XXX`
 
 ## Installation Methods
 
@@ -75,7 +75,7 @@ curl -sSl https://raw.githubusercontent.com/Earth-Restored/Solace/main/install.s
     git clone https://github.com/Earth-Restored/Solace.git
     ```
 
-2. CD to the Solace directory, then run `publish.ps1 -profiles framework-dependent-{os}-{arch}`, replace `{os}` with you os (win, linux, osx) and `{arch}` with the cpu architecture (x64, x86, arm64, arm32), e.g. `framework-dependent-win-x64`
+2. `cd` to the Solace directory, then run `publish.ps1 -profiles framework-dependent-{os}-{arch}`, replace `{os}` with you os (win, linux, osx) and `{arch}` with the cpu architecture (x64, x86, arm64, arm32), e.g. `framework-dependent-win-x64`
 3. Run "run_launcher.ps1"
 4. Now on the same device open http://localhost:5000, create an account, make sure you confirm your email on the page that opens, if you fail to do this, you need to [Delete account db (Option B)](#i-cannot-see-the-start-server-button-when-logged-in), and login
 5. Under "Server Options", set "Network/IPv4 Address" to your PC's IP address and either disable "Map/Enable Tile Rendering" or set the "Map/MapTiler API Key" (it can be found [here](https://cloud.maptiler.com/account/keys/) when logged in)
